@@ -6,7 +6,7 @@
 Welcome to My Blog's documentation!
 ===================================
 
-Contents:
+内容:
 
 .. toctree::
    :maxdepth: 2
