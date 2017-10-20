@@ -1,1 +1,1 @@
-Search.setIndex({envversion:46,filenames:["index"],objects:{},objnames:{},objtypes:{},terms:{"\u5185\u5bb9":[],"\u5185\u5bb91":[],content:[],index:[],modul:[],page:[],search:[]},titles:["Blog"],titleterms:{blog:0,document:[],indic:[],tabl:[],welcom:[]}})
+Search.setIndex({envversion:46,filenames:["index"],objects:{},objnames:{},objtypes:{},terms:{"\u5185\u5bb9":[],"\u5185\u5bb91":[],content:[],hello:[],index:[],modul:[],page:[],search:[]},titles:["Blog"],titleterms:{blog:0,document:[],indic:[],tabl:[],welcom:[]}})
