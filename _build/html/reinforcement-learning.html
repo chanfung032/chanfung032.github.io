@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Blog &mdash; My Blog 1.0 documentation</title>
+    <title>强化学习 Reinforcement Learning &mdash; My Blog 1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -24,8 +24,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="My Blog 1.0 documentation" href="#" />
-    <link rel="next" title="sqlite剖析（1）——文件格式" href="sqlite-file-format.html" />
+    <link rel="top" title="My Blog 1.0 documentation" href="index.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -38,12 +37,24 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="blog">
-<h1>Blog<a class="headerlink" href="#blog" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="sqlite-file-format.html">sqlite剖析（1）——文件格式</a></li>
-</ul>
+  <div class="section" id="reinforcement-learning">
+<h1>强化学习 Reinforcement Learning<a class="headerlink" href="#reinforcement-learning" title="Permalink to this headline">¶</a></h1>
+<p>原文：<a class="reference external" href="http://karpathy.github.io/2016/05/31/rl/">http://karpathy.github.io/2016/05/31/rl/</a></p>
+<p><a class="reference external" href="https://www.youtube.com/watch?v=W8XF3ME8G2I">https://www.youtube.com/watch?v=W8XF3ME8G2I</a></p>
+<div class="section" id="policy-network">
+<h2>Policy Network<a class="headerlink" href="#policy-network" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="rmsprop">
+<h2>RMSprop<a class="headerlink" href="#rmsprop" title="Permalink to this headline">¶</a></h2>
+<p>RMSprop 是 Geoff Hinton 在 <a class="reference external" href="http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf">Lecture 6e of his Coursera Class</a> 中提出的一个学习速率自适应算法。</p>
+<div class="math">
+\[S_{dW} = {\beta}S_{dW} + (1 - \beta)dW^2\]\[W = W - \lambda\frac{dW}{\sqrt{S_{dW} + \epsilon}}\]</div>
+</div>
+<div class="section" id="q-learning">
+<h2>Q-Learning<a class="headerlink" href="#q-learning" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Q-learning">https://en.wikipedia.org/wiki/Q-learning</a></p>
+<p>手算 Q-learning： <a class="reference external" href="http://mnemstudio.org/path-finding-q-learning-tutorial.htm">http://mnemstudio.org/path-finding-q-learning-tutorial.htm</a></p>
+<p>Q = immediate reward + future reward</p>
 </div>
 </div>
 
@@ -52,18 +63,27 @@
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">强化学习 Reinforcement Learning</a><ul>
+<li><a class="reference internal" href="#policy-network">Policy Network</a></li>
+<li><a class="reference internal" href="#rmsprop">RMSprop</a></li>
+<li><a class="reference internal" href="#q-learning">Q-Learning</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
 <h3>Related Topics</h3>
 <ul>
-  <li><a href="#">Documentation overview</a><ul>
-      <li>Next: <a href="sqlite-file-format.html" title="next chapter">sqlite剖析（1）——文件格式</a></li>
+  <li><a href="index.html">Documentation overview</a><ul>
   </ul></li>
 </ul>
 </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/index.txt"
+      <li><a href="_sources/reinforcement-learning.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -92,7 +112,7 @@
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
       
       |
-      <a href="_sources/index.txt"
+      <a href="_sources/reinforcement-learning.txt"
           rel="nofollow">Page source</a>
     </div>
 

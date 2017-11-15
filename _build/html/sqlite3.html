@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sqlite剖析（1）——文件格式 &mdash; My Blog 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="My Blog 1.0 documentation" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="sqlite-1">
+<h1>sqlite剖析（1）——文件格式<a class="headerlink" href="#sqlite-1" title="Permalink to this headline">¶</a></h1>
+<p>sqlite 数据库中的每一张表为一个 b-tree ，b-tree 的每一个节点映射为磁盘上的一个固定大小的 page （文件读写的最小单位），表中的一行数据映射为 b-tree 上叶子节点中的一个键值对，键为 rowid <a class="footnote-reference" href="#id3" id="id1">[1]</a> 。</p>
+<p>b-tree 的中间节点中保存了 K 个键和 K+1 个指向子节点的指针（child page number）。</p>
+<img alt="_images/sqlite-b-tree.jpg" src="_images/sqlite-b-tree.jpg" />
+<p>b-tree page 的格式如下：</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="17%" />
+<col width="28%" />
+<col width="27%" />
+<col width="28%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>page header</td>
+<td>cell pointer array</td>
+<td>unallocated space</td>
+<td>cell content array</td>
+</tr>
+</tbody>
+</table>
+<p>叶子节点的键值对，中间节点的键和指针都存在 b-tree page 的 cell 中。cell content 中是 cell 的实际内容，格式由其所在的 page 类型决定。cell pointer array 里是每个 cell content 的起始位置。同一个页面里所有的 cell 是按键的升序排列的，知道了所有 cell 的位置就可以进行二分查找了。</p>
+<p>对于叶子节点，cell 的格式如下：</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="53%" />
+<col width="17%" />
+<col width="30%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>payload length</td>
+<td>rowid</td>
+<td>payload</td>
+</tr>
+</tbody>
+</table>
+<p>payload 中为实际的行数据，由该行所有的字段按照表定义时的字段顺序拼接而成，也叫 record <a class="footnote-reference" href="#id4" id="id2">[2]</a> 。</p>
+<p>表上如果有索引，每一个索引也是一个单独的 b-tree。该 b-tree 的键值对的键为 <em>索引的字段值</em> ，值为 rowid 。</p>
+<p>用户创建的表，表的索引的相关信息存在 sqlite 的内部表 sqlite_master 中，数据库文件的第一个 page 就是 sqlite_master 的 rootpage 。sqlite_master 表的 schema 如下：</p>
+<div class="highlight-shell"><div class="highlight"><pre>sqlite&gt; .schema sqlite_master
+CREATE TABLE sqlite_master <span class="o">(</span>
+    <span class="nb">type </span>text,
+    name text,
+    tbl_name text,
+    rootpage integer,
+    sql text
+<span class="o">)</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>我们创建一个简单的 sqlite 数据库：</p>
+<div class="highlight-shell"><div class="highlight"><pre><span class="nv">$ </span>sqlite
+sqlite&gt; .open --new x.db
+sqlite&gt; CREATE TABLE user <span class="o">(</span>
+    name TEXT PRIMARY KEY,
+    age INTEGER
+<span class="o">)</span><span class="p">;</span>
+sqlite&gt; INSERT INTO user VALUES<span class="o">(</span><span class="s1">&#39;bob&#39;</span>, 5<span class="o">)</span><span class="p">;</span>
+sqlite&gt; INSERT INTO user VALUES<span class="o">(</span><span class="s1">&#39;alice&#39;</span>, 10<span class="o">)</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>下图为该数据库文件的结构说明：</p>
+<img alt="_images/sqlite-file-format-commented.png" src="_images/sqlite-file-format-commented.png" />
+<p>sqlite 的文件格式的官方文档： <a class="reference external" href="https://www.sqlite.org/fileformat2.html">https://www.sqlite.org/fileformat2.html</a> 。</p>
+<p>从数据库文件的格式，我们可以大致推断一个查询语句的执行过程。</p>
+<ol class="arabic simple">
+<li>查询 sql_master 表，找到要查询的表及其索引信息。</li>
+<li>如果有用得上的索引，读取索引，过滤出符合条件的行的 rowid 。</li>
+<li>根据 rowid 再去读表，如果还有没有索引的查询条件，再过滤得到最终的行返回。</li>
+</ol>
+<table class="docutils footnote" frame="void" id="id3" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td><a class="reference external" href="https://www.sqlite.org/lang_createtable.html#rowid">https://www.sqlite.org/lang_createtable.html#rowid</a></td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id4" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[2]</a></td><td><a class="reference external" href="https://www.sqlite.org/fileformat2.html#record_format">https://www.sqlite.org/fileformat2.html#record_format</a></td></tr>
+</tbody>
+</table>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/sqlite3.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/sqlite3.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
