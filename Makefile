@@ -190,3 +190,8 @@ pseudoxml:
 	$(SPHINXBUILD) -b pseudoxml $(ALLSPHINXOPTS) $(BUILDDIR)/pseudoxml
 	@echo
 	@echo "Build finished. The pseudo-XML files are in $(BUILDDIR)/pseudoxml."
+
+publish: html
+	touch _build/html/.nojekyll
+	git add _build/html && git commit -m "Update _build/html"
+	git subtree push  --prefix _build/html origin master

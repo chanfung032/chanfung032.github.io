@@ -2,7 +2,6 @@ Blog
 ===================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-
-
+   sqlite-file-format.rst
