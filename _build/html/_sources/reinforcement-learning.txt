@@ -23,10 +23,16 @@ RMSprop 是 Geoff Hinton 在 `Lecture 6e of his Coursera Class <http://www.cs.to
 
 
 Q-Learning
-----------------
+===================
 
 https://en.wikipedia.org/wiki/Q-learning
 
 手算 Q-learning： http://mnemstudio.org/path-finding-q-learning-tutorial.htm
 
 Q = immediate reward + future reward
+
+
+
+Actor + Critic == Policy Network + Q Learning
+
+

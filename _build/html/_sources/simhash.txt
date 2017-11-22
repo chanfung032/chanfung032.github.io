@@ -1,0 +1,23 @@
+Simhash 算法
+================
+
+哈希算法经常会被用来生成文档的指纹。传统的哈希算法（md5等）对于不同的文档，即使只有细小的差别，也会哈希到完全不一样的值上去，这样生成的指纹只能用来做精确匹配。和这些算法不一样，Simhash 可以将类似的文档哈希到相近的值上去（这里说的距离是Hamming distance [1]_ ），从而可以根据哈希值直接进行模糊匹配。
+
+原始 paper： `similarity estimation techniques from rounding algorithms.pdf <http://www.cs.princeton.edu/courses/archive/spring04/cos598B/bib/CharikarEstim.pdf>`_ 。
+
+计算过程：
+
+1. 选择 hashsize，比如 8 。令 V = [0] * 8 （也就是 8 个 0）。
+2. 从文档中提取特征，比如统计词频。
+3. 对每一个特征使用 8-bit hash 算法计算其 hash 。
+4. 对于每一个 hash，V[i] += 1 if hash bit[i] == 1 else -1
+5. 最后 simhash bit[i] = 1 if V[i] >= 0 else 0
+
+..  image:: images/simhash.jpg
+
+上面词频的方式作为文档的特征比较简单粗暴，丢失了词语的序列信息，这样将文档的词语打乱后再计算 simhash 还是一样，所以一般使用 n-gram 作为特征。
+
+直观来看，如果文档只有细小变化，那么也就只有很少的特征有变化，那么上图最上面的一层红圈中只有少数值会发生随机变化，这些值的变化对整体的影响是比较小的，所以导致最终只有少数 bit 会变化，更加形象生动的说明可以参见： https://ferd.ca/simhashing-hopefully-made-simple.html
+
+.. [1] https://en.wikipedia.org/wiki/Hamming_distance 比如，在 mysql 中模糊查询： ``SELECT id, BIT_COUNT(hash ^ search_hash) as hd from A ORDER BY hd ASC`` 。
+
