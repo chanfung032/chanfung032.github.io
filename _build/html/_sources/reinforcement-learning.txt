@@ -23,7 +23,7 @@ RMSprop 是 Geoff Hinton 在 `Lecture 6e of his Coursera Class <http://www.cs.to
 
 
 Q-Learning
-===================
+---------------
 
 https://en.wikipedia.org/wiki/Q-learning
 
