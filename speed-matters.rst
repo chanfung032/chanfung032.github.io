@@ -19,7 +19,7 @@ This is true of any to-do list that gets worked off too slowly. A malaise creeps
 
 任务清单完成得慢，慢慢的任务就会只增不减，直到最后放弃不干。
 
----
+----
 
 It is a truism, too, in workplaces, that faster employees get assigned more work. Of course they do. Humans are lazy. They want to preserve calories. And it’s exhausting merely thinking about giving work to someone slow. When you’re thinking about giving work to someone slow, you run through the likely quagmire in your head; you visualize days of halting progress. You imagine a resource—this slow person—tied up for awhile. It’s wearisome, even in the thinking. Whereas the fast teammate—well, their time feels cheap, in the sense that you can give them something and know they’ll be available again soon. You aren’t “using them up” by giving them work. So you route as much as you can through the fast people. It’s ironic: your company’s most valuable resources—because they finish things quickly—are the easiest to consume.
 
@@ -37,7 +37,7 @@ Slowness seems to make a special contribution to this picture in our heads. Time
 
 做事慢会让我们觉得时间越来越宝贵，如果某件事要花费不少时间的去做的话，天哪，太浪费了，不干了。
 
----
+----
 
 The prescription must be that if there’s something you want to do a lot of and get good at—like write, or fix bugs—you should try to do it faster.
 
