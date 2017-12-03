@@ -1,0 +1,131 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Kafka的存储机制 &mdash; My Blog 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="My Blog 1.0 documentation" href="index.html" />
+    <link rel="next" title="Speed matters: Why working quickly is more important than it seems" href="speed-matters.html" />
+    <link rel="prev" title="Blog" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="kafka">
+<h1>Kafka的存储机制<a class="headerlink" href="#kafka" title="Permalink to this headline">¶</a></h1>
+<p>原文：<a class="reference external" href="https://thehoard.blog/how-kafkas-storage-internals-work-3a29b02e026">https://thehoard.blog/how-kafkas-storage-internals-work-3a29b02e026</a></p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">$</span> bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor <span class="m">1</span> --partitions <span class="m">3</span> --topic <span class="nb">test</span> --config retention.ms<span class="o">=</span>172800000
+</pre></div>
+</div>
+<p>每个 topic 由一个或多个分区（ partition ）组成，每个分区都是一个有序消息序列，该序列只能追加不能修改。分区是不可切割的整体，不会再切割后存在多台机器或者多个磁盘上。</p>
+<img alt="_images/kafka-partition.png" src="_images/kafka-partition.png" />
+<p>topic创建的时候一般都会指定里面消息的保留策略（ retention policy ），因此 Kafka 会定期清除每个分区（也就是 topic ）下的过期消息，如果一个分区就是一个大文件的话，那每次清除的过程会非常的耗时，所以分区会切分为 segments 后再保存。</p>
+<img alt="_images/kafka-segment.png" src="_images/kafka-segment.png" />
+<p>下面是 Kafka 数据目录的结构，顶层目录下每个目录为一个分区。</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">$</span> tree /data0/kafka <span class="p">|</span> head -n 6
+<span class="go">kafka</span>
+<span class="go">├── test</span>
+<span class="go">│ ├── 00000000003064504069.index</span>
+<span class="go">│ ├── 00000000003064504069.log</span>
+<span class="go">│ ├── 00000000003065011416.index</span>
+<span class="go">│ ├── 00000000003065011416.log</span>
+</pre></div>
+</div>
+<p>分区目录下为 segement 文件。<code class="docutils literal"><span class="pre">*.index</span></code> 是索引文件，<code class="docutils literal"><span class="pre">*.log</span></code> 是实际存储每个 segment 里消息的文件，文件名中的数字是该segment 中消息的 base offset，这个 offset 大于上一个 segment 里最后一条消息的offset，小于等于本 segment 文件里第一条的 offset。</p>
+<p>每个 segment 文件里为一条一条追加的消息。每条消息由 offset, key, message size, compression codec, crc, version, value 等组成。</p>
+<p>我们可以使用 Kafka 自带的工具看下 <code class="docutils literal"><span class="pre">*.log</span></code> 文件里的内容：</p>
+<div class="highlight-console"><div class="highlight"><pre><span class="gp">$</span> bin/kafka-run-class.sh kafka.tools.DumpLogSegments --deep-iteration --print-data-log --files /data/kafka/events-1/00000000003065011416.log <span class="p">|</span> head -n 4
+<span class="go">Dumping /data/kafka/appusers-1/00000000003065011416.log</span>
+<span class="go">Starting offset: 3065011416</span>
+<span class="go">offset: 3065011416 position: 0 isvalid: true payloadsize: 2820 magic: 1 compresscodec: NoCompressionCodec crc: 811055132 payload: {&quot;name&quot;: &quot;Travis&quot;, msg: &quot;Hey, what&#39;s up?&quot;}</span>
+<span class="go">offset: 3065011417 position: 1779 isvalid: true payloadsize: 2244 magic: 1 compresscodec: NoCompressionCodec crc: 151590202 payload: {&quot;name&quot;: &quot;Wale&quot;, msg: &quot;Starving.&quot;}</span>
+</pre></div>
+</div>
+<p><a href="#id1"><span class="problematic" id="id2">*</span></a>.index 文件中每 8 个字节为一条索引，每条索引里存储了 2 个数值：消息的 offset（4 字节）、消息在 segment 文件中的偏移地址（4 字节）。这里消息的 offset 是相对地址，加上文件名里的 base offset 才是消息的实际 offset。</p>
+<p>所以知道了消息的 offset，根据 segment 的文件名我们能大致找出这条消息在哪一个 segment 文件中，然后根据消息的 offset 在索引文件中找到最接近这个 offset 并且小于等于这个 offset 的消息的索引（索引文件是有序的，可以二分查找），然后在 segment 文件中找到该索引的偏移地址，依次往后查找就可以找到对应 offset 的消息了。</p>
+<p>producer 发送的消息格式 == segment 文件里存储的消息格式 == 发送给 consumer 的消息格式。所以消息传输和保存的过程都不需要转换格式。Kafka 也就可以使用 sendfile 直接发送消息给 consumer。</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Blog</a></li>
+      <li>Next: <a href="speed-matters.html" title="next chapter">Speed matters: Why working quickly is more important than it seems</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/kafka-storage-internals.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/kafka-storage-internals.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
