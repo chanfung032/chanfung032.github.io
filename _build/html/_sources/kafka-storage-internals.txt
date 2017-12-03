@@ -41,7 +41,7 @@ topic创建的时候一般都会指定里面消息的保留策略（ retention p
     offset: 3065011416 position: 0 isvalid: true payloadsize: 2820 magic: 1 compresscodec: NoCompressionCodec crc: 811055132 payload: {"name": "Travis", msg: "Hey, what's up?"}
     offset: 3065011417 position: 1779 isvalid: true payloadsize: 2244 magic: 1 compresscodec: NoCompressionCodec crc: 151590202 payload: {"name": "Wale", msg: "Starving."}
 
-*.index 文件中每 8 个字节为一条索引，每条索引里存储了 2 个数值：消息的 offset（4 字节）、消息在 segment 文件中的偏移地址（4 字节）。这里消息的 offset 是相对地址，加上文件名里的 base offset 才是消息的实际 offset。
+``*.index`` 文件中每 8 个字节为一条索引，每条索引里存储了 2 个数值：消息的 offset（4 字节）、消息在 segment 文件中的偏移地址（4 字节）。这里消息的 offset 是相对地址，加上文件名里的 base offset 才是消息的实际 offset。
 
 所以知道了消息的 offset，根据 segment 的文件名我们能大致找出这条消息在哪一个 segment 文件中，然后根据消息的 offset 在索引文件中找到最接近这个 offset 并且小于等于这个 offset 的消息的索引（索引文件是有序的，可以二分查找），然后在 segment 文件中找到该索引的偏移地址，依次往后查找就可以找到对应 offset 的消息了。
 

@@ -69,7 +69,7 @@
 <span class="go">offset: 3065011417 position: 1779 isvalid: true payloadsize: 2244 magic: 1 compresscodec: NoCompressionCodec crc: 151590202 payload: {&quot;name&quot;: &quot;Wale&quot;, msg: &quot;Starving.&quot;}</span>
 </pre></div>
 </div>
-<p><a href="#id1"><span class="problematic" id="id2">*</span></a>.index 文件中每 8 个字节为一条索引，每条索引里存储了 2 个数值：消息的 offset（4 字节）、消息在 segment 文件中的偏移地址（4 字节）。这里消息的 offset 是相对地址，加上文件名里的 base offset 才是消息的实际 offset。</p>
+<p><code class="docutils literal"><span class="pre">*.index</span></code> 文件中每 8 个字节为一条索引，每条索引里存储了 2 个数值：消息的 offset（4 字节）、消息在 segment 文件中的偏移地址（4 字节）。这里消息的 offset 是相对地址，加上文件名里的 base offset 才是消息的实际 offset。</p>
 <p>所以知道了消息的 offset，根据 segment 的文件名我们能大致找出这条消息在哪一个 segment 文件中，然后根据消息的 offset 在索引文件中找到最接近这个 offset 并且小于等于这个 offset 的消息的索引（索引文件是有序的，可以二分查找），然后在 segment 文件中找到该索引的偏移地址，依次往后查找就可以找到对应 offset 的消息了。</p>
 <p>producer 发送的消息格式 == segment 文件里存储的消息格式 == 发送给 consumer 的消息格式。所以消息传输和保存的过程都不需要转换格式。Kafka 也就可以使用 sendfile 直接发送消息给 consumer。</p>
 </div>
