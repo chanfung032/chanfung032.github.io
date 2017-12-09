@@ -15,17 +15,17 @@ Go 语言实现——变量
     |3.1|  float32
     +---+
     +---+---+---+---+
-    | 1 | 2 | 3 | 4 | [4]int 
+    | 1 | 2 | 3 | 4 | [4]int
     +---+---+---+---+
 
 结构体（struct） ::
 
     +---+---+---+---+---+---+---+---+
-    | 1 | 2 | 0 | 0 | 3 | 0 | 0 | 0 | struct{a byte; b byte; c int32} = {1,2,3} 
+    | 1 | 2 | 0 | 0 | 3 | 0 | 0 | 0 | struct{a byte; b byte; c int32} = {1,2,3}
     +---+---+---+---+---+---+---+---+
       a   b           c
 
-字符串和切片（slice） [1]_ ::
+字符串和切片（slice） ::
 
     +---------+---------+
     | pointer | len=5   | s = "hello"
@@ -44,9 +44,9 @@ Go 语言实现——变量
     +---------+---------+---------+
         |
         +---+---+---+---+---+---+---+---+
-        | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | [8]int 
+        | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | [8]int
         +---+---+---+---+---+---+---+---+
-            |       
+            |
             +---------+---------+---------+
             | pointer | len=2   | cap=5   | y = x[1:3:6]
             +---------+---------+---------+
@@ -178,9 +178,10 @@ iface/eface 中的 data 是指向实际值（value）的指针， *itab._type* �
 
 参考：
 
-.. [1] https://blog.golang.org/go-slices-usage-and-internals
-.. [2] https://research.swtch.com/interfaces
-.. [3] http://legendtkl.com/2017/07/01/golang-interface-implement/
-.. [4] https://blog.golang.org/laws-of-reflection
-.. [5] https://stackoverflow.com/a/34608738
-.. [6] https://blog.altoros.com/golang-internals-part-2-diving-into-the-go-compiler.html
+- https://blog.golang.org/go-slices-usage-and-internals
+- https://research.swtch.com/interfaces
+- http://legendtkl.com/2017/07/01/golang-interface-implement/
+- https://blog.golang.org/laws-of-reflection
+- https://stackoverflow.com/a/34608738
+- https://blog.altoros.com/golang-internals-part-2-diving-into-the-go-compiler.html
+
