@@ -25,6 +25,8 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="top" title="My Blog 1.0 documentation" href="index.html" />
+    <link rel="next" title="Kafka的存储机制" href="kafka-storage-internals.html" />
+    <link rel="prev" title="Blog" href="index.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -61,7 +63,7 @@
   a   b           c
 </pre></div>
 </div>
-<p>字符串和切片（slice） <a class="footnote-reference" href="#id2" id="id1">[1]</a></p>
+<p>字符串和切片（slice）</p>
 <div class="highlight-python"><div class="highlight"><pre>+---------+---------+
 | pointer | len=5   | s = &quot;hello&quot;
 +---------+---------+
@@ -199,42 +201,14 @@ after walk main
 </pre></div>
 </div>
 <p>参考：</p>
-<table class="docutils footnote" frame="void" id="id2" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td><a class="reference external" href="https://blog.golang.org/go-slices-usage-and-internals">https://blog.golang.org/go-slices-usage-and-internals</a></td></tr>
-</tbody>
-</table>
-<table class="docutils footnote" frame="void" id="id3" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label">[2]</td><td><a class="reference external" href="https://research.swtch.com/interfaces">https://research.swtch.com/interfaces</a></td></tr>
-</tbody>
-</table>
-<table class="docutils footnote" frame="void" id="id4" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label">[3]</td><td><a class="reference external" href="http://legendtkl.com/2017/07/01/golang-interface-implement/">http://legendtkl.com/2017/07/01/golang-interface-implement/</a></td></tr>
-</tbody>
-</table>
-<table class="docutils footnote" frame="void" id="id5" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label">[4]</td><td><a class="reference external" href="https://blog.golang.org/laws-of-reflection">https://blog.golang.org/laws-of-reflection</a></td></tr>
-</tbody>
-</table>
-<table class="docutils footnote" frame="void" id="id6" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label">[5]</td><td><a class="reference external" href="https://stackoverflow.com/a/34608738">https://stackoverflow.com/a/34608738</a></td></tr>
-</tbody>
-</table>
-<table class="docutils footnote" frame="void" id="id7" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label">[6]</td><td><a class="reference external" href="https://blog.altoros.com/golang-internals-part-2-diving-into-the-go-compiler.html">https://blog.altoros.com/golang-internals-part-2-diving-into-the-go-compiler.html</a></td></tr>
-</tbody>
-</table>
+<ul class="simple">
+<li><a class="reference external" href="https://blog.golang.org/go-slices-usage-and-internals">https://blog.golang.org/go-slices-usage-and-internals</a></li>
+<li><a class="reference external" href="https://research.swtch.com/interfaces">https://research.swtch.com/interfaces</a></li>
+<li><a class="reference external" href="http://legendtkl.com/2017/07/01/golang-interface-implement/">http://legendtkl.com/2017/07/01/golang-interface-implement/</a></li>
+<li><a class="reference external" href="https://blog.golang.org/laws-of-reflection">https://blog.golang.org/laws-of-reflection</a></li>
+<li><a class="reference external" href="https://stackoverflow.com/a/34608738">https://stackoverflow.com/a/34608738</a></li>
+<li><a class="reference external" href="https://blog.altoros.com/golang-internals-part-2-diving-into-the-go-compiler.html">https://blog.altoros.com/golang-internals-part-2-diving-into-the-go-compiler.html</a></li>
+</ul>
 </div>
 </div>
 
@@ -256,6 +230,8 @@ after walk main
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Blog</a></li>
+      <li>Next: <a href="kafka-storage-internals.html" title="next chapter">Kafka的存储机制</a></li>
   </ul></li>
 </ul>
 </div>
