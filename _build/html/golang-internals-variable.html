@@ -1,38 +1,40 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Go 语言实现——数据结构 &mdash; My Blog 1.0 documentation</title>
-    
+    <title>Go 语言实现——数据结构 &#8212; My Blog 1.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
         VERSION:     '1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="My Blog 1.0 documentation" href="index.html" />
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Kafka的存储机制" href="kafka-storage-internals.html" />
-    <link rel="prev" title="Blog" href="index.html" />
+    <link rel="prev" title="Go 语言实现——nil" href="golang-internals-nil.html" />
    
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body>
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -45,54 +47,54 @@
 <div class="section" id="value">
 <h2>值（value）的内存结构<a class="headerlink" href="#value" title="Permalink to this headline">¶</a></h2>
 <p>基础类型</p>
-<div class="highlight-python"><div class="highlight"><pre>+---+
-| 1 |  int
-+---+
-+---+
-|3.1|  float32
-+---+
-+---+---+---+---+
-| 1 | 2 | 3 | 4 | [4]int
-+---+---+---+---+
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">+---+</span>
+<span class="o">|</span> <span class="mi">1</span> <span class="o">|</span>  <span class="nb">int</span>
+<span class="o">+---+</span>
+<span class="o">+---+</span>
+<span class="o">|</span><span class="mf">3.1</span><span class="o">|</span>  <span class="n">float32</span>
+<span class="o">+---+</span>
+<span class="o">+---+---+---+---+</span>
+<span class="o">|</span> <span class="mi">1</span> <span class="o">|</span> <span class="mi">2</span> <span class="o">|</span> <span class="mi">3</span> <span class="o">|</span> <span class="mi">4</span> <span class="o">|</span> <span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="nb">int</span>
+<span class="o">+---+---+---+---+</span>
 </pre></div>
 </div>
 <p>结构体（struct）</p>
-<div class="highlight-python"><div class="highlight"><pre>+---+---+---+---+---+---+---+---+
-| 1 | 2 | 0 | 0 | 3 | 0 | 0 | 0 | struct{a byte; b byte; c int32} = {1,2,3}
-+---+---+---+---+---+---+---+---+
-  a   b           c
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">+---+---+---+---+---+---+---+---+</span>
+<span class="o">|</span> <span class="mi">1</span> <span class="o">|</span> <span class="mi">2</span> <span class="o">|</span> <span class="mi">0</span> <span class="o">|</span> <span class="mi">0</span> <span class="o">|</span> <span class="mi">3</span> <span class="o">|</span> <span class="mi">0</span> <span class="o">|</span> <span class="mi">0</span> <span class="o">|</span> <span class="mi">0</span> <span class="o">|</span> <span class="n">struct</span><span class="p">{</span><span class="n">a</span> <span class="n">byte</span><span class="p">;</span> <span class="n">b</span> <span class="n">byte</span><span class="p">;</span> <span class="n">c</span> <span class="n">int32</span><span class="p">}</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">}</span>
+<span class="o">+---+---+---+---+---+---+---+---+</span>
+  <span class="n">a</span>   <span class="n">b</span>           <span class="n">c</span>
 </pre></div>
 </div>
 <p>字符串和切片（slice）</p>
-<div class="highlight-python"><div class="highlight"><pre>+---------+---------+
-| pointer | len=5   | s = &quot;hello&quot;
-+---------+---------+
-  |
-  +---+---+---+---+---+
-  | h | e | l | l | o | [5]byte
-  +---+---+---+---+---+
-      |
-+---------+---------+
-| pointer | len=2   | sub = s[1:3]
-+---------+---------+
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">+---------+---------+</span>
+<span class="o">|</span> <span class="n">pointer</span> <span class="o">|</span> <span class="nb">len</span><span class="o">=</span><span class="mi">5</span>   <span class="o">|</span> <span class="n">s</span> <span class="o">=</span> <span class="s2">&quot;hello&quot;</span>
+<span class="o">+---------+---------+</span>
+  <span class="o">|</span>
+  <span class="o">+---+---+---+---+---+</span>
+  <span class="o">|</span> <span class="n">h</span> <span class="o">|</span> <span class="n">e</span> <span class="o">|</span> <span class="n">l</span> <span class="o">|</span> <span class="n">l</span> <span class="o">|</span> <span class="n">o</span> <span class="o">|</span> <span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="n">byte</span>
+  <span class="o">+---+---+---+---+---+</span>
+      <span class="o">|</span>
+<span class="o">+---------+---------+</span>
+<span class="o">|</span> <span class="n">pointer</span> <span class="o">|</span> <span class="nb">len</span><span class="o">=</span><span class="mi">2</span>   <span class="o">|</span> <span class="n">sub</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+<span class="o">+---------+---------+</span>
 
-+---------+---------+---------+
-| pointer | len=8   | cap=8   | x = []int{0,1,2,3,4,5,6,7}
-+---------+---------+---------+
-    |
-    +---+---+---+---+---+---+---+---+
-    | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | [8]int
-    +---+---+---+---+---+---+---+---+
-        |
-        +---------+---------+---------+
-        | pointer | len=2   | cap=5   | y = x[1:3:6]
-        +---------+---------+---------+
+<span class="o">+---------+---------+---------+</span>
+<span class="o">|</span> <span class="n">pointer</span> <span class="o">|</span> <span class="nb">len</span><span class="o">=</span><span class="mi">8</span>   <span class="o">|</span> <span class="n">cap</span><span class="o">=</span><span class="mi">8</span>   <span class="o">|</span> <span class="n">x</span> <span class="o">=</span> <span class="p">[]</span><span class="nb">int</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">}</span>
+<span class="o">+---------+---------+---------+</span>
+    <span class="o">|</span>
+    <span class="o">+---+---+---+---+---+---+---+---+</span>
+    <span class="o">|</span> <span class="mi">0</span> <span class="o">|</span> <span class="mi">1</span> <span class="o">|</span> <span class="mi">2</span> <span class="o">|</span> <span class="mi">3</span> <span class="o">|</span> <span class="mi">4</span> <span class="o">|</span> <span class="mi">5</span> <span class="o">|</span> <span class="mi">6</span> <span class="o">|</span> <span class="mi">7</span> <span class="o">|</span> <span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="nb">int</span>
+    <span class="o">+---+---+---+---+---+---+---+---+</span>
+        <span class="o">|</span>
+        <span class="o">+---------+---------+---------+</span>
+        <span class="o">|</span> <span class="n">pointer</span> <span class="o">|</span> <span class="nb">len</span><span class="o">=</span><span class="mi">2</span>   <span class="o">|</span> <span class="n">cap</span><span class="o">=</span><span class="mi">5</span>   <span class="o">|</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">:</span><span class="mi">6</span><span class="p">]</span>
+        <span class="o">+---------+---------+---------+</span>
 </pre></div>
 </div>
 <p>从上面可以看出，Go 在存储变量值时和 C 比较类似，就是存的 raw 数据。</p>
 <p>那么问题来了，既然变量值里没有保存类型指针之类的额外数据， <code class="docutils literal"><span class="pre">reflect.TypeOf(v)</span></code> 是怎么取得变量值的类型信息的呢？</p>
 <p>我们看一下 <code class="docutils literal"><span class="pre">reflect.TypeOf(v)</span></code> 的函数原型：</p>
-<div class="highlight-go"><div class="highlight"><pre><span class="kd">func</span> <span class="nx">TypeOf</span><span class="p">(</span><span class="nx">i</span> <span class="kd">interface</span><span class="p">{})</span> <span class="nx">Type</span>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">TypeOf</span><span class="p">(</span><span class="nx">i</span> <span class="kd">interface</span><span class="p">{})</span> <span class="nx">Type</span>
 </pre></div>
 </div>
 <p>从函数原型来看，答案应该就在这个 <em>interface{}</em> 里了 。</p>
@@ -101,7 +103,7 @@
 <h2>接口 interface 的实现<a class="headerlink" href="#interface" title="Permalink to this headline">¶</a></h2>
 <p>interface 是 Go 语言中类型系统的注入点。</p>
 <p>根据 interface 是否包含有 method，interface 用  <a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/runtime2.go#L143">iface</a>  和 <a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/runtime2.go#L148">eface</a> 这两种结构体来保存。eface 是不含 method 的 interface 结构，即 interface{} 。</p>
-<div class="highlight-go"><div class="highlight"><pre><span class="kd">type</span> <span class="nx">iface</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">iface</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">tab</span>  <span class="o">*</span><span class="nx">itab</span>
     <span class="nx">data</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span>
 <span class="p">}</span>
@@ -125,7 +127,7 @@
 </div>
 <p>iface/eface 中的 data 是指向实际值（value）的指针， <em>itab._type</em> 或者 <em>_type</em> 是指向类型信息的指针，Go 语言在编译的时候会将所有类型信息保存在可执行文件中，在运行时载入内存，最后在创建 interface{} 结构的时候将类型信息注入到 interface{} 结构中。 通过 <em>s.tab-&gt;type</em> 即可获取值（value）的类型信息。</p>
 <p>最后，我们用一段简单的代码看看 interface{} 具体是怎么工作的。</p>
-<div class="highlight-go"><div class="highlight"><pre><span class="c1">// test.go</span>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// test.go</span>
 <span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
@@ -137,11 +139,11 @@
 </pre></div>
 </div>
 <p>编译并打印语法树：</p>
-<div class="highlight-console"><div class="highlight"><pre><span class="gp">$</span> go tool compile -W test.go
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> go tool compile -W test.go
 </pre></div>
 </div>
 <p>语法树比较长，下面是相关部分简化并注释后的输出</p>
-<div class="highlight-python"><div class="highlight"><pre>// 还有一个 before walk main 是原始的语法树，after 是 golang 对语法树做了所有修改之后的最终语法树。
+<div class="highlight-default"><div class="highlight"><pre><span></span>// 还有一个 before walk main 是原始的语法树，after 是 golang 对语法树做了所有修改之后的最终语法树。
 after walk main
     // 声明一个 string 类型的变量 s
 .   DCL
@@ -230,7 +232,7 @@ after walk main
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">Blog</a></li>
+      <li>Previous: <a href="golang-internals-nil.html" title="previous chapter">Go 语言实现——nil</a></li>
       <li>Next: <a href="kafka-storage-internals.html" title="next chapter">Kafka的存储机制</a></li>
   </ul></li>
 </ul>
@@ -238,21 +240,18 @@ after walk main
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/golang-internals-variable.txt"
+      <li><a href="_sources/golang-internals-variable.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -263,11 +262,11 @@ after walk main
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="_sources/golang-internals-variable.txt"
+      <a href="_sources/golang-internals-variable.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

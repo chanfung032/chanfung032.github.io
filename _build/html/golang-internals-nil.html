@@ -1,38 +1,40 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Go 语言实现——nil &mdash; My Blog 1.0 documentation</title>
-    
+    <title>Go 语言实现——nil &#8212; My Blog 1.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
         VERSION:     '1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="My Blog 1.0 documentation" href="index.html" />
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Go 语言实现——数据结构" href="golang-internals-variable.html" />
     <link rel="prev" title="Blog" href="index.html" />
    
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body>
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -43,7 +45,7 @@
 <h1>Go 语言实现——nil<a class="headerlink" href="#go-nil" title="Permalink to this headline">¶</a></h1>
 <p>按照 Go 语言规范，任何类型在未初始化时都对应一个零值，boolean 是 false，int 是 0，而 pointer, function, interface, slice, channel, map 的零值是 nil <a class="footnote-reference" href="#id4" id="id1">[1]</a> 。</p>
 <p>我们用下面这段简单的程序来看下各种类型的 nil 到底是什么。</p>
-<div class="highlight-go"><div class="highlight"><pre><span class="kn">package</span> <span class="nx">main</span>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="nx">p</span> <span class="o">*</span><span class="kt">int</span>
@@ -67,26 +69,26 @@
 </pre></div>
 </div>
 <p>运行的输出结果（// 后是注释）：</p>
-<div class="highlight-python"><div class="highlight"><pre>0x0         // pointer
-0x0         // function
-(0x0,0x0)   // interface
-[0/0]0x0    // slice
-0x0         // map
-0x0         // channel
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mh">0x0</span>         <span class="o">//</span> <span class="n">pointer</span>
+<span class="mh">0x0</span>         <span class="o">//</span> <span class="n">function</span>
+<span class="p">(</span><span class="mh">0x0</span><span class="p">,</span><span class="mh">0x0</span><span class="p">)</span>   <span class="o">//</span> <span class="n">interface</span>
+<span class="p">[</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span><span class="p">]</span><span class="mh">0x0</span>    <span class="o">//</span> <span class="nb">slice</span>
+<span class="mh">0x0</span>         <span class="o">//</span> <span class="nb">map</span>
+<span class="mh">0x0</span>         <span class="o">//</span> <span class="n">channel</span>
 </pre></div>
 </div>
 <p>反编译可以看到 print 语句被翻译为了以下调用：</p>
-<div class="highlight-python"><div class="highlight"><pre>    test.go:9       0x782   e800000000              CALL 0x787              [1:5]R_CALL:runtime.printpointer
-...
-    test.go:12      0x7a8   e800000000              CALL 0x7ad              [1:5]R_CALL:runtime.printpointer
-    ...
-    test.go:15      0x7e1   e800000000              CALL 0x7e6              [1:5]R_CALL:runtime.printeface
-    ...
-    test.go:18      0x82d   e800000000              CALL 0x832              [1:5]R_CALL:runtime.printslice
-...
-    test.go:21      0x853   e800000000              CALL 0x858              [1:5]R_CALL:runtime.printpointer
-...
-    test.go:24      0x879   e800000000              CALL 0x87e              [1:5]R_CALL:runtime.printpointer
+<div class="highlight-default"><div class="highlight"><pre><span></span>    <span class="n">test</span><span class="o">.</span><span class="n">go</span><span class="p">:</span><span class="mi">9</span>       <span class="mh">0x782</span>   <span class="n">e800000000</span>              <span class="n">CALL</span> <span class="mh">0x787</span>              <span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span><span class="n">R_CALL</span><span class="p">:</span><span class="n">runtime</span><span class="o">.</span><span class="n">printpointer</span>
+<span class="o">...</span>
+    <span class="n">test</span><span class="o">.</span><span class="n">go</span><span class="p">:</span><span class="mi">12</span>      <span class="mh">0x7a8</span>   <span class="n">e800000000</span>              <span class="n">CALL</span> <span class="mh">0x7ad</span>              <span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span><span class="n">R_CALL</span><span class="p">:</span><span class="n">runtime</span><span class="o">.</span><span class="n">printpointer</span>
+    <span class="o">...</span>
+    <span class="n">test</span><span class="o">.</span><span class="n">go</span><span class="p">:</span><span class="mi">15</span>      <span class="mh">0x7e1</span>   <span class="n">e800000000</span>              <span class="n">CALL</span> <span class="mh">0x7e6</span>              <span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span><span class="n">R_CALL</span><span class="p">:</span><span class="n">runtime</span><span class="o">.</span><span class="n">printeface</span>
+    <span class="o">...</span>
+    <span class="n">test</span><span class="o">.</span><span class="n">go</span><span class="p">:</span><span class="mi">18</span>      <span class="mh">0x82d</span>   <span class="n">e800000000</span>              <span class="n">CALL</span> <span class="mh">0x832</span>              <span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span><span class="n">R_CALL</span><span class="p">:</span><span class="n">runtime</span><span class="o">.</span><span class="n">printslice</span>
+<span class="o">...</span>
+    <span class="n">test</span><span class="o">.</span><span class="n">go</span><span class="p">:</span><span class="mi">21</span>      <span class="mh">0x853</span>   <span class="n">e800000000</span>              <span class="n">CALL</span> <span class="mh">0x858</span>              <span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span><span class="n">R_CALL</span><span class="p">:</span><span class="n">runtime</span><span class="o">.</span><span class="n">printpointer</span>
+<span class="o">...</span>
+    <span class="n">test</span><span class="o">.</span><span class="n">go</span><span class="p">:</span><span class="mi">24</span>      <span class="mh">0x879</span>   <span class="n">e800000000</span>              <span class="n">CALL</span> <span class="mh">0x87e</span>              <span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span><span class="n">R_CALL</span><span class="p">:</span><span class="n">runtime</span><span class="o">.</span><span class="n">printpointer</span>
 </pre></div>
 </div>
 <p>打印的实现代码在 src/runtime/print.go 中 <a class="footnote-reference" href="#id5" id="id2">[2]</a> 。</p>
@@ -96,7 +98,7 @@
 <li>slice, interface 是各自的结构体中所有的值都是 0 。</li>
 </ul>
 <p>最后，我们来看看 Go 官方文档 FAQ 里提到的一个问题 <a class="footnote-reference" href="#id6" id="id3">[3]</a> ：</p>
-<div class="highlight-go"><div class="highlight"><pre><span class="kd">type</span> <span class="nx">MyError</span> <span class="kd">struct</span><span class="p">{}</span>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">MyError</span> <span class="kd">struct</span><span class="p">{}</span>
 
 <span class="kd">func</span> <span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">MyError</span><span class="p">)</span> <span class="nx">Error</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
     <span class="k">return</span> <span class="s">&quot;&quot;</span>
@@ -150,21 +152,18 @@
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/golang-internals-nil.txt"
+      <li><a href="_sources/golang-internals-nil.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -175,11 +174,11 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="_sources/golang-internals-nil.txt"
+      <a href="_sources/golang-internals-nil.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
