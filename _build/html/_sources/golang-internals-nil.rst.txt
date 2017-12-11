@@ -40,17 +40,17 @@ Go 语言实现——nil
 
 反编译可以看到 print 语句被翻译为了以下调用： ::
 
-	test.go:9	0x782	e800000000		CALL 0x787		[1:5]R_CALL:runtime.printpointer
+    test.go:9   0x782 e800000000 CALL 0x787 [1:5]R_CALL:runtime.printpointer
     ...
-	test.go:12	0x7a8	e800000000		CALL 0x7ad		[1:5]R_CALL:runtime.printpointer
-	...
-	test.go:15	0x7e1	e800000000		CALL 0x7e6		[1:5]R_CALL:runtime.printeface
-	...
-	test.go:18	0x82d	e800000000		CALL 0x832		[1:5]R_CALL:runtime.printslice
+    test.go:12  0x7a8 e800000000 CALL 0x7ad [1:5]R_CALL:runtime.printpointer
     ...
-	test.go:21	0x853	e800000000		CALL 0x858		[1:5]R_CALL:runtime.printpointer
+    test.go:15  0x7e1 e800000000 CALL 0x7e6 [1:5]R_CALL:runtime.printeface
     ...
-	test.go:24	0x879	e800000000		CALL 0x87e		[1:5]R_CALL:runtime.printpointer
+    test.go:18  0x82d e800000000 CALL 0x832 [1:5]R_CALL:runtime.printslice
+    ...
+    test.go:21  0x853 e800000000 CALL 0x858 [1:5]R_CALL:runtime.printpointer
+    ...
+    test.go:24  0x879 e800000000 CALL 0x87e [1:5]R_CALL:runtime.printpointer
 
 打印的实现代码在 src/runtime/print.go 中 [2]_ 。
 
