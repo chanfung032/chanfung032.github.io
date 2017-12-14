@@ -4,6 +4,7 @@ Blog
 .. toctree::
    :maxdepth: 1
 
+   golang-internals-function.rst
    golang-internals-nil.rst
    golang-internals-variable.rst
    kafka-storage-internals.rst
