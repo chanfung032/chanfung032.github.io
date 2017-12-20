@@ -1,0 +1,292 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Go 语言实现——启动过程 &#8212; My Blog 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Go 语言实现——函数" href="golang-internals-function.html" />
+    <link rel="prev" title="Blog" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="go">
+<h1>Go 语言实现——启动过程<a class="headerlink" href="#go" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> gdb <span class="nb">test</span>
+<span class="go">...</span>
+<span class="go">(gdb) info files</span>
+<span class="go">Symbols from &quot;/root/test&quot;.</span>
+<span class="go">Local exec file:</span>
+<span class="go">    `/root/test&#39;, file type elf64-x86-64.</span>
+<span class="go">    Entry point: 0x44bb80</span>
+<span class="go">    ...</span>
+<span class="go">(gdb) b *0x44bb80</span>
+</pre></div>
+</div>
+<p>用 gdb 跟踪一下 Go 程序启动阶段的执行，可以得到其执行路径大致如下：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>➜ _rt0_amd64_linux () at src/runtime/rt0_linux_amd64.s:8
+  ➜ main () at src/runtime/rt0_linux_amd64.s:73
+    ➜ runtime.rt0_go () at src/runtime/asm_amd64.s:12
+</pre></div>
+</div>
+<p>前面两个函数做的事情比较简单，就是保存一下（argc，argv）到（SI，DI）寄存器，然后跳转到 <em>runtime·rt0_go</em> 函数执行。</p>
+<div class="highlight-asm"><div class="highlight"><pre><span></span>TEXT _rt0_amd64_linux(SB),NOSPLIT,$-8
+    LEAQ  8(SP), SI // argv
+    MOVQ  0(SP), DI // argc
+    MOVQ  $main(SB), AX
+    JMP   AX
+TEXT main(SB),NOSPLIT,$-8
+    MOVQ  $runtime·rt0_go(SB), AX
+    JMP   AX
+</pre></div>
+</div>
+<p><em>runtime·rt0_go</em> 是一个比较复杂的函数，这里会完成所有的初始化工作并开始程序的执行，它的逻辑大致如下：</p>
+<ol class="arabic simple">
+<li>初始化 root goroutine 的运行环境，为执行 Go 代码做好准备（类似于操作系统一开始会用汇编初始化好 C 运行环境然后跳到 C 代码执行）。</li>
+<li>获取 cpuinfo ，初始化相关的一些 runtime 标志变量，比如： <em>runtime·support_sse2</em> 。</li>
+<li>调用 args() 获取一些跟内核相关的信息，比如内核的 page size 等。这些数据存在 argc, argv 之后一段叫做 <a class="reference external" href="https://lwn.net/Articles/519085/">auxv</a> 的数据里。</li>
+<li>调用 osinit() ，初始化 ncpu 。</li>
+<li><dl class="first docutils">
+<dt>调用 schedinit() 初始化各种子系统。</dt>
+<dd><ul class="first last">
+<li>栈、内存管理初始化</li>
+<li>调度器初始化</li>
+<li>将命令行参数和环境变量保存到 slice 中，这样 os.Args() 和 os.Environ() 只要返回这个 slice 就行了</li>
+<li>gc 初始化</li>
+<li>…</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li>创建一个新的 goroutine，其执行函数为 <em>runtime·main</em> ，这个函数最终会调用 <em>main·main</em> 也就是用户代码的入口函数。</li>
+<li>调用 <em>runtime·mstart()</em> 让线程开始调度执行 goroutine 。</li>
+</ol>
+<p>从第 1 步之后的各种初始化基本都是用 Go 写的，所以系统一开始得先准备一个 root goroutine 的执行环境出来用来执行这部分初始化代码。这个主要涉及 3 个数据：</p>
+<ul class="simple">
+<li>g0，类型为 g，root goroutine 的关联数据，主要是需要初始化执行栈的相关变量。</li>
+<li>m0，类型为 m，主线程的关联数据，主要 m0.tls ，线程的 TLS 数据。</li>
+<li>TLS，go 代码中很多地方需要获取当前运行的 goroutine 对应的 g 数据，这个指针存在线程的 TLS 里的。</li>
+</ul>
+<p><em>runtime·rt0_go</em> 的代码使用汇编写的，下面是其大致的伪代码：</p>
+<p><a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/asm_amd64.s#L10">https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/asm_amd64.s#L10</a></p>
+<div class="highlight-go"><div class="highlight"><pre><span></span>// proc.go
+var (
+    m0           m
+    g0           g
+)
+
+// runtime2.go
+type g struct {
+    // goroutine 的栈空间内存范围: [stack.lo, stack.hi).
+    stack       stack
+    // 栈空间一开始分配是比较小的，SP 指针小于 stackguard0 后说明栈空间不够，要 realloc 了。
+    stackguard0 uintptr
+    stackguard1 uintptr
+    ...
+}
+
+type m struct
+
+// 下面是 asm_amd64.s 中 runtime·rt0_go 的伪代码
+// 初始化 root goroutine 执行栈的相关变量。
+g0.stack.hi = (SP)
+g0.stack.lo = (-64*1024+104)(SP)
+g0.stackguard0 = g0.stack.lo
+g0.stackguard1 = g0.stack.lo
+
+// 设置当前线程的 TLS 指向 m0.tls
+arch_prctl(ARCH_SET_FS, m0.tls)
+
+// 让 m0.tls 指向 g0 也就是让当前线程的 TLS 指向 g0
+// go 编译出的代码中很多地方会通过类似下面的代码来获取当前执行的 goroutine 的相关数据
+//   get_tls(CX)
+//   MOVQ  g(CX), AX     // Move g into AX.
+//   MOVQ  g_m(AX), BX   // Move g.m into BX.
+// https://golang.org/doc/asm#amd64
+m0.tls = &amp;g0
+
+// 继续初始化 m0 和 g0 这两个变量
+m0.g0 = &amp;g0
+g0.m = &amp;m0
+
+// 一些环境检查
+runtime·check()
+// 从 auxv 数据里读取一些有用的信息
+runtime·args()
+
+// 初始化 ncpu
+runtime·osinit()
+// 各种子系统的初始化
+runtime·schedinit()
+
+// 创建一个新的 goroutine ，执行函数为 runtime.main
+runtime.newproc(0, runtime.main)
+
+// kick start the world
+runtime·mstart()
+</pre></div>
+</div>
+<p><em>runtime·schedinit</em> 的缩略代码：</p>
+<p><a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/proc.go#L468">https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/proc.go#L468</a></p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">schedinit</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// 获取 root goroutine 的 g 指针 也就是 &amp;g0</span>
+    <span class="nx">_g_</span> <span class="o">:=</span> <span class="nx">getg</span><span class="p">()</span>
+
+    <span class="c1">// 最大线程数为 10000</span>
+    <span class="nx">sched</span><span class="p">.</span><span class="nx">maxmcount</span> <span class="p">=</span> <span class="mi">10000</span>
+
+    <span class="nx">tracebackinit</span><span class="p">()</span>
+    <span class="nx">moduledataverify</span><span class="p">()</span>
+    <span class="c1">// 栈和内存管理的初始化</span>
+    <span class="nx">stackinit</span><span class="p">()</span>
+    <span class="nx">mallocinit</span><span class="p">()</span>
+    <span class="c1">// Go 中 m 指的就是线程，这里也就是初始化调度器</span>
+    <span class="nx">mcommoninit</span><span class="p">(</span><span class="nx">_g_</span><span class="p">.</span><span class="nx">m</span><span class="p">)</span>
+    <span class="c1">// 初始化 hash 算法，go 里 map 使用 hashmap 实现的，所以这行代码之前是不能用 map 的。</span>
+    <span class="nx">alginit</span><span class="p">()</span>
+    <span class="nx">modulesinit</span><span class="p">()</span>
+    <span class="nx">typelinksinit</span><span class="p">()</span>
+    <span class="nx">itabsinit</span><span class="p">()</span>
+
+    <span class="nx">msigsave</span><span class="p">(</span><span class="nx">_g_</span><span class="p">.</span><span class="nx">m</span><span class="p">)</span>
+    <span class="nx">initSigmask</span> <span class="p">=</span> <span class="nx">_g_</span><span class="p">.</span><span class="nx">m</span><span class="p">.</span><span class="nx">sigmask</span>
+
+    <span class="c1">// 将命令行参数和环境变量保存到 slice 中，这样 os.Args() 和 os.Environ() 只要返回这个 slice 就行了</span>
+    <span class="nx">goargs</span><span class="p">()</span>
+    <span class="nx">goenvs</span><span class="p">()</span>
+    <span class="nx">parsedebugvars</span><span class="p">()</span>
+    <span class="c1">// 初始化 gc</span>
+    <span class="nx">gcinit</span><span class="p">()</span>
+
+    <span class="nx">sched</span><span class="p">.</span><span class="nx">lastpoll</span> <span class="p">=</span> <span class="nb">uint64</span><span class="p">(</span><span class="nx">nanotime</span><span class="p">())</span>
+    <span class="c1">// 设置并发数，所以代码中不用再写 runtime.GOMAXPROCS(n) 了，因为默认已经初始化好了</span>
+    <span class="nx">procs</span> <span class="o">:=</span> <span class="nx">ncpu</span>
+    <span class="k">if</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">atoi32</span><span class="p">(</span><span class="nx">gogetenv</span><span class="p">(</span><span class="s">&quot;GOMAXPROCS&quot;</span><span class="p">));</span> <span class="nx">ok</span> <span class="o">&amp;&amp;</span> <span class="nx">n</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="nx">procs</span> <span class="p">=</span> <span class="nx">n</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nx">procs</span> <span class="p">&gt;</span> <span class="nx">_MaxGomaxprocs</span> <span class="p">{</span>
+        <span class="nx">procs</span> <span class="p">=</span> <span class="nx">_MaxGomaxprocs</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nx">procresize</span><span class="p">(</span><span class="nx">procs</span><span class="p">)</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">throw</span><span class="p">(</span><span class="s">&quot;unknown runnable goroutine during bootstrap&quot;</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><em>runtime·main</em> 函数的缩略代码：</p>
+<p><a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/proc.go#L109">https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/proc.go#L109</a></p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// 创建出一个单独的物理线程来执行 sysmon ，这个函数和调度相关</span>
+    <span class="nx">systemstack</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">newm</span><span class="p">(</span><span class="nx">sysmon</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+    <span class="p">})</span>
+
+    <span class="c1">// 执行 runtime 包里的所有 init 函数</span>
+    <span class="nx">runtime_init</span><span class="p">()</span>
+
+    <span class="c1">// 开启 gc</span>
+    <span class="nx">gcenable</span><span class="p">()</span>
+
+    <span class="c1">// 执行所有用户包（包括标准库）的init函数</span>
+    <span class="nx">fn</span> <span class="o">:=</span> <span class="nx">main_init</span>
+    <span class="nx">fn</span><span class="p">()</span>
+
+    <span class="c1">// 执行 main.main() 函数，也就是用户代码的入口函数</span>
+    <span class="nx">fn</span> <span class="p">=</span> <span class="nx">main_main</span>
+    <span class="nx">fn</span><span class="p">()</span>
+
+    <span class="nx">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Go 的初始化过程是个非常复杂的过程，这里我们只是简单的理了一下其大致的流程，详细的分析在后续的各个子系统的分析中再说。</p>
+<p>参考：</p>
+<ul class="simple">
+<li><a class="reference external" href="https://golang.org/doc/gdb">https://golang.org/doc/gdb</a></li>
+<li><a class="reference external" href="https://blog.altoros.com/golang-internals-part-5-runtime-bootstrap-process.html">https://blog.altoros.com/golang-internals-part-5-runtime-bootstrap-process.html</a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Blog</a></li>
+      <li>Next: <a href="golang-internals-function.html" title="next chapter">Go 语言实现——函数</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/golang-internals-bootstrap.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/golang-internals-bootstrap.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
