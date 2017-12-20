@@ -2,3 +2,4 @@ _build/doctrees/
 _build/html/.doctrees/
 _build/html/searchindex.js
 _build/html/objects.inv
+_*.rst
