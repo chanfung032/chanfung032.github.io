@@ -4,6 +4,7 @@ Blog
 .. toctree::
    :maxdepth: 1
 
+   golang-internals-goroutine.rst
    golang-internals-bootstrap.rst
    golang-internals-function.rst
    golang-internals-nil.rst
