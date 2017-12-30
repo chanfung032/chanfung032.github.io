@@ -193,5 +193,5 @@ pseudoxml:
 
 publish: html
 	touch _build/html/.nojekyll
-	git add _build/html && git commit -m "Update _build/html"
+	-git add _build/html && git commit -m "Update _build/html"
 	git subtree push  --prefix _build/html origin master
