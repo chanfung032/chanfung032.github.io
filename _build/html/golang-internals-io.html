@@ -1,0 +1,271 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Go 语言实现——网络 IO &#8212; My Blog 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Go 语言实现——goroutine" href="golang-internals-goroutine.html" />
+    <link rel="prev" title="Blog" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="go-io">
+<h1>Go 语言实现——网络 IO<a class="headerlink" href="#go-io" title="Permalink to this headline">¶</a></h1>
+<p>Go 的 net 包提供的是阻塞的接口，但在底层实现上却是非阻塞的，类似于 Python 的 gevent 库。</p>
+<p>Go 在 runtime 底层实现了一个 netpoller，net 包里的网络函数在需要阻塞的地方会调用 runtime 提供的接口向 netpoller 注册对应 fd 的读写事件并将当前 goroutine 从 running 状态切换成 waiting 状态挂起，netpoller 后台有一个线程不断的 poll 所有注册的 fd，在事件触发后再将其关联的 goroutine 从 waiting 状态切换成 runnable 状态并加到全局 goroutine 运行队列中去。</p>
+<p>从非阻塞到阻塞相关的封装主要涉及以下三个结构体：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// net/fd_unix.go</span>
+<span class="c1">// 封装了 socket fd 相关的 connect、read、write、close 等接口</span>
+<span class="c1">// 提供给 net 包更上层的封装使用</span>
+<span class="kd">type</span> <span class="nx">netFD</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">pfd</span> <span class="nx">poll</span><span class="p">.</span><span class="nx">FD</span>
+<span class="p">}</span>
+
+<span class="c1">// internal/poll/fd_unix.go</span>
+<span class="c1">// 对 runtime netpoller 进一步的封装</span>
+<span class="kd">type</span> <span class="nx">FD</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">Sysfd</span> <span class="kt">int</span>
+    <span class="nx">pd</span> <span class="nx">pollDesc</span>
+<span class="p">}</span>
+
+<span class="c1">// runtime/netpoll.go</span>
+<span class="c1">// 底层 netpoller 用数据结构</span>
+<span class="kd">type</span> <span class="nx">pollDesc</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">link</span> <span class="o">*</span><span class="nx">pollDesc</span>
+    <span class="nx">fd</span>      <span class="kt">uintptr</span>
+    <span class="nx">rg</span>      <span class="kt">uintptr</span> <span class="c1">// pdReady, pdWait, 等待读事件的 goroutine 或 nil</span>
+    <span class="nx">wg</span>      <span class="kt">uintptr</span> <span class="c1">// pdReady, pdWait, 等待写事件的 goroutine 或 nil</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>netFD 这个结构体由 socket 接口创建：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// net/sock_posix.go</span>
+<span class="kd">func</span> <span class="nx">socket</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">net</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">family</span><span class="p">,</span> <span class="nx">sotype</span><span class="p">,</span> <span class="nx">proto</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">ipv6only</span> <span class="kt">bool</span><span class="p">,</span> <span class="nx">laddr</span><span class="p">,</span> <span class="nx">raddr</span> <span class="nx">sockaddr</span><span class="p">)</span> <span class="p">(</span><span class="nx">fd</span> <span class="o">*</span><span class="nx">netFD</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// sysSocket 函数里会调用 socket 系统调用创建一个新的网络 fd</span>
+    <span class="c1">// 并将其设置成非阻塞的返回。</span>
+    <span class="nx">sysfd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">sysSocket</span><span class="p">(</span><span class="nx">family</span><span class="p">,</span> <span class="nx">sotype</span><span class="p">,</span> <span class="nx">proto</span><span class="p">)</span>
+    <span class="c1">// 将网络 fd 封装成 netFD 结构体返回。</span>
+    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">netFD</span><span class="p">{</span>
+        <span class="nx">pfd</span><span class="p">:</span> <span class="nx">poll</span><span class="p">.</span><span class="nx">FD</span><span class="p">{</span>
+            <span class="nx">Sysfd</span><span class="p">:</span>         <span class="nx">sysfd</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">},</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>因为 socket 创建的 netFD 是非阻塞的，netFD 实现各个接口时原本调用阻塞函数的地方后面需要插入等待 fd 相关事件发生的代码，从而将非阻塞的 fd 操作转换成阻塞的形式，以 netFD.connect 为例：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">fd</span> <span class="o">*</span><span class="nx">netFD</span><span class="p">)</span> <span class="nx">connect</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">la</span><span class="p">,</span> <span class="nx">ra</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">Sockaddr</span><span class="p">)</span> <span class="p">(</span><span class="nx">rsa</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">Sockaddr</span><span class="p">,</span> <span class="nx">ret</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// connectFunc = syscall.Connect</span>
+    <span class="k">switch</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">connectFunc</span><span class="p">(</span><span class="nx">fd</span><span class="p">.</span><span class="nx">pfd</span><span class="p">.</span><span class="nx">Sysfd</span><span class="p">,</span> <span class="nx">ra</span><span class="p">);</span> <span class="nx">err</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EINPROGRESS</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EALREADY</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EINTR</span><span class="p">:</span>
+    <span class="k">case</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EISCONN</span><span class="p">:</span>
+        <span class="c1">// 连接成功，向 netpoller 注册这个 fd 的所有读写事件，返回</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fd</span><span class="p">.</span><span class="nx">pfd</span><span class="p">.</span><span class="nx">Init</span><span class="p">(</span><span class="nx">fd</span><span class="p">.</span><span class="nx">net</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span>
+    <span class="k">default</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">NewSyscallError</span><span class="p">(</span><span class="s">&quot;connect&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="c1">// 向 netpoller 注册这个 fd 的所有读写事件</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fd</span><span class="p">.</span><span class="nx">pfd</span><span class="p">.</span><span class="nx">Init</span><span class="p">(</span><span class="nx">fd</span><span class="p">.</span><span class="nx">net</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="p">{</span>
+        <span class="c1">// 挂起本 goroutine，等待 fd 的写事件</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fd</span><span class="p">.</span><span class="nx">pfd</span><span class="p">.</span><span class="nx">WaitWrite</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+        <span class="p">}</span>
+        <span class="nx">nerr</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">getsockoptIntFunc</span><span class="p">(</span><span class="nx">fd</span><span class="p">.</span><span class="nx">pfd</span><span class="p">.</span><span class="nx">Sysfd</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">SOL_SOCKET</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">SO_ERROR</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">NewSyscallError</span><span class="p">(</span><span class="s">&quot;getsockopt&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="k">switch</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">Errno</span><span class="p">(</span><span class="nx">nerr</span><span class="p">);</span> <span class="nx">err</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EINPROGRESS</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EALREADY</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EINTR</span><span class="p">:</span>
+            <span class="c1">// 还没连接上，继续等待</span>
+        <span class="k">case</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EISCONN</span><span class="p">:</span>
+            <span class="c1">// 连接已经建立，返回</span>
+            <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="kc">nil</span>
+        <span class="k">default</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">NewSyscallError</span><span class="p">(</span><span class="s">&quot;getsockopt&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>这里，和 “注册事件，设置 callback，return” 的方式不一样， fd.pfd.WaitWrite() 这个函数调用会调用 Go 调度的接口“将 goroutine 挂起，直到等待的事件发生后再从挂起的地方继续向下执行”。</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// internal/poll/fd_unix.go</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">fd</span> <span class="o">*</span><span class="nx">FD</span><span class="p">)</span> <span class="nx">Init</span><span class="p">(</span><span class="nx">net</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">pollable</span> <span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">fd</span><span class="p">.</span><span class="nx">pd</span><span class="p">.</span><span class="nx">init</span><span class="p">(</span><span class="nx">fd</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="c1">// internal/poll/fd_poll_runtime.go</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">pd</span> <span class="o">*</span><span class="nx">pollDesc</span><span class="p">)</span> <span class="nx">init</span><span class="p">(</span><span class="nx">fd</span> <span class="o">*</span><span class="nx">FD</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="c1">// var serverInit sync.Once</span>
+    <span class="c1">// 如果 netpoller 还没初始化，先初始化</span>
+    <span class="nx">serverInit</span><span class="p">.</span><span class="nx">Do</span><span class="p">(</span><span class="nx">runtime_pollServerInit</span><span class="p">)</span>
+    <span class="c1">// 初始化 fd.pd 结构体，并调用 epoll_ctrl 注册 fd.Sysfd 相关的事件</span>
+    <span class="c1">// EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET</span>
+    <span class="c1">// runtime_pollOpen 是 runtime/netpoll.go 提供的接口</span>
+    <span class="nx">ctx</span><span class="p">,</span> <span class="nx">errno</span> <span class="o">:=</span> <span class="nx">runtime_pollOpen</span><span class="p">(</span><span class="nb">uintptr</span><span class="p">(</span><span class="nx">fd</span><span class="p">.</span><span class="nx">Sysfd</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nx">errno</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">Errno</span><span class="p">(</span><span class="nx">errno</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="c1">// internal/poll/fd_unix.go</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">fd</span> <span class="o">*</span><span class="nx">FD</span><span class="p">)</span> <span class="nx">WaitWrite</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">fd</span><span class="p">.</span><span class="nx">pd</span><span class="p">.</span><span class="nx">waitWrite</span><span class="p">(</span><span class="nx">fd</span><span class="p">.</span><span class="nx">isFile</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="c1">// internal/poll/fd_poll_runtime.go</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">pd</span> <span class="o">*</span><span class="nx">pollDesc</span><span class="p">)</span> <span class="nx">waitWrite</span><span class="p">(</span><span class="nx">isFile</span> <span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">pd</span><span class="p">.</span><span class="nx">wait</span><span class="p">(</span><span class="sc">&#39;w&#39;</span><span class="p">,</span> <span class="nx">isFile</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">pd</span> <span class="o">*</span><span class="nx">pollDesc</span><span class="p">)</span> <span class="nx">waitCanceled</span><span class="p">(</span><span class="nx">mode</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">runtime_pollWaitCanceled</span><span class="p">(</span><span class="nx">pd</span><span class="p">.</span><span class="nx">runtimeCtx</span><span class="p">,</span> <span class="nx">mode</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="c1">// runtime/netpoll.go</span>
+<span class="kd">func</span> <span class="nx">poll_runtime_pollWaitCanceled</span><span class="p">(</span><span class="nx">pd</span> <span class="o">*</span><span class="nx">pollDesc</span><span class="p">,</span> <span class="nx">mode</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">!</span><span class="nx">netpollblock</span><span class="p">(</span><span class="nx">pd</span><span class="p">,</span> <span class="nb">int32</span><span class="p">(</span><span class="nx">mode</span><span class="p">),</span> <span class="kc">true</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="kd">func</span> <span class="nx">netpollblock</span><span class="p">(</span><span class="nx">pd</span> <span class="o">*</span><span class="nx">pollDesc</span><span class="p">,</span> <span class="nx">mode</span> <span class="kt">int32</span><span class="p">,</span> <span class="nx">waitio</span> <span class="kt">bool</span><span class="p">)</span> <span class="kt">bool</span> <span class="p">{</span>
+    <span class="nx">gpp</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">pd</span><span class="p">.</span><span class="nx">rg</span>
+    <span class="k">if</span> <span class="nx">mode</span> <span class="o">==</span> <span class="sc">&#39;w&#39;</span> <span class="p">{</span>
+        <span class="nx">gpp</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">pd</span><span class="p">.</span><span class="nx">wg</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="p">{</span>
+        <span class="nx">old</span> <span class="o">:=</span> <span class="o">*</span><span class="nx">gpp</span>
+        <span class="c1">// 如果等待的事件已发生，直接返回</span>
+        <span class="c1">// netpoller 会 poll fd 的所有事件，并不只是当前等待的事件</span>
+        <span class="k">if</span> <span class="nx">old</span> <span class="o">==</span> <span class="nx">pdReady</span> <span class="p">{</span>
+            <span class="o">*</span><span class="nx">gpp</span> <span class="p">=</span> <span class="mi">0</span>
+            <span class="k">return</span> <span class="kc">true</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nx">Casuintptr</span><span class="p">(</span><span class="nx">gpp</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">pdWait</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">break</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="nx">waitio</span> <span class="o">||</span> <span class="nx">netpollcheckerr</span><span class="p">(</span><span class="nx">pd</span><span class="p">,</span> <span class="nx">mode</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+        <span class="c1">// func netpollblockcommit () {</span>
+        <span class="c1">//   return atomic.Casuintptr((*uintptr)(gpp), pdWait, uintptr(unsafe.Pointer(gp)))</span>
+        <span class="c1">// }</span>
+        <span class="c1">// 调用 netpollblockcommit 将当前 goroutine 的 g 指针 赋值给 gpp</span>
+        <span class="c1">// 如果 gpp 不是 pdWait，赋值失败，说明事件已经发生了，直接返回</span>
+        <span class="c1">// 否则挂起当前 goroutine，直到下次调度到执行再返回。</span>
+        <span class="c1">// gopark 是 runtime/proc.go 中提供的。</span>
+        <span class="nx">gopark</span><span class="p">(</span><span class="nx">netpollblockcommit</span><span class="p">,</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="nx">gpp</span><span class="p">),</span> <span class="s">&quot;IO wait&quot;</span><span class="p">,</span> <span class="nx">traceEvGoBlockNet</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">old</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nx">Xchguintptr</span><span class="p">(</span><span class="nx">gpp</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="c1">// 返回等待的事件是不是已经 ready</span>
+    <span class="k">return</span> <span class="nx">old</span> <span class="o">==</span> <span class="nx">pdReady</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>最后，<em>sysmon</em> 中每隔一段时间会调用 netpoll poll 所有注册的 fd，并将有事件发生的 fd 的关联的 goroutine 重新加入到可执行队列中。</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">sysmon</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">{</span>
+        <span class="nx">lastpoll</span> <span class="o">:=</span> <span class="nb">int64</span><span class="p">(</span><span class="nx">atomic</span><span class="p">.</span><span class="nx">Load64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">sched</span><span class="p">.</span><span class="nx">lastpoll</span><span class="p">))</span>
+        <span class="nx">now</span> <span class="o">:=</span> <span class="nx">nanotime</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nx">netpollinited</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="nx">lastpoll</span> <span class="o">!=</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">lastpoll</span><span class="o">+</span><span class="mi">10</span><span class="o">*</span><span class="mi">1000</span><span class="o">*</span><span class="mi">1000</span> <span class="p">&lt;</span> <span class="nx">now</span> <span class="p">{</span>
+            <span class="nx">atomic</span><span class="p">.</span><span class="nx">Cas64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">sched</span><span class="p">.</span><span class="nx">lastpoll</span><span class="p">,</span> <span class="nb">uint64</span><span class="p">(</span><span class="nx">lastpoll</span><span class="p">),</span> <span class="nb">uint64</span><span class="p">(</span><span class="nx">now</span><span class="p">))</span>
+            <span class="c1">// poll 是否有 fd 有事件发生，返回有事件发生 fd 关联的 goroutine 列表，每 10ms 执行一次</span>
+            <span class="nx">gp</span> <span class="o">:=</span> <span class="nx">netpoll</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nx">gp</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                <span class="c1">// 将 goroutine 改成 runnable 状态并插入到全局 goroutine 队列去</span>
+                <span class="nx">injectglist</span><span class="p">(</span><span class="nx">gp</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Blog</a></li>
+      <li>Next: <a href="golang-internals-goroutine.html" title="next chapter">Go 语言实现——goroutine</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/golang-internals-io.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/golang-internals-io.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -365,6 +365,9 @@ runtime.Gosched()
 
     // proc.go
     func Gosched() {
+        // mcall 会将当前函数的 pc（mcall 的返回地址）, sp 指针保存到 g.sched 中
+        // 然后执行 gosched_m 函数
+        // 这样 goroutine 被重新调度执行就等于从 mcall 函数中返回。
         mcall(gosched_m)
     }
 

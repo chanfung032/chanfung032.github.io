@@ -24,6 +24,8 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Go 语言实现——启动过程" href="golang-internals-bootstrap.html" />
+    <link rel="prev" title="Blog" href="index.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -373,6 +375,9 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
 <p><a class="reference external" href="https://golang.org/src/runtime/proc.go?s=8739:8753#L248">runtime.Gosched()</a> 做的就是主动放弃 goroutine 本次的运行机会，将自己放到队列后面去，等待下次再被调度到。</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// proc.go</span>
 <span class="kd">func</span> <span class="nx">Gosched</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// mcall 会将当前函数的 pc（mcall 的返回地址）, sp 指针保存到 g.sched 中</span>
+    <span class="c1">// 然后执行 gosched_m 函数</span>
+    <span class="c1">// 这样 goroutine 被重新调度执行就等于从 mcall 函数中返回。</span>
     <span class="nx">mcall</span><span class="p">(</span><span class="nx">gosched_m</span><span class="p">)</span>
 <span class="p">}</span>
 
@@ -419,6 +424,8 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Blog</a></li>
+      <li>Next: <a href="golang-internals-bootstrap.html" title="next chapter">Go 语言实现——启动过程</a></li>
   </ul></li>
 </ul>
 </div>
