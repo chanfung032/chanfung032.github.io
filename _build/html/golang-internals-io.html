@@ -85,7 +85,7 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>因为 socket 创建的 netFD 是非阻塞的，netFD 实现各个接口时原本调用阻塞函数的地方后面需要插入等待 fd 相关事件发生的代码，从而将非阻塞的 fd 操作转换成阻塞的形式，以 netFD.connect 为例：</p>
+<p>因为 socket 创建的 netFD 是非阻塞的，netFD 实现各个接口时在调用本该阻塞函数的地方后面需要插入等待 fd 相关事件发生的代码，从而将非阻塞的 fd 操作转换成阻塞的形式，以 netFD.connect 为例：</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">fd</span> <span class="o">*</span><span class="nx">netFD</span><span class="p">)</span> <span class="nx">connect</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">la</span><span class="p">,</span> <span class="nx">ra</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">Sockaddr</span><span class="p">)</span> <span class="p">(</span><span class="nx">rsa</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">Sockaddr</span><span class="p">,</span> <span class="nx">ret</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
     <span class="c1">// connectFunc = syscall.Connect</span>
     <span class="k">switch</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">connectFunc</span><span class="p">(</span><span class="nx">fd</span><span class="p">.</span><span class="nx">pfd</span><span class="p">.</span><span class="nx">Sysfd</span><span class="p">,</span> <span class="nx">ra</span><span class="p">);</span> <span class="nx">err</span> <span class="p">{</span>

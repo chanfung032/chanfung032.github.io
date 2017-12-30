@@ -49,7 +49,7 @@ netFD 这个结构体由 socket 接口创建：
         }, nil
     }
 
-因为 socket 创建的 netFD 是非阻塞的，netFD 实现各个接口时原本调用阻塞函数的地方后面需要插入等待 fd 相关事件发生的代码，从而将非阻塞的 fd 操作转换成阻塞的形式，以 netFD.connect 为例：
+因为 socket 创建的 netFD 是非阻塞的，netFD 实现各个接口时在调用本该阻塞函数的地方后面需要插入等待 fd 相关事件发生的代码，从而将非阻塞的 fd 操作转换成阻塞的形式，以 netFD.connect 为例：
 
 .. code-block:: go
 
