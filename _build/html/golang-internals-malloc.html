@@ -51,7 +51,7 @@
 <li>对于大于 32kb 的 object 分配器直接分配连续的 page。</li>
 <li>小于 32kb 的 small object 的分配稍微复杂一点。首先，分配器从 1~32k 定义了大约 70 个大小固定的 object class，分配器分配连续的 page 给这些 object class 去使用，然后要分配 small object 的时候，按其 object 大小向上寻找一个最接近其大小的 object class，从这个 object class 的 page 中切一块分配给这个 object。object class 中的 page 用完了再分配新的 page。</li>
 </ul>
-<p>分配器中分配出去的连续 page 叫做 span ，线程会缓存每个 object class 的一个 span 用于本线程的 small object 分配，这样大部分情况下 small object 的分配就不用加全局锁了。</p>
+<p>分配器中分配出去的连续 page 叫做 span ，线程会为每个 object class 缓存一个 span 用于本线程的 small object 分配，这样大部分情况下 small object 的分配就不用加全局锁了。</p>
 </div>
 <div class="section" id="id2">
 <h2>主要数据结构<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
@@ -102,8 +102,8 @@
 
 <span class="kd">type</span> <span class="nx">mcentral</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">spanclass</span> <span class="nx">spanClass</span>
-    <span class="nx">nonempty</span>  <span class="nx">mSpanList</span>   <span class="c1">// 还有空 slot 的 span 列表</span>
-    <span class="nx">empty</span>     <span class="nx">mSpanList</span>   <span class="c1">// 没有空 slot 的 span 列表</span>
+    <span class="nx">nonempty</span>  <span class="nx">mSpanList</span>   <span class="c1">// 没有空 slot 的 span 列表</span>
+    <span class="nx">empty</span>     <span class="nx">mSpanList</span>   <span class="c1">// 还有空 slot 的 span 列表</span>
 <span class="p">}</span>
 
 <span class="kd">type</span> <span class="nx">mspan</span> <span class="kd">struct</span> <span class="p">{</span>
@@ -475,7 +475,7 @@
         <span class="p">}</span>
     <span class="p">}</span>
 
-    <span class="c1">// 如果要 free 的 span 前面的 span 也是 free 的，合并</span>
+    <span class="c1">// 如果要 free 的 span 后面的 span 也是 free 的，合并</span>
     <span class="k">if</span> <span class="p">(</span><span class="nx">p</span> <span class="o">+</span> <span class="nx">s</span><span class="p">.</span><span class="nx">npages</span><span class="p">)</span> <span class="p">&lt;</span> <span class="nb">uintptr</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">h</span><span class="p">.</span><span class="nx">spans</span><span class="p">))</span> <span class="p">{</span>
         <span class="nx">after</span> <span class="o">:=</span> <span class="nx">h</span><span class="p">.</span><span class="nx">spans</span><span class="p">[</span><span class="nx">p</span><span class="o">+</span><span class="nx">s</span><span class="p">.</span><span class="nx">npages</span><span class="p">]</span>
         <span class="k">if</span> <span class="nx">after</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">after</span><span class="p">.</span><span class="nx">state</span> <span class="o">==</span> <span class="nx">_MSpanFree</span> <span class="p">{</span>

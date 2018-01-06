@@ -11,7 +11,7 @@ Go 语言的堆内存分配是基于 `TCMalloc <http://goog-perftools.sourceforg
 - 对于大于 32kb 的 object 分配器直接分配连续的 page。
 - 小于 32kb 的 small object 的分配稍微复杂一点。首先，分配器从 1~32k 定义了大约 70 个大小固定的 object class，分配器分配连续的 page 给这些 object class 去使用，然后要分配 small object 的时候，按其 object 大小向上寻找一个最接近其大小的 object class，从这个 object class 的 page 中切一块分配给这个 object。object class 中的 page 用完了再分配新的 page。
 
-分配器中分配出去的连续 page 叫做 span ，线程会缓存每个 object class 的一个 span 用于本线程的 small object 分配，这样大部分情况下 small object 的分配就不用加全局锁了。
+分配器中分配出去的连续 page 叫做 span ，线程会为每个 object class 缓存一个 span 用于本线程的 small object 分配，这样大部分情况下 small object 的分配就不用加全局锁了。
 
 主要数据结构
 --------------
@@ -65,8 +65,8 @@ Go 语言的堆内存分配是基于 `TCMalloc <http://goog-perftools.sourceforg
 
     type mcentral struct {
         spanclass spanClass
-        nonempty  mSpanList   // 还有空 slot 的 span 列表
-        empty     mSpanList   // 没有空 slot 的 span 列表
+        nonempty  mSpanList   // 没有空 slot 的 span 列表
+        empty     mSpanList   // 还有空 slot 的 span 列表
     }
 
     type mspan struct {
@@ -441,7 +441,7 @@ mheap 分配新的 span 的逻辑如下：
             }
         }
 
-        // 如果要 free 的 span 前面的 span 也是 free 的，合并
+        // 如果要 free 的 span 后面的 span 也是 free 的，合并
         if (p + s.npages) < uintptr(len(h.spans)) {
             after := h.spans[p+s.npages]
             if after != nil && after.state == _MSpanFree {
