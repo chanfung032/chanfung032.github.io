@@ -1,0 +1,481 @@
+Go 语言实现——内存管理
+========================
+
+概述
+-----------
+
+Go 语言的堆内存分配是基于 `TCMalloc <http://goog-perftools.sourceforge.net/doc/tcmalloc.html>`_ 的模型实现的，是一个带有 thread cache 的分配器。
+
+分配器一开始向操作系统申请一大片地址空间用于内存分配，分配器的分配单位是 page（8kb）。
+
+- 对于大于 32kb 的 object 分配器直接分配连续的 page。
+- 小于 32kb 的 small object 的分配稍微复杂一点。首先，分配器从 1~32k 定义了大约 70 个大小固定的 object class，分配器分配连续的 page 给这些 object class 去使用，然后要分配 small object 的时候，按其 object 大小向上寻找一个最接近其大小的 object class，从这个 object class 的 page 中切一块分配给这个 object。object class 中的 page 用完了再分配新的 page。
+
+分配器中分配出去的连续 page 叫做 span ，线程会缓存每个 object class 的一个 span 用于本线程的 small object 分配，这样大部分情况下 small object 的分配就不用加全局锁了。
+
+主要数据结构
+--------------
+
+和分配器相关的主要是 mheap、mcentral、mspan、mcache 这四个结构体。
+
+- mheap 分配器相关的结构体。
+- mcentral 管理分配给每个 object class 的所有 span。
+- mspan 管理分配出去的 span 。
+- mcache 管理每个线程的 span cache 的结构体。
+
+.. code-block:: go
+
+    type mheap struct {
+        // 所有已分配的 span
+        allspans []*mspan
+        // arena 中已使用的 page 到对应的 *mspan 的映射表，1 个 page 对应一个
+        spans []*mspan
+
+        // gc 标志用（暂时忽略）
+        bitmap        uintptr
+        bitmap_mapped uintptr
+
+        // arena 是真正用来分配 span 的内存空间
+        arena_start uintptr
+        arena_used  uintptr
+        arena_alloc uintptr
+        arena_end   uintptr
+        arena_reserved bool
+
+        // 全局存放每个 object class 对应的 span 的地方
+        central [numSpanClasses]struct {
+            mcentral mcentral
+        }
+
+        // 空闲的 span 会被加入到下面几个结构里。
+        // free[5] 里包含所有空闲的 npages = 5 的 mspan
+        // npages >= _MaxMHeapList 的存在 freelarge 里
+        free      [_MaxMHeapList]mSpanList
+        freelarge mTreap
+        // 在使用中的 span
+        busy      [_MaxMHeapList]mSpanList
+        busylarge mSpanList
+
+        // span 结构体、mcache 结构体、treap 结构体分配器
+        spanalloc             fixalloc
+        cachealloc            fixalloc
+        treapalloc            fixalloc
+    }
+    var mheap_ mheap
+
+    type mcentral struct {
+        spanclass spanClass
+        nonempty  mSpanList   // 还有空 slot 的 span 列表
+        empty     mSpanList   // 没有空 slot 的 span 列表
+    }
+
+    type mspan struct {
+        next *mspan
+        prev *mspan
+
+        // span 管理的 page 的开始地址和 page 个数
+        startAddr uintptr
+        npages    uintptr
+
+        // 管理的 page 会被分成 nelems 个 elemsize 大小的 slot 用来存对象，
+        // allocBits 是 bitmap，每个 slot 在里面对应一个 bit ，标示是否为空。
+        // freeindex = 上次分配的对象的 slot 的 index + 1
+        // 每次分配从 freeindex 开始往后找空闲位置，freeindex == nelems 表示这个 span 存满了
+        freeindex uintptr
+        nelems uintptr
+        elemsize    uintptr
+        // allocBits 是 alloBits 从 freeindex 这个 slot 开始的一段缓存，freeindex 对应最低位 bit
+        allocCache uint64
+        allocBits  *gcBits
+
+        // 已分配的 slot 数目
+        allocCount  uint16
+        // sizeclass<<1 | noscan
+        spanclass   spanClass
+        // 是否被 mcache 使用
+        incache     bool
+        state       mSpanState // mspaninuse etc
+    }
+
+    type mcache struct {
+        // Tiny allocator
+        tiny             uintptr
+        tinyoffset       uintptr
+
+        // span 缓存
+        alloc [numSpanClasses]*mspan
+    }
+
+初始化
+-----------
+
+在 Go 运行环境初始化的过程中，会调用 mallocinit() 函数初始化堆内存分配器，mallocinit() 会向操作系统申请如下的一段虚拟地址空间：
+
++-----------------------+---------------------+-----------------------+
+|    spans 512M         |    bitmap 16G       |   arena 512G          |
++-----------------------+---------------------+-----------------------+
+
+.. code-block:: go
+
+    mheap_.spans.array = spans
+    mheap_.bitmap = bitmap
+    mheap_.arena_start = arena
+
+这段地址空间中的 arena 就是最终分配 object 用的内存空间，前两个是分配器自用：
+
+- spans 是 mheap\_.spans 这个 slice 的底层 array 。
+- bitmap 是给 gc 来标记对象用的（Go 的 object 里没有 object header，所以这个标记只能外放了）。
+
+.. code-block:: go
+
+    func mallocinit() {
+        var p, pSize uintptr
+        var reserved bool
+
+        // _MaxMem = 申请的堆空间大小 - 1，64-bit 机器上为 512GB
+        // _PageSize = 8k
+        // 计算 span 和 bitmap 的大小
+        var spansSize uintptr = (_MaxMem + 1) / _PageSize * sys.PtrSize
+        spansSize = round(spansSize, _PageSize)
+        var bitmapSize uintptr = (_MaxMem + 1) / (sys.PtrSize * 8 / 2)
+        bitmapSize = round(bitmapSize, _PageSize)
+
+        if sys.PtrSize == 8 {
+            // 计算 arena 的大小（也就是真正用来分配的 heap memory）
+            arenaSize := round(_MaxMem, _PageSize)
+            pSize = bitmapSize + spansSize + arenaSize + _PageSize
+            for i := 0; i <= 0x7f; i++ {
+                switch {
+                default:
+                    p = uintptr(i)<<40 | uintptrMask&(0x00c0<<32)
+                }
+                // mmap(nil, pSize, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0)
+                // 在 64-bit 机器上这里并不会实际分配内存，只是检查了 mmap 是否 ok，分配是 lazy 的，
+                p = uintptr(sysReserve(unsafe.Pointer(p), pSize, &reserved))
+                if p != 0 {
+                    break
+                }
+            }
+        }
+
+        p1 := round(p, _PageSize)
+        pSize -= p1 - p
+        spansStart := p1
+
+        p1 += spansSize
+        mheap_.bitmap = p1 + bitmapSize
+
+        p1 += bitmapSize
+        mheap_.arena_start = p1
+        mheap_.arena_end = p + pSize
+        mheap_.arena_used = p1
+        mheap_.arena_alloc = p1
+        mheap_.arena_reserved = reserved
+
+        // 初始化 mheap
+        // 这个里面会将 spansStart 赋给 mheap_.spans.array
+        mheap_.init(spansStart, spansSize)
+
+        // 给第一个虚拟线程初始化 mcache 结构
+        // 后续会在 procresize() 中被赋给第一个创建的虚拟线程 p.mcache
+        _g_ := getg()
+        _g_.m.mcache = allocmcache()
+    }
+
+分配
+--------------
+
+堆内存分配器的入口是 newobject，从其函数中能看到其对 small 和 large object 的不同处理。
+
+.. code-block:: go
+
+    func newobject(typ *_type) unsafe.Pointer {
+        return mallocgc(typ.size, typ, true)
+    }
+
+    func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
+        // 空结构体 struct{}，直接返回 &zerobase 的地址
+        if size == 0 {
+            return unsafe.Pointer(&zerobase)
+        }
+
+        // 获取运行 goroutine 线程的 mcache 结构体指针
+        c := gomcache()
+        var x unsafe.Pointer
+        // 好吧，概述里说的按照 object size 大小分成 70 多个 object
+        // 并不准确，其实是 70 * 2，object 会按 object 里是否包含指针
+        // 再分成两类，真正的 object class = object size << 1 | noscan
+        noscan := typ == nil || typ.kind&kindNoPointers != 0
+        if size <= maxSmallSize {
+            if noscan && size < maxTinySize {
+                // 不包含指针并且 size < 16 的 object 为 tiny object，使用 tiny
+                // allocator 来分配。
+                // tiny allocator 每次向 mcache 申请一块 16 个字节大小的内存，每次
+                // 申请内存的 tiny object 从这块内存上割一块，不够了再新申请。
+                off := c.tinyoffset
+                if off+size <= maxTinySize && c.tiny != 0 {
+                    x = unsafe.Pointer(c.tiny + off)
+                    c.tinyoffset = off + size
+                    return x
+                }
+                span := c.alloc[tinySpanClass]
+                v := nextFreeFast(span)
+                if v == 0 {
+                    v, _, _ = c.nextFree(tinySpanClass)
+                }
+                x = unsafe.Pointer(v)
+                // 新的 tiny object 需要将内存清零
+                (*[2]uint64)(x)[0] = 0
+                (*[2]uint64)(x)[1] = 0
+                if size < c.tinyoffset || c.tiny == 0 {
+                    c.tiny = uintptr(x)
+                    c.tinyoffset = size
+                }
+            } else {
+                // 不是 tiny object 并且小于 32k 的 small object
+                var sizeclass uint8
+                // 计算 object 的 sizeclass
+                if size <= smallSizeMax-8 {
+                    sizeclass = size_to_class8[(size+smallSizeDiv-1)/smallSizeDiv]
+                } else {
+                    sizeclass = size_to_class128[(size-smallSizeMax+largeSizeDiv-1)/largeSizeDiv]
+                }
+                // 根据 sizeclass 获取实际分配的内存大小
+                size = uintptr(class_to_size[sizeclass])
+                // spc = sizeclass<<1 | noscan
+                spc := makeSpanClass(sizeclass, noscan)
+                span := c.alloc[spc]
+                v := nextFreeFast(span)
+                if v == 0 {
+                    v, span, _ = c.nextFree(spc)
+                }
+                x = unsafe.Pointer(v)
+                if needzero && span.needzero != 0 {
+                    memclrNoHeapPointers(unsafe.Pointer(v), size)
+                }
+            }
+        } else {
+            // 大于 32 k
+            var s *mspan
+            systemstack(func() {
+                s = largeAlloc(size, needzero, noscan)
+            })
+            s.freeindex = 1
+            s.allocCount = 1
+            x = unsafe.Pointer(s.base())
+        }
+
+        return x
+    }
+
+上面代码中 nextFreeFast 会尝试根据 span.allocCache 直接找到下一个空闲 slot 用来分配，如果没找到再调用 c.nextFree(spc) 根据 span.alloBits 来找到下一个空闲 slot 并且重新装填 span.allocCache。mcache 在初始化的时候所有的 object class 缓存的 span 都是 emptymspan，一个没有任何 page 的空 span，在 span 没有空闲 slot 的情况下，c.nextFree(spc) 会调用 c.refill() 向 mheap\_.central 重新申请一个新的可用 span。
+
+.. code-block:: go
+
+    func (c *mcache) refill(spc spanClass) {
+        // 将当前缓存的 span 还给 mcentral。
+        s := c.alloc[spc]
+        if s != &emptymspan {
+            s.incache = false
+        }
+
+        // 从 mcentral 中获取一个新的可用 span。
+        s = mheap_.central[spc].mcentral.cacheSpan()
+        c.alloc[spc] = s
+    }
+
+    func (c *mcentral) cacheSpan() *mspan {
+    retry:
+        var s *mspan
+        for s = c.nonempty.first; s != nil; s = s.next {
+            // 尝试从 c.nonempty 分配，初始为空，跳过
+            // 成功 goto havespan
+        }
+
+        for s = c.empty.first; s != nil; s = s.next {
+            // 尝试从 c.empty 分配，初始为空，跳过
+            // 成功 goto havespan
+        }
+
+        // 如果上面分配失败，那么申请新的 span
+        s = c.grow()
+        c.empty.insertBack(s)
+
+    havespan:
+        s.incache = true
+        return s
+    }
+
+如果 mcentral 中没有可用的 span，mcentral 会调用 mheap.alloc() 申请一个新的 span。
+
+.. code-block:: go
+
+    func (c *mcentral) grow() *mspan {
+        // 根据 span 的 sizeclass 确定要分配多少 page。
+        npages := uintptr(class_to_allocnpages[c.spanclass.sizeclass()])
+        size := uintptr(class_to_size[c.spanclass.sizeclass()])
+        n := (npages << _PageShift) / size
+
+        // 从 arena 中分配一个新的 npages span
+        s := mheap_.alloc(npages, c.spanclass, false, true)
+        if s == nil {
+            return nil
+        }
+
+        p := s.base()
+        s.limit = p + size*n
+
+        return s
+    }
+
+mheap 分配新的 span 的逻辑如下：
+
+1. 检查 mheap.free 中有没有空闲 span, 有的话返回。
+2. 检查 mheap.freelarge 中有没有空闲 span，有的话裁剪返回。
+3. 从 mheap.arena 中再新分配一个至少 64 kb 的 span 并释放到 mheap.freelarge 中，返回 2 继续执行。
+
+.. code-block:: go
+
+    func (h *mheap) alloc(npage uintptr, spanclass spanClass, large bool, needzero bool) *mspan {
+        var s *mspan
+        systemstack(func() {
+            s = h.alloc_m(npage, spanclass, large)
+        })
+        return s
+    }
+    func (h *mheap) alloc_m(npage uintptr, spanclass spanClass, large bool) *mspan {
+        s := h.allocSpanLocked(npage, &memstats.heap_inuse)
+        return s
+    }
+    func (h *mheap) allocSpanLocked(npage uintptr, stat *uint64) *mspan {
+        var list *mSpanList
+        var s *mspan
+
+        // 在 mheap.free 里找找有没有合适的
+        for i := int(npage); i < len(h.free); i++ {
+            list = &h.free[i]
+            if !list.isEmpty() {
+                s = list.first
+                list.remove(s)
+                goto HaveSpan
+            }
+        }
+        // 在 mheap.freelarge 里找找有没有合适的
+        s = h.allocLarge(npage)
+        if s == nil {
+            // 找不到的话从 arena 中新分配 npage 并创建一个新的 span
+            // 新 span 至少有 64kb ，创建后会被 free 到 h.freelarge 里。
+            if !h.grow(npage) {
+                return nil
+            }
+            s = h.allocLarge(npage)
+            if s == nil {
+                return nil
+            }
+        }
+
+    HaveSpan:
+        if s.npages > npage {
+            // 将多余的 page 裁剪后放入 free span 中
+            t := (*mspan)(h.spanalloc.alloc())
+            t.init(s.base()+npage<<_PageShift, s.npages-npage)
+            s.npages = npage
+            p := (t.base() - h.arena_start) >> _PageShift
+            if p > 0 {
+                h.spans[p-1] = s
+            }
+            h.spans[p] = t
+            h.spans[p+t.npages-1] = t
+            s.state = _MSpanManual // prevent coalescing with s
+            h.freeSpanLocked(t, false, false, s.unusedsince)
+        }
+
+        p := (s.base() - h.arena_start) >> _PageShift
+        for n := uintptr(0); n < npage; n++ {
+            h.spans[p+n] = s
+        }
+
+        return s
+    }
+
+回收
+-------------------
+
+当一个 span 中所有的对象被释放时，这个 span 会被回收（对象的释放由 gc 来完成，这里暂且先跳过），回收的 span 会被加入到 mheap.free 和 mheap.freelarge 中，供后续新的 span 申请使用。
+
+.. code-block:: go
+
+    func (h *mheap) freeSpan(s *mspan, acct int32) {
+        systemstack(func() {
+            h.freeSpanLocked(s, true, true, 0)
+        })
+    }
+    func (h *mheap) freeSpanLocked(s *mspan, acctinuse, acctidle bool, unusedsince int64) {
+        switch s.state {
+        s.state = _MSpanFree
+        if s.inList() {
+            // 将 span 从 busyList 中删除
+            h.busyList(s.npages).remove(s)
+        }
+
+        // 如果要 free 的 span 前面的 span 也是 free 的，合并
+        p := (s.base() - h.arena_start) >> _PageShift
+        if p > 0 {
+            before := h.spans[p-1]
+            if before != nil && before.state == _MSpanFree {
+                // Now adjust s.
+                s.startAddr = before.startAddr
+                s.npages += before.npages
+                s.npreleased = before.npreleased // absorb released pages
+                s.needzero |= before.needzero
+                p -= before.npages
+                h.spans[p] = s
+                // The size is potentially changing so the treap needs to delete adjacent nodes and
+                // insert back as a combined node.
+                if h.isLargeSpan(before.npages) {
+                    h.freelarge.removeSpan(before)
+                } else {
+                    h.freeList(before.npages).remove(before)
+                }
+                h.spanalloc.free(unsafe.Pointer(before))
+            }
+        }
+
+        // 如果要 free 的 span 前面的 span 也是 free 的，合并
+        if (p + s.npages) < uintptr(len(h.spans)) {
+            after := h.spans[p+s.npages]
+            if after != nil && after.state == _MSpanFree {
+                s.npages += after.npages
+                s.npreleased += after.npreleased
+                s.needzero |= after.needzero
+                h.spans[p+s.npages-1] = s
+                if h.isLargeSpan(after.npages) {
+                    h.freelarge.removeSpan(after)
+                } else {
+                    h.freeList(after.npages).remove(after)
+                }
+                h.spanalloc.free(unsafe.Pointer(after))
+            }
+        }
+
+        // 将空闲的 span 插入 h.freelarge 或者 h.free 中。
+        if h.isLargeSpan(s.npages) {
+            h.freelarge.insert(s)
+        } else {
+            h.freeList(s.npages).insert(s)
+        }
+    }
+
+最后 sysmon 每隔一段时间会执行 mheap\_.scavenge(）将长时间不用的 span 的内存通过 madvise(MADV_DONTNEED) “释放” 给操作系统。
+
+	MADV_DONTNEED: Do not expect access in the near future. (For the time being, the application is finished with the given range, so the kernel can free resources associated with it.) Subsequent accesses of pages in this range will succeed, but will result either in reloading of the memory contents from the underlying mapped file (see mmap(2)) or zero-fill-on-demand pages for mappings without an underlying file.
+
+分配器自用的内存分配
+-----------------------
+
+分配器自用的一些结构体 mcache、mspan 等是通过 fixalloc 分配器来分配的。
+
+	fixalloc is a SLAB-style allocator that allocates objects of a fixed
+	size. fixalloced objects can be freed, but this memory can only be
+	reused by the same fixalloc pool, so it can only be reused for
+	objects of the same type.
