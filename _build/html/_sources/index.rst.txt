@@ -6,6 +6,7 @@ Blog
 .. toctree::
    :maxdepth: 1
 
+   user-experience-design-for-apis.rst
    golang-internals-malloc.rst
 
 2017
