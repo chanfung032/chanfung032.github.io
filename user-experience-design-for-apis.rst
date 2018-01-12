@@ -1,0 +1,85 @@
+User experience design for APIs
+====================================
+
+原文：https://blog.keras.io/user-experience-design-for-apis.html
+
+1 - Deliberately design end-to-end user workflows.
+---------------------------------------------------------
+
+Most API developers focus on atomic methods rather than holistic workflows. They let users figure out end-to-end workflows through evolutionary happenstance, given the basic primitives they provided. The resulting user experience is often one long chain of hacks that route around technical constraints that were invisible at the level of individual methods.
+
+不要只是实现一些原子方法，而让用户自己去摸索并组合出自己要实现的业务流程。
+
+To avoid this, start by listing the most common workflows that your API will be involved in. The use cases that most people will care about. Actually go through them yourself, and take notes. Better yet: watch a new user go through them, and identify pain points. Ruthlessly iron out those pain points. In particular:
+
+列出自己 API 的常见使用场景，试着在这些场景下用用自己的 API，或者观察一个新用户的摸索使用过程，找到这个过程中的痛点并解决。
+
+- **Your workflows should closely map to domain-specific notions that users care about.** If you are designing an API for cooking burgers, it should probably feature unsurprising objects such as "patty", "cheese", "bun", "grill", etc. And if you are designing a deep learning API, then your core data structures and their methods should closely map to the concepts used by people familiar with the field: models/networks, layers, activations, optimizers, losses, epochs, etc.
+- **Ideally, no API element should deal with implementation details.** You do not want the average user to deal with "primary_frame_fn", "defaultGradeLevel", "graph_hook", "shardedVariableFactory", or "hash_scope", because these are not concepts from the underlying problem domain, they are highly specific concepts that come from your internal implementation choices.
+- **Deliberately design the user onboarding process.** How are complete newcomers going to find out the best way to solve their use case with your tool? Have an answer ready. Make sure your onboarding material closely maps to what your users care about: don't teach newcomers how your API is implemented, teach them how they can use it to solve their own problems.
+
+
++ **API 的设计抽象应该贴近业务的表达** 比如设计一个深度学习的 API，你的核心数据结构、函数方法应该映射到 models/networks, layers, activations, optimizers, losses, epochs 这些用户熟悉的概念。
++ **不要暴露 API 的实现细节** 。
++ **优化新用户的初次使用体验** 教用户怎么使用你的 API 解决他们的问题，而不是你的 API 是怎么实现的。
+
+2 - Reduce cognitive load for your users.
+----------------------------------------------
+
+In the end-to-end workflows you design, always strive to reduce the mental effort that your users have to invest to understand and remember how things work. The less effort and focus you require from your users, the more they can invest in solving their actual problems -- instead of trying to figure out how to use this or that method. In particular:
+
+尽可能的傻瓜化你的 API，让用户可以专注于解决他们的业务问题，而不是花费时间在琢磨怎么使用你的 API 上。
+
+Use consistent naming and code patterns. Your API naming conventions should be internally consistent (If you usually denote counts via the num_* prefix, don't switch to n_* in some places), but also consistent with widely recognized external standards. For instance, if you are designing an API for numerical computation in Python, it should not glaringly clash with the Numpy API, which everyone uses. A user-hostile API would arbitrarily use keepdim where Numpy uses keepdims, would use dim where Numpy uses axis, etc. And an especially poorly-designed API would just randomly alternate between axis, dim, dims, axes, axis_i, dim_i, for the same concept.
+
+统一命名和代码规范，例如：不要一会使用 num_* 这样的参数名来命名一些表示数量的参数，一会又换成 n_* 。
+
+遵守约定俗成的规范或者事实上的标准，例如：如果你的 API 是做数值计算的，那么同样的概念最好起和 numpy 中一样的名字。
+
+Introduce as few new concepts as possible. It's not just that additional data structures require more effort in order to learn about their methods and properties, it's that they multiply the number of mental models that are necessary to grok your API. Ideally, you should only need a single universal mental model from which everything flows (in Keras, that's the Layer/Model). Definitely avoid having more than 2-3 mental models underlying your workflows.
+
+引入越少的新概念越好。多一个数据结构用户就得多花一点时间学习这个数据结构的方法和属性该怎么使用。用户需要在脑中记住出这个结构的使用模式，模式多了会让用户死很多脑细胞的。理想情况下，用户只需要记住一个通用的使用模式就够了。
+
+Strike a balance between the number of different classes/functions you have, and the parameterization of these classes/functions. Having a different class/function for every user action induces high cognitive load, but so does parameter proliferation -- you don't want 35 keyword arguments in a class constructor. Such a balance can be achieved by making your data structures modular and composable.
+
+不要一个功能一个类，也不要一个类完成所有功能然后一大堆参数，在两者之间做一个折衷。
+
+Automate what can be automated. Strive to reduce the number of user actions required in your workflows. Identify often-repeated code blocks in user-written code, and provide utilities to abstract them away. For instance, in a deep learning API, you should provide automated shape inference instead of requiring users to do mental math to compute expected input shapes in all of their layers.
+
+能自动化的尽可能的自动化。尽可能让用户通过最少的 API 调用、最少的参数就可以完成业务逻辑。对于一些常见的代码功能，提供一些工具方法将他们抽象掉。比如：在深度学习 API 实现中，应该尽可能自动推导各 layer 的输入矩阵 shape，而不是让用户手工指定。
+
+Have clear documentation, with lots of examples. The best way to communicate to the user how to solve a problem is not to talk about the solution, it is to show the solution. Make sure to have concise and readable code examples available for every feature in your API.
+
+提供清晰的文档以及大量的范例。教用户如何解决一个问题的最佳方法是不废话直接秀出你的解决方案。
+
+The litmus test I use to tell whether an API is well-designed is the following: if a new user goes through the workflow for their use case on day one (following the documentation or a tutorial), and they come back the next day to solve the same problem in a slightly different context, will they be able to follow their workflow without looking up the documentation/tutorial? Will they be able to remember their workflow in one shot? A good API is one where the cognitive load of most workflows is so low that it can be learned in one shot.
+
+This litmus test also gives you a way to quantify how good or bad an API is, by counting the number of times the average user needs to look up information about a workflow in order to master it. The worst workflows are those that can never be fully remembered, and require following a lengthy tutorial every single time.
+
+如何判断一个 API 设计得是好是坏呢？我的方法是这样的：今天用户通过查文档解决了某个问题，明天用户是否可以不用再查文档仅凭记忆就可以解决类似问题？如果是，那这个 API 设计就是好的。
+
+3 - Provide helpful feedback to your users.
+-----------------------------------------------
+
+Good design is interactive. It should be possible to use a good API while only minimally relying on documentation and tutorials -- by simply trying things that seem intuitive, and acting upon the feedback you get back from the API. In particular:
+
+一个好的 API 设计应该提供好的交互体验，让用户可以不用文档，仅凭直觉加上接口的反馈信息就能搞懂接口的使用方法。
+
+Catch user errors early and anticipate common mistakes. Do user input validation as soon as possible. Actively keep track of common mistakes that people make, and either solve them by simplifying your API, adding targeted error messages for these mistakes, or having a "solutions to common issues" page in your docs.
+
+尽早捕获用户的错误并抛出，比如尽早对用户的输入做验证。对常见错误提供友好的错误信息，在文档中提供常见错误的解决方法，或者可以简化 API 让用户不会再犯这些错误。
+
+Have a place where users can ask questions. How else are you going to keep track of existing pain points you need to fix?
+
+提供一个地方让用户可以问问题。否则怎么发现那些需要解决的用户痛点问题呢。
+
+Provide detailed feedback messages upon user error. A good error message should answer: what happened, in what context? What did the software expect? How can the user fix it? They should be contextual, informative, and actionable. Every error message that transparently provides the user with the solution to their problem means one less support ticket, multiplied by how many times users run into the same issue.
+
+对于用户的错误提供详细的错误信息，一个好的错误信息应该包含以下几点：错误是在哪、在什么情况下抛出来的？正常情况下这里应该是什么？用户应该怎样 fix 这个错误。好的错误信息会大大降低用户提工单寻求支持的几率。
+
+Conclusion
+---------------
+
+Always remember: software is for humans, not just for machines. Keep the user in mind at all times.
+
+记住：程序并不只是写给机器去执行的，也是写给人去用的，所以写的时候想想那些用它的人，也设身处地的为他们考虑考虑。
