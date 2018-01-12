@@ -191,6 +191,8 @@ pseudoxml:
 	@echo
 	@echo "Build finished. The pseudo-XML files are in $(BUILDDIR)/pseudoxml."
 
+p: publish
+
 publish: html
 	touch _build/html/.nojekyll
 	-git add _build/html && git commit -m "Update _build/html"
