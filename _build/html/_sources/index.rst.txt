@@ -6,6 +6,7 @@ Blog
 .. toctree::
    :maxdepth: 1
 
+   nginx-lua-internals.rst
    user-experience-design-for-apis.rst
    golang-internals-malloc.rst
 
