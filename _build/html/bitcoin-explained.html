@@ -1,0 +1,237 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Bitcoin Explained &#8212; My Blog 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Nginx Lua 剖析" href="nginx-lua-internals.html" />
+    <link rel="prev" title="Blog" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="bitcoin-explained">
+<h1>Bitcoin Explained<a class="headerlink" href="#bitcoin-explained" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>区块链<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>区块链（blockchain）是一个分布式强一致性但是写入性能极其低下的数据库。这个数据库中有且仅有一张区块（block）表，每个区块是这张表里的一条记录（Row）。区块里记录了比特币的交易（Transaction）信息。这张表只能插入新的数据，不能更改。</p>
+<p>区块表的表结构如下：</p>
+<div class="highlight-sql"><div class="highlight"><pre><span></span><span class="k">create</span> <span class="k">table</span> <span class="n">blocks</span> <span class="p">(</span>
+    <span class="n">hash</span> <span class="nb">char</span><span class="p">(</span><span class="mi">32</span><span class="p">),</span>         <span class="c1">-- 区块的 hash</span>
+    <span class="k">version</span> <span class="nb">int</span><span class="p">,</span>           <span class="c1">-- 区块链协议的版本</span>
+    <span class="n">prev_block</span> <span class="nb">char</span><span class="p">(</span><span class="mi">32</span><span class="p">),</span>   <span class="c1">-- 前一个区块的 hash</span>
+    <span class="n">merkle_root</span> <span class="nb">char</span><span class="p">(</span><span class="mi">32</span><span class="p">),</span>  <span class="c1">-- 交易信息的 hash</span>
+    <span class="k">timestamp</span> <span class="nb">int</span><span class="p">,</span>         <span class="c1">-- 时间戳</span>
+    <span class="n">bits</span> <span class="nb">int</span><span class="p">,</span>              <span class="c1">-- target</span>
+    <span class="n">nonce</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">transaction_count</span> <span class="nb">int</span><span class="p">,</span> <span class="c1">-- 交易条数</span>
+    <span class="n">transactions</span> <span class="nb">text</span>      <span class="c1">-- 交易的详细信息</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>每个区块里保存了上一个区块的 hash 值，也就是指向上一个区块的指针，所有的区块会串成一个链，这也是区块链这个名字的由来。</p>
+<p>使用比特币的用户需要加入比特币网络成为其中的一个节点，每个节点上都保存了一份完整的一模一样的区块链副本。</p>
+<p>每个节点的角色是对等的，所有的节点既是区块链这个数据库的主，也是从。某个节点插入了一个新的区块之后（这个时候它就是主），会将插入的区块广播给其它的节点，其它节点收到广播后会将这条新的区块插入自己的区块链中，保证所有节点上区块链的同步。这个机制能够工作的前提是插入的时候需要有一个全局锁，保证全局唯一插入，否则很快各个节点的数据库副本之间就会出现大量的冲突。</p>
+<p>对于区块链这样的分布式数据库来说，实现一个全局锁是不现实的，所以其采用了一个迂回的方式实现了类似于全局锁的效果，从而保证所有节点上数据的强一致性。这个方式就是将插入新的区块变得非常非常…… 非常的困难。</p>
+<p>所有插入的区块需要保证其 hash 小于一个 target。这个 target 由以下公式得出：</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">target_max</span> <span class="o">=</span> <span class="mh">0x00000000FFFF0000000000000000000000000000000000000000000000000000</span>
+<span class="c1"># 比特币网络有一个全局参数 difficulty</span>
+<span class="c1"># https://blockexplorer.com/api/status?q=getDifficulty</span>
+<span class="c1"># 随着区块的增加，difficulty 会跟着增加。</span>
+<span class="c1"># 随着 difficulty 的增加，target 前面的 0 会越来越多。</span>
+<span class="c1"># 也就是说区块的 hash 前面需要有越多的 0。</span>
+<span class="c1"># https://en.bitcoin.it/wiki/Difficulty</span>
+<span class="n">target</span> <span class="o">=</span> <span class="n">target_max</span> <span class="o">/</span> <span class="n">difficulty</span>
+<span class="n">bits</span> <span class="o">=</span> <span class="n">target_2_bits</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>直观来说，就是要让区块的 hash 值的前面出现足够多的 0。我们可以通过修改 nonce, timestamp, transactions 的方式来调整区块的 hash 值，让其满足这个条件，这个计算需要花费大量的 cpu 资源，所以这个计算过程也叫挖矿（Mine），目前这个计算大概需要花费 10 分钟的时间（所以区块链这个数据库的写入速率大概是 1 block／10 min）。</p>
+<p>下面是一个最简单的挖矿脚本：</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">nonce</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+    <span class="nb">hash</span> <span class="o">=</span> <span class="n">sha256</span><span class="p">(</span><span class="n">version</span> <span class="o">+</span> <span class="n">prev_block</span> <span class="o">+</span> <span class="n">merkle_root</span> <span class="o">+</span> <span class="n">timestamp</span> <span class="o">+</span> <span class="n">bits</span> <span class="o">+</span> <span class="n">nonce</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">hash</span> <span class="o">&lt;</span> <span class="n">target</span><span class="p">:</span>
+        <span class="k">break</span>
+    <span class="n">nonce</span> <span class="o">+=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>挖出新区块的节点会获得一定的比特币作为回报。所有的从节点在收到新区块的广播后，会计算这个区块是否是合法的（这个计算很简单），如果是才会将其插入到本地的区块链中。</p>
+<p>如果有多个节点同时挖出了新的区块，那么区块链就会出现一个分叉，怎么解决这个冲突呢？目前的策略是：如果区块链有分叉，将看哪个分支在分叉点后面，先达到 6 个新区块（称为 “六次确认”）。按照 10 分钟一个区块计算，1 小时就可以确认。</p>
+<hr class="docutils" />
+<p>一个实际的区块 <a class="reference external" href="https://blockexplorer.com/block/000000000003ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506">区块 #100000</a> ：</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">bits_2_target</span><span class="p">(</span><span class="n">bits</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">exp</span> <span class="o">=</span> <span class="n">bits</span> <span class="o">&gt;&gt;</span> <span class="mi">24</span>
+<span class="gp">... </span>    <span class="n">mant</span> <span class="o">=</span> <span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xffffff</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">mant</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="mi">8</span><span class="o">*</span><span class="p">(</span><span class="n">exp</span> <span class="o">-</span> <span class="mi">3</span><span class="p">)))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">target</span> <span class="o">=</span> <span class="n">bits_2_target</span><span class="p">(</span><span class="mh">0x1b04864c</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="s1">&#39;</span><span class="si">%064x</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">target</span>
+<span class="go">000000000004864c000000000000000000000000000000000000000000000000</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">target_max</span> <span class="o">=</span> <span class="mh">0x00000000FFFF0000000000000000000000000000000000000000000000000000</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">difficulty</span> <span class="o">=</span> <span class="n">target_max</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">difficulty</span>
+<span class="go">14484.162361225399</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">hash</span> <span class="o">=</span> <span class="mh">0x000000000003ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="nb">hash</span> <span class="o">&lt;</span> <span class="n">target</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>区块中并不存 difficulty ，区块页面里显示的 difficulty 是计算出来的。</p>
+</div>
+<div class="section" id="id3">
+<h2>比特币<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<p>区块链中存储了比特币从开始到现在所有用户的所有交易记录。一个用户的比特币就是这些交易记录里和其相关的记录。比特币的交易过程就是引用这些已有交易记录来创建新的交易记录并插入区块链的过程。</p>
+<p>下面我们以 Alice 交易比特币给 Bob 为例来说明比特币的工作原理。</p>
+<p>首先，比特币使用公钥私钥来标示和验证用户，比特币地址是用户的公钥 hash 后使用 base58check（base58check 编码类似于 base64 编码，只是去除了 O, 0, I, l 这些易混淆的字符并添加了一个 4-byte 的校验码，因为交易给错误地址的比特币就永久消失了） 编码出来的。</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">address</span> <span class="o">=</span> <span class="n">base58check</span><span class="p">(</span><span class="n">version</span> <span class="o">+</span> <span class="n">ripemd160</span><span class="p">(</span><span class="n">sha256</span><span class="p">(</span><span class="n">pubkey</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Alice 在交易前需要：</p>
+<ol class="arabic simple">
+<li>知道 Bob 的比特币地址。</li>
+<li>在区块链中找到一条别人交易比特币给她的交易记录，这些比特币必须还没交易给给别人。</li>
+</ol>
+<p>然后构造下面一条交易记录信息：</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1"># 本次交易信息的 hash</span>
+    <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="s2">&quot;fff2....02c4&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;input&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="c1"># 引用的交易记录的 hash</span>
+            <span class="s2">&quot;prev_output_hash&quot;</span><span class="p">:</span> <span class="s2">&quot;fe02....19a4&quot;</span><span class="p">,</span>
+            <span class="c1"># 要使用引用的交易记录 output 中的第几项，交易记录的 output 可以有多个</span>
+            <span class="s2">&quot;prev_output_index&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="c1"># 交易的比特币数</span>
+            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;0.31900000&quot;</span><span class="p">,</span>
+            <span class="c1"># Bob 的比特币地址</span>
+            <span class="s2">&quot;address&quot;</span><span class="p">:</span> <span class="s2">&quot;1JqDybm2nWTENrHvMyafbSXXtTk5Uv5QAn&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="c1"># Alice 的公钥</span>
+    <span class="s2">&quot;pubkey&quot;</span><span class="p">:</span> <span class="s2">&quot;0987....45af&quot;</span><span class="p">,</span>
+    <span class="c1"># 使用 Alice 的私钥对消息的签名。</span>
+    <span class="s2">&quot;sig&quot;</span><span class="p">:</span> <span class="s2">&quot;ab0c....efge&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<img alt="_images/bitcoin-transaction.png" src="_images/bitcoin-transaction.png" />
+<p>构造完消息后，Alice 可以通过自己挖矿的方式将这条记录插入区块链中完成交易，但是大部分普通用户的计算资源有效，并没有挖矿的能力，所以普通用户一般会将这条交易信息广播到比特币网络中，让那些专门挖矿的矿工来做挖矿的工作。</p>
+<p>假设 Alice 使用 tx 消息将这个交易的信息发送给比特币网络。所有收到消息的节点会验证这条交易信息是否合法：</p>
+<ol class="arabic simple">
+<li>使用公钥验证签名是否正确，也就是说这条消息是否确实是 Alice 发的（签名是使用私钥签发的，没有私钥无法伪造）。</li>
+<li>Alice 的公钥是否和引用的交易记录的 ouput 项的 address 是否匹配，也就是说引用的交易记录的 ouput 项是否确实是交易给 Alice 的。</li>
+<li>引用的交易记录的 ouput 项是否有交易给其它人的记录，防止 Alice double-spending 这笔比特币。</li>
+</ol>
+<p>如果合法，节点会将这条交易信息继续广播下去，比特币网络中的挖矿节点在收到这条交易信息后，会将其加入未完成交易列表中，然后尝试组合这些交易、调整 nonce 等方法来挖出新的区块，一旦 Alice 的交易信息被包含在新的区块中插入了区块链，这个交易就完成了。</p>
+<p>btw. 区块链的从节点在收到新的区块后， 也会验证交易的信息是否合法，如果区块合法但是交易不合法，这个区块也会被拒绝。</p>
+<p>p.s.</p>
+<ol class="arabic simple">
+<li>每个引用的交易记录中的 ouput 项只能使用一次，如果钱有多余，可以在新交易信息的 output 里添加自己的 address，将多余的钱交易给自己。</li>
+<li>比特币有两种来源，一种是原始发行的，比如 <a class="reference external" href="https://blockexplorer.com/block/00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048">区块 #1</a> 中的交易，另外一种是挖矿挖出来的，比如 <a class="reference external" href="https://blockexplorer.com/block/000000000003ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506">区块 #100000</a> 中的第一个交易，一般区块里第一个交易记录都是给挖矿的矿工的回报的交易记录。这两类交易记录都是没有 input 的。</li>
+</ol>
+<p>参考资料：</p>
+<ul class="simple">
+<li><a class="reference external" href="http://www.righto.com/2014/02/bitcoins-hard-way-using-raw-bitcoin.html">Bitcoins the hard way: Using the raw Bitcoin protocol</a> 手工创建一个比特币交易（Python 代码）。</li>
+<li><a class="reference external" href="http://www.righto.com/2014/02/bitcoin-mining-hard-way-algorithms.html">Bitcoin mining the hard way: the algorithms, protocols, and bytes</a> 挖矿相关的计算细节。</li>
+<li><a class="reference external" href="http://www.michaelnielsen.org/ddi/how-the-bitcoin-protocol-actually-works/">How the Bitcoin protocol actually works</a> 如何从零构建出比特币。</li>
+<li><a class="reference external" href="https://en.bitcoin.it/wiki/Help:Introduction">https://en.bitcoin.it/wiki/Help:Introduction</a></li>
+<li><a class="reference external" href="https://en.bitcoin.it/wiki/Protocol_documentation">https://en.bitcoin.it/wiki/Protocol_documentation</a></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Bitcoin Explained</a><ul>
+<li><a class="reference internal" href="#id1">区块链</a></li>
+<li><a class="reference internal" href="#id3">比特币</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Blog</a></li>
+      <li>Next: <a href="nginx-lua-internals.html" title="next chapter">Nginx Lua 剖析</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/bitcoin-explained.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/bitcoin-explained.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
