@@ -153,7 +153,7 @@
 <p>假设 Alice 使用 tx 消息将这个交易的信息发送给比特币网络。所有收到消息的节点会验证这条交易信息是否合法：</p>
 <ol class="arabic simple">
 <li>使用公钥验证签名是否正确，也就是说这条消息是否确实是 Alice 发的（签名是使用私钥签发的，没有私钥无法伪造）。</li>
-<li>Alice 的公钥是否和引用的交易记录的 ouput 项的 address 是否匹配，也就是说引用的交易记录的 ouput 项是否确实是交易给 Alice 的。</li>
+<li>Alice 的公钥是否和引用的交易记录的 ouput 项的 address 匹配，也就是说引用的交易记录的 ouput 项是否确实是交易给 Alice 的。</li>
 <li>引用的交易记录的 ouput 项是否有交易给其它人的记录，防止 Alice double-spending 这笔比特币。</li>
 <li>所有的 input 项中对应的比特币加起来是否大于等于 output 中交易的比特币数。</li>
 </ol>
