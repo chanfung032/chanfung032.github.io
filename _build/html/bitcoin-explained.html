@@ -5,7 +5,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Bitcoin Explained &#8212; My Blog 1.0 documentation</title>
+    <title>比特币是如何工作的？ &#8212; My Blog 1.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -41,10 +41,10 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="bitcoin-explained">
-<h1>Bitcoin Explained<a class="headerlink" href="#bitcoin-explained" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id1">
-<h2>区块链<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+  <div class="section" id="id1">
+<h1>比特币是如何工作的？<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id2">
+<h2>区块链<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
 <p>区块链（blockchain）是一个分布式强一致性但是写入性能极其低下的数据库。这个数据库中有且仅有一张区块（block）表，每个区块是这张表里的一条记录（Row）。区块里记录了比特币的交易（Transaction）信息。这张表只能插入新的数据，不能更改。</p>
 <p>区块表的表结构如下：</p>
 <div class="highlight-sql"><div class="highlight"><pre><span></span><span class="k">create</span> <span class="k">table</span> <span class="n">blocks</span> <span class="p">(</span>
@@ -108,8 +108,8 @@
 </div>
 <p>区块中并不存 difficulty ，区块页面里显示的 difficulty 是计算出来的。</p>
 </div>
-<div class="section" id="id3">
-<h2>比特币<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id4">
+<h2>比特币<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
 <p>区块链中存储了比特币从开始到现在所有用户的所有交易记录。一个用户的比特币就是这些交易记录里和其相关的记录。比特币的交易过程就是引用这些已有交易记录来创建新的交易记录并插入区块链的过程。</p>
 <p>下面我们以 Alice 交易比特币给 Bob 为例来说明比特币的工作原理。</p>
 <p>首先，比特币使用公钥私钥来标示和验证用户，比特币地址是用户的公钥 hash 后使用 base58check（base58check 编码类似于 base64 编码，只是去除了 O, 0, I, l 这些易混淆的字符并添加了一个 4-byte 的校验码，因为交易给错误地址的比特币就永久消失了） 编码出来的。</p>
@@ -184,9 +184,9 @@
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Bitcoin Explained</a><ul>
-<li><a class="reference internal" href="#id1">区块链</a></li>
-<li><a class="reference internal" href="#id3">比特币</a></li>
+<li><a class="reference internal" href="#">比特币是如何工作的？</a><ul>
+<li><a class="reference internal" href="#id2">区块链</a></li>
+<li><a class="reference internal" href="#id4">比特币</a></li>
 </ul>
 </li>
 </ul>
