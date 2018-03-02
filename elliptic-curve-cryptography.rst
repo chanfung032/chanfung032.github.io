@@ -509,18 +509,16 @@ Schoof's algorithm 只能计算椭圆曲线群的序，不能用于计算点 :ma
 椭圆曲线加密：ECDH 和 ECDSA
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-算法参数（Domain parameters）
+椭圆曲线参数（Domain parameters）
 ---------------------------------
 
-椭圆曲线加密算法工作在有限域上的椭圆曲线的循环子群上，算法包含以下参数：
+椭圆曲线加密算法工作在 *有限域上的椭圆曲线* 的循环子群上，曲线的参数可以用一个六元组 :math:`(p, a, b, G, n, h)` 表示：
 
-- 一个 **素数** :math:`p` 指定有限域的大小。
+- **素数** :math:`p` 指定有限域的大小。
 - **椭圆曲线的系数** :math:`a` 和 :math:`b` 。
 - 子群的 **基点** :math:`G` 。
 - 子群的 **序** :math:`n` 。
 - 子群的 **cofactor** :math:`h` 。
-
-简言之，椭圆曲线加密算法的参数可以用一个六元组表示： :math:`(p, a, b, G, n, h)` 。
 
 椭圆曲线加密（Elliptic Curve Cryptography）
 -------------------------------------------
@@ -532,14 +530,14 @@ Schoof's algorithm 只能计算椭圆曲线群的序，不能用于计算点 :ma
 
 根据循环子群的特性，知道 :math:`d` 和 :math:`G` 可以很容易的计算得到 :math:`H`，相反，知道 :math:`H` 和 :math:`G` 想要得到私钥 :math:`d` 非常的困难，因为这是一个离散对数问题。
 
-椭圆曲线常用的是以下两个算法：用于加密的 ECDH (Elliptic curve Diffie-Hellman) 算法，用于计算数字签名的 ECDSA (Elliptic Curve Digital Signature Algorithm) 算法。
+椭圆曲线常用的有以下两个算法：用于加密的 ECDH (Elliptic curve Diffie-Hellman) 算法，用于计算数字签名的 ECDSA (Elliptic Curve Digital Signature Algorithm) 算法。
 
 ECDH 加密算法
 *******************
 
 ECDH 是 `Diffie-Hellman 算法 <https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange>`_ 的一个变种，它本质上是 `密钥协商算法 <https://en.wikipedia.org/wiki/Key-agreement_protocol>`_ ，只负责通信双方密钥的生成和交换，如何使用这个密钥加密数据取决于用户，和 ECDH 算法无关。
 
-假设 Alice 和 Bob 想要交换信息，下面是使用 ECDH 的交换密钥的过程：
+假设 Alice 和 Bob 想要交换信息，下面是使用 ECDH 交换密钥的过程：
 
 1. 首先，**Alice 和 Bob 各自生成自己的公钥和私钥**。设 Alice 的私钥为 :math:`d_A` ，公钥 :math:`H_A = d_AG`，Bob 的私钥 :math:`d_B`，公钥 :math:`H_B = d_BG` 。两人使用同样的曲线参数。
 2. **Alice 和 Bob 在不可靠的信道上交换它们的公钥**。中间人即使监听获得了两人的公钥 :math:`H_A` 和 :math:`H_B` ，也没办法解出两人的私钥 :math:`d_A` 或 :math:`d_B` ，因为需要解离散对数问题。
@@ -565,7 +563,7 @@ Diffie-Hellman 难题更详细的可以参见可汗学院的这个视频： `Pub
 
 **Alice 和 Bob 获得共同的秘密** :math:`S` **后，就可以使用对称加密来交换数据了。**
 
-比如，可以使用 :math:`S` 的 :math:`x` 坐标作为密钥，使用 AES 或者 3DES 之类的算法来加密信息了。TLS 的方式比这个稍微复杂一点，它用的是 :math:`x` 坐标再加上一些和连接相关的数值后计算的一个 hash。
+比如，可以使用 :math:`S` 的 :math:`x` 坐标作为密钥，使用 AES 或者 3DES 之类的算法来加密信息。TLS 的方式比这个稍微复杂一点，它用的是 :math:`x` 坐标再加上一些和连接相关的数值后计算的一个 hash。
 
 ECDHE 加密算法
 *******************

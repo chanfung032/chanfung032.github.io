@@ -6,6 +6,7 @@ Blog
 .. toctree::
    :maxdepth: 1
 
+   elliptic-curve-cryptography.rst
    bitcoin-explained.rst
    nginx-lua-internals.rst
    user-experience-design-for-apis.rst
