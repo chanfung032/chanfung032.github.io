@@ -48,7 +48,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'My Blog'
+project = u'Feng\'s blog'
 copyright = u'2017, chanfung032'
 author = u'chanfung032'
 

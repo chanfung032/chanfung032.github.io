@@ -5,7 +5,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Elliptic Curve Cryptography &#8212; My Blog 1.0 documentation</title>
+    <title>Elliptic Curve Cryptography &#8212; Feng&#39;s blog 1.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -25,7 +25,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="比特币的工作原理" href="bitcoin-explained.html" />
-    <link rel="prev" title="Blog" href="index.html" />
+    <link rel="prev" title="Feng’s blog" href="index.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -497,7 +497,7 @@ y_R &amp; = &amp; [y_P + m(x_R - x_P)] \bmod{p} \\
 <h4>ECDSA 签名算法（Signing with ECDSA）<a class="headerlink" href="#ecdsa-signing-with-ecdsa" title="Permalink to this headline">¶</a></h4>
 <p>ECDSA 签名算法的使用场景是这样的：Alice 要发送一个消息给 Bob，为了让 Bob 相信这个信息确实是她发出的， Alice 使用自己的私钥 <span class="math">\(d_A\)</span> 给消息生成一个数字签名并和消息一起发给 Bob，Bob 收到后可以使用 Alice 的公钥 <span class="math">\(H_A\)</span> 验证这个消息是否确实是 Alice 所发。</p>
 <p>这里两人依然使用同样的椭圆曲线参数。ECDSA 是 Digital Signature Algorithm 在椭圆曲线上的应用。</p>
-<p>ECDSA 是用消息的 hash 来生成签名的，这个 hash 函数我们可以自己定（但最好使用一个 <a class="reference external" href="http://en.wikipedia.org/wiki/Cryptographic_hash_function">安全 hash 算法</a> 。hash 值会被截断到和子群的序 <span class="math">\(n\)</span> 同样的 bit 长度。记这个截断后的整数值为 <span class="math">\(z\)</span> 。</p>
+<p>ECDSA 是用消息的 hash 来生成签名的，这个 hash 函数我们可以自己定（但最好使用一个 <a class="reference external" href="http://en.wikipedia.org/wiki/Cryptographic_hash_function">安全 hash 算法</a> ）。hash 值会被截断到和子群的序 <span class="math">\(n\)</span> 同样的 bit 长度。记这个截断后的整数值为 <span class="math">\(z\)</span> 。</p>
 <p>ECDSA 算法签名的过程如下：</p>
 <ol class="arabic simple">
 <li>从 <span class="math">\({1, \cdots, n - 1}\)</span> 随机取一个数 <span class="math">\(k\)</span> （<span class="math">\(n\)</span> 是子群的序）。</li>
@@ -607,7 +607,7 @@ P &amp; = s^{-1} (z + r d_A) G \\
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">Blog</a></li>
+      <li>Previous: <a href="index.html" title="previous chapter">Feng’s blog</a></li>
       <li>Next: <a href="bitcoin-explained.html" title="next chapter">比特币的工作原理</a></li>
   </ul></li>
 </ul>

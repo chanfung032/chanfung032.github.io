@@ -579,7 +579,7 @@ ECDSA 签名算法的使用场景是这样的：Alice 要发送一个消息给 B
 
 这里两人依然使用同样的椭圆曲线参数。ECDSA 是 Digital Signature Algorithm 在椭圆曲线上的应用。
 
-ECDSA 是用消息的 hash 来生成签名的，这个 hash 函数我们可以自己定（但最好使用一个 `安全 hash 算法 <http://en.wikipedia.org/wiki/Cryptographic_hash_function>`_ 。hash 值会被截断到和子群的序 :math:`n` 同样的 bit 长度。记这个截断后的整数值为 :math:`z` 。
+ECDSA 是用消息的 hash 来生成签名的，这个 hash 函数我们可以自己定（但最好使用一个 `安全 hash 算法 <http://en.wikipedia.org/wiki/Cryptographic_hash_function>`_ ）。hash 值会被截断到和子群的序 :math:`n` 同样的 bit 长度。记这个截断后的整数值为 :math:`z` 。
 
 ECDSA 算法签名的过程如下：
 
