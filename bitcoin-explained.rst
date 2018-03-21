@@ -84,6 +84,12 @@
 
 区块中并不存 difficulty ，区块页面里显示的 difficulty 是计算出来的。
 
+----
+
+difficulty 每 2016 个区块会调整一次，根据前 2016 个区块挖出的时间，目标是让区块的挖出速度能稳定在 10 分钟 1 个区块，2016 个区块大概需要两周时间挖出来，如果前 2016 个区块挖出的时间小于这个时间，那么 difficulty 参数就会增加，反之， difficulty 参数会下降。
+
+https://en.bitcoin.it/wiki/Difficulty#What_is_the_formula_for_difficulty.3F
+
 比特币
 -------------
 
