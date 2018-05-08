@@ -5,7 +5,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Feng’s blog &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <title>机器学习笔记——GAN &#8212; Feng&#39;s blog 1.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -24,7 +24,6 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Percolator 的事务模型" href="percolator.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -40,34 +39,28 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="feng-s-blog">
-<h1>Feng’s blog<a class="headerlink" href="#feng-s-blog" title="Permalink to this headline">¶</a></h1>
-<p>2018</p>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="percolator.html">Percolator 的事务模型</a></li>
-<li class="toctree-l1"><a class="reference internal" href="elliptic-curve-cryptography.html">Elliptic Curve Cryptography</a></li>
-<li class="toctree-l1"><a class="reference internal" href="bitcoin-explained.html">比特币的工作原理</a></li>
-<li class="toctree-l1"><a class="reference internal" href="nginx-lua-internals.html">Nginx Lua 剖析</a></li>
-<li class="toctree-l1"><a class="reference internal" href="user-experience-design-for-apis.html">User experience design for APIs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="golang-internals-malloc.html">Go 语言实现——内存管理</a></li>
+  <div class="section" id="gan">
+<h1>机器学习笔记——GAN<a class="headerlink" href="#gan" title="Permalink to this headline">¶</a></h1>
+<p>李宏毅 - Generative Adversarial Network (GAN) <a class="reference external" href="https://www.youtube.com/playlist?list=PLJV_el3uVTsMd2G9ZjcpJn1YfnM9wVOBf">video</a> <a class="reference external" href="http://speech.ee.ntu.edu.tw/~tlkagk/slide/Tutorial_HYLee_GAN.pdf">slide</a></p>
+<p>初始化 D 的参数 <span class="math">\(\theta_d\)</span>  和 G 的参数 <span class="math">\(\theta_g\)</span> 。</p>
+<p>对于每次训练迭代:</p>
+<ul class="simple">
+<li>Sample m examples <span class="math">\(\{x^1, x^2, \cdots, x^m\}\)</span> from data distribution <span class="math">\(P_{data}(x)\)</span></li>
+<li>Sample m noise samples <span class="math">\(\{z^1, z^2, \cdots, z^m\}\)</span> from the prior <span class="math">\(P_{prior}(z)\)</span></li>
+<li>Obtaining generated data <span class="math">\(\{\tilde{x}^1, \tilde{x}^2, \cdots, \tilde{x}^m\}\)</span>, <span class="math">\(\tilde{x}^i = G(z^i)\)</span></li>
+<li>Update discriminator parameters <span class="math">\(\theta_d\)</span> to maximize<ul>
+<li><span class="math">\(\tilde{V} = \frac{1}{m}\sum_{i=1}^{m} \log D(x_i) + \frac{1}{m} \sum_{i=1}^{m} \log(1 - D(\tilde{x}^i))\)</span></li>
+<li><span class="math">\(\theta_d \leftarrow \theta_d - \eta\nabla\tilde{V}(\theta_d)\)</span></li>
 </ul>
-</div>
-<p>2017</p>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="golang-internals-io.html">Go 语言实现——网络 IO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="golang-internals-goroutine.html">Go 语言实现——goroutine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="golang-internals-bootstrap.html">Go 语言实现——启动过程</a></li>
-<li class="toctree-l1"><a class="reference internal" href="golang-internals-function.html">Go 语言实现——函数</a></li>
-<li class="toctree-l1"><a class="reference internal" href="golang-internals-nil.html">Go 语言实现——nil</a></li>
-<li class="toctree-l1"><a class="reference internal" href="golang-internals-variable.html">Go 语言实现——数据结构</a></li>
-<li class="toctree-l1"><a class="reference internal" href="kafka-storage-internals.html">Kafka的存储机制</a></li>
-<li class="toctree-l1"><a class="reference internal" href="speed-matters.html">Speed matters: Why working quickly is more important than it seems</a></li>
-<li class="toctree-l1"><a class="reference internal" href="simhash.html">Simhash 算法</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sqlite-file-format.html">sqlite剖析（1）——文件格式</a></li>
+</li>
+<li>Sample another m noise samples <span class="math">\(\{z^1, z^2, \cdots, z^m\}\)</span> from the prior <span class="math">\(P_{prior}(z)\)</span></li>
+<li>Update generator parameters <span class="math">\(\theta_g\)</span> to minimize<ul>
+<li><span class="math">\(\tilde{V} = \frac{1}{m}\sum_{i=1}^{m} \log D(x_i) + \frac{1}{m} \sum_{i=1}^{m} \log(1 - D(G(z^i)))\)</span></li>
+<li><span class="math">\(\theta_g \leftarrow \theta_g - \eta\nabla\tilde{V}(\theta_g)\)</span></li>
 </ul>
-</div>
+</li>
+</ul>
+<p>前面 4 步为 Learning D，后面 2 步为 Learning G。</p>
 </div>
 
 
@@ -78,15 +71,14 @@
         <div class="sphinxsidebarwrapper"><div class="relations">
 <h3>Related Topics</h3>
 <ul>
-  <li><a href="#">Documentation overview</a><ul>
-      <li>Next: <a href="percolator.html" title="next chapter">Percolator 的事务模型</a></li>
+  <li><a href="index.html">Documentation overview</a><ul>
   </ul></li>
 </ul>
 </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/index.rst.txt"
+      <li><a href="_sources/gan.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -112,7 +104,7 @@
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="_sources/index.rst.txt"
+      <a href="_sources/gan.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

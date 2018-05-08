@@ -6,6 +6,7 @@ Feng's blog
 .. toctree::
    :maxdepth: 1
 
+   percolator.rst
    elliptic-curve-cryptography.rst
    bitcoin-explained.rst
    nginx-lua-internals.rst

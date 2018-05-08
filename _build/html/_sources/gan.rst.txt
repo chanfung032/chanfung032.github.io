@@ -1,0 +1,24 @@
+机器学习笔记——GAN
+========================
+
+李宏毅 - Generative Adversarial Network (GAN) `video <https://www.youtube.com/playlist?list=PLJV_el3uVTsMd2G9ZjcpJn1YfnM9wVOBf>`_ `slide <http://speech.ee.ntu.edu.tw/~tlkagk/slide/Tutorial_HYLee_GAN.pdf>`_ 
+
+初始化 D 的参数 :math:`\theta_d`  和 G 的参数 :math:`\theta_g` 。
+
+对于每次训练迭代:
+
+- Sample m examples :math:`\{x^1, x^2, \cdots, x^m\}` from data distribution :math:`P_{data}(x)`
+- Sample m noise samples :math:`\{z^1, z^2, \cdots, z^m\}` from the prior :math:`P_{prior}(z)`
+- Obtaining generated data :math:`\{\tilde{x}^1, \tilde{x}^2, \cdots, \tilde{x}^m\}`, :math:`\tilde{x}^i = G(z^i)`
+- Update discriminator parameters :math:`\theta_d` to maximize
+
+  * :math:`\tilde{V} = \frac{1}{m}\sum_{i=1}^{m} \log D(x_i) + \frac{1}{m} \sum_{i=1}^{m} \log(1 - D(\tilde{x}^i))`
+  * :math:`\theta_d \leftarrow \theta_d - \eta\nabla\tilde{V}(\theta_d)`
+
+- Sample another m noise samples :math:`\{z^1, z^2, \cdots, z^m\}` from the prior :math:`P_{prior}(z)`
+- Update generator parameters :math:`\theta_g` to minimize
+
+  * :math:`\tilde{V} = \frac{1}{m}\sum_{i=1}^{m} \log D(x_i) + \frac{1}{m} \sum_{i=1}^{m} \log(1 - D(G(z^i)))`
+  * :math:`\theta_g \leftarrow \theta_g - \eta\nabla\tilde{V}(\theta_g)`
+
+前面 4 步为 Learning D，后面 2 步为 Learning G。
