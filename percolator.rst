@@ -52,7 +52,7 @@ Percolator 中的一个 column *c* 由 5 个 Bigtable column 组成，其中和�
 **Commit阶段**
 
 1. 检查 primary row 的 lock 是否还在，如果不在，失败返回。
-2. 提交 primary row，即写入 (row, c:write, commit_ts) => start_ts 并删除 c:lock 的锁。primary row 提交成功即使整个事务成功。
+2. 提交 primary row，即写入 (row, c:write, commit_ts) => start_ts 并删除 c:lock 的锁。primary row 提交成功即是整个事务成功。
 3. 提交 secondary rows.
 
 Get()
