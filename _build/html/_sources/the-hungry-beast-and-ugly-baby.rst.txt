@@ -3,7 +3,7 @@ The Hungry Beast And The Ugly Baby
 
 From: `Creativity, Inc. <https://book.douban.com/subject/25777433/>`_
 
-工作效率和产出的提高（hungry beast）不是最终目标，创新（ugly babies）才是，两者应该和平共处达成一种平衡。只要不扼杀创新，hungry beast 还是一个好用的生产力工具。
+工作效率和产出的提高（hungry beast）不是最终目标，创新（ugly babies）才是，两者应该和平共处相辅相成。只要不扼杀创新，hungry beast 还是一个好用的生产力工具。要培养自己的 hungry beast。
 
 I see this over and over again in other companies: A subversion takes place in which streamlining the process or increasing production supplants the ultimate goal, with each person or group thinking they’re doing the right thing—when, in fact, they have strayed off course. When efficiency or consistency of workflow are not balanced by other equally strong countervailing forces, the result is that new ideas—our ugly babies—aren’t afforded the attention and protection they need to shine and mature. They are abandoned or never conceived of in the first place. Emphasis is placed on doing safer projects that mimic proven money-makers just to keep something—anything!—moving through the pipeline (see The Lion King 1½, a direct-to-video effort that came out in 2004, six years after The Lion King 2: Simba’s Pride). This kind of thinking yields predictable, unoriginal fare because it prevents the kind of organic ferment that fuels true inspiration. But it does feed the Beast.
 
