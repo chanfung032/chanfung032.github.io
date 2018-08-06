@@ -6,6 +6,7 @@ Feng's blog
 .. toctree::
    :maxdepth: 1
 
+   python3-features.rst
    the-hungry-beast-and-ugly-baby.rst
    spanner.rst
    percolator.rst

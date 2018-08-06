@@ -1,0 +1,362 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>一些 Python 3 新特性及其使用方法 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="python-3">
+<h1>一些 Python 3 新特性及其使用方法<a class="headerlink" href="#python-3" title="Permalink to this headline">¶</a></h1>
+<p>Python 2 转 3 的流水账。</p>
+<p><a class="reference external" href="https://docs.python.org/3/whatsnew/index.html">https://docs.python.org/3/whatsnew/index.html</a></p>
+<div class="section" id="to3">
+<h2>2to3<a class="headerlink" href="#to3" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first"><code class="docutils literal"><span class="pre">print</span></code> 在 3 中是一个 function。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="s1">&#39;hello&#39;</span>
+<span class="go">File &quot;&lt;stdin&gt;&quot;, line 1</span>
+<span class="go">    print &#39;hello&#39;</span>
+<span class="go">                ^</span>
+<span class="go">SyntaxError: Missing parentheses in call to &#39;print&#39;. Did you mean print(&#39;hello&#39;)?</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;hello&#39;</span><span class="p">)</span>
+<span class="go">hello</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">StringIO</span></code>、<code class="docutils literal"><span class="pre">cStringIO</span></code> 模块删除，对应的功能由 <code class="docutils literal"><span class="pre">io.StringIO</span></code>、<code class="docutils literal"><span class="pre">io.BytesIO</span></code> 取代。</p>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">super()</span></code> 函数可以不用传参数了。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># Python 2</span>
+<span class="k">class</span> <span class="nc">MySubClass</span><span class="p">(</span><span class="n">MySuperClass</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MySubClass</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+<span class="c1"># Python 3</span>
+<span class="k">class</span> <span class="nc">MySubClass</span><span class="p">(</span><span class="n">MySuperClass</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">3/2</span></code> 现在返回一个 float，而不是 2 中的 int。</p>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">dict.keys()</span></code>, <code class="docutils literal"><span class="pre">dict.items()</span></code>, <code class="docutils literal"><span class="pre">dict.values()</span></code> 现在返回 views 而不是 lists。iter* 系列函数被删除。</p>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">map()</span></code>、<code class="docutils literal"><span class="pre">filter()</span></code>、<code class="docutils literal"><span class="pre">range()</span></code>、<code class="docutils literal"><span class="pre">zip()</span></code> 现在返回 iterator。</p>
+</li>
+</ul>
+</div>
+<div class="section" id="literal-string-interpolation">
+<h2>Literal String Interpolation<a class="headerlink" href="#literal-string-interpolation" title="Permalink to this headline">¶</a></h2>
+<p>又叫 f-string，用来替代 % 格式化、 <code class="docutils literal"><span class="pre">str.format()</span></code> 格式化。基本语法如下：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">f</span> <span class="s1">&#39; &lt;text&gt; { &lt;expression&gt; &lt;optional !s, !r, or !a&gt; &lt;optional : format specifier&gt; } &lt;text&gt; ... &#39;</span>
+</pre></div>
+</div>
+<p>其中</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">!s</span></code>, <code class="docutils literal"><span class="pre">!r</span></code>, <code class="docutils literal"><span class="pre">!a</span></code> 等于 <code class="docutils literal"><span class="pre">str(expression)</span></code>, <code class="docutils literal"><span class="pre">repr(expression)</span></code>, <code class="docutils literal"><span class="pre">ascii(expression)</span></code> 。</li>
+<li>format specifier 同 <code class="docutils literal"><span class="pre">format()</span></code> 的，详细见：<a class="reference external" href="https://docs.python.org/3.7/library/string.html#formatspec">https://docs.python.org/3.7/library/string.html#formatspec</a></li>
+</ul>
+<p>示例：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;world&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="s1">&#39;hello </span><span class="si">{name}</span><span class="s1">&#39;</span>
+<span class="go">&#39;hello world&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="s1">&#39;hello {name.upper()}&#39;</span>
+<span class="go">&#39;hello WORLD&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="s1">&#39;hello </span><span class="si">{name!r}</span>
+<span class="go">&quot;hello &#39;world&#39;&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="s1">&#39;hello {{name}}&#39;</span>
+<span class="go">&quot;hello {name}&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="s1">&#39;hello </span><span class="si">{name:10s}</span><span class="s1">&#39;</span>
+<span class="go">&#39;hello world     &#39;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://www.python.org/dev/peps/pep-0498/#specification">https://www.python.org/dev/peps/pep-0498/#specification</a></li>
+</ul>
+</div>
+<div class="section" id="fine-grained-os-exceptions">
+<h2>Fine-grained OS Exceptions<a class="headerlink" href="#fine-grained-os-exceptions" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span>&gt;&gt;&gt; open(&#39;/sbin/md5&#39;, &#39;w&#39;)
+Traceback (most recent call last):
+File &quot;&lt;stdin&gt;&quot;, line 1, in &lt;module&gt;
+PermissionError: [Errno 1] Operation not permitted: &#39;/sbin/md5&#39;
+&gt;&gt;&gt; PermissionError.mro()
+[&lt;class &#39;PermissionError&#39;&gt;, &lt;class &#39;OSError&#39;&gt;, &lt;class &#39;Exception&#39;&gt;, &lt;class &#39;BaseException&#39;&gt;, &lt;class &#39;object&#39;&gt;]
+</pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">OSError</span></code> 根据 errno 的不一样有了一系列的子异常，可以直接捕获这些异常而不是如下捕获 OSError 后再判断其 errno。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;/sbin/md5&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="ow">in</span> <span class="p">[</span><span class="n">errno</span><span class="o">.</span><span class="n">EPERM</span><span class="p">,</span> <span class="n">errno</span><span class="o">.</span><span class="n">EACCES</span><span class="p">]:</span>
+        <span class="k">pass</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#os-exceptions">https://docs.python.org/3/library/exceptions.html#os-exceptions</a></p>
+</div>
+<div class="section" id="extended-iterable-unpacking">
+<h2>Extended Iterable Unpacking<a class="headerlink" href="#extended-iterable-unpacking" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">first</span><span class="p">,</span> <span class="o">*</span><span class="n">rest</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="n">seq</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">first</span><span class="p">,</span> <span class="n">rest</span><span class="p">,</span> <span class="n">last</span>
+<span class="go">(0, [1, 2, 3], 4)</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://www.python.org/dev/peps/pep-3132/">https://www.python.org/dev/peps/pep-3132/</a></p>
+</div>
+<div class="section" id="faulthandler">
+<h2>faulthandler<a class="headerlink" href="#faulthandler" title="Permalink to this headline">¶</a></h2>
+<p>给 SIGSEGV，SIGFPE，SIGABRT，SIGBUS 或者 SIGILL 安装 handler，在遇到这些信号程序挂的时候打印当时的调用栈。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">faulthandler</span>
+<span class="n">faulthandler</span><span class="o">.</span><span class="n">enable</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">killme</span><span class="p">():</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="kn">from</span> <span class="nn">ctypes</span> <span class="k">import</span> <span class="n">CDLL</span>
+    <span class="n">dll</span> <span class="o">=</span> <span class="s1">&#39;dylib&#39;</span> <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;darwin&#39;</span> <span class="k">else</span> <span class="s1">&#39;so.6&#39;</span>
+    <span class="n">libc</span> <span class="o">=</span> <span class="n">CDLL</span><span class="p">(</span><span class="s2">&quot;libc.</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">dll</span><span class="p">)</span>
+    <span class="n">libc</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># BOOM!!</span>
+
+<span class="n">killme</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>$ python test.py
+Fatal Python error: Segmentation fault
+
+Current thread 0x00007fff781b6310:
+File <span class="s2">&quot;test.py&quot;</span>, line <span class="m">11</span> in killme
+File <span class="s2">&quot;test.py&quot;</span>, line <span class="m">13</span> in &lt;module&gt;
+Segmentation fault: <span class="m">11</span>
+</pre></div>
+</div>
+<p>也可以通过设置 <code class="docutils literal"><span class="pre">PYTHONFAULTHANDLER=1</span></code> 环境变量或者命令行参数 <code class="docutils literal"><span class="pre">-X</span> <span class="pre">faulthandler</span></code> enable 这个 handler。</p>
+<p><a class="reference external" href="https://docs.python.org/3/library/faulthandler.html">https://docs.python.org/3/library/faulthandler.html</a></p>
+</div>
+<div class="section" id="exception-chaining">
+<h2>Exception Chaining<a class="headerlink" href="#exception-chaining" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span>&gt;&gt;&gt; try:
+...     1/0
+... except ZeroDivisionError:
+...     raise RuntimeError()
+...
+Traceback (most recent call last):
+File &quot;&lt;stdin&gt;&quot;, line 2, in &lt;module&gt;
+ZeroDivisionError: division by zero
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+File &quot;&lt;stdin&gt;&quot;, line 4, in &lt;module&gt;
+RuntimeError
+</pre></div>
+</div>
+<p>如果不想输出整个 Exception chain，可以使用 <code class="docutils literal"><span class="pre">raise</span> <span class="pre">RuntimeError()</span> <span class="pre">from</span> <span class="pre">None</span></code> 。</p>
+<p><a class="reference external" href="https://www.python.org/dev/peps/pep-3134/">https://www.python.org/dev/peps/pep-3134/</a></p>
+</div>
+<div class="section" id="enum">
+<h2>Enum<a class="headerlink" href="#enum" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">enum</span> <span class="k">import</span> <span class="n">Enum</span>
+<span class="k">class</span> <span class="nc">Color</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">RED</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">GREEN</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">BLUE</span> <span class="o">=</span> <span class="mi">3</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="thousands-separator">
+<h2>Thousands Separator<a class="headerlink" href="#thousands-separator" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="s1">&#39;</span><span class="si">{100000000000:,d}</span><span class="s1">&#39;</span>
+<span class="go">&#39;100,000,000,000&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">100</span><span class="n">_000_000_000</span>
+<span class="go">100000000000</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="cocurrent-future">
+<h2>cocurrent.future<a class="headerlink" href="#cocurrent-future" title="Permalink to this headline">¶</a></h2>
+<p>在 threading 和 multiprocessing 之上的一层抽象。</p>
+<p>基本使用：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">concurrent.futures</span>
+
+<span class="k">with</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+    <span class="n">future</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>同 map 函数，只是任务会并发执行：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ProcessPoolExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">result</span> <span class="n">executor</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">iterables</span><span class="p">)):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>并发执行，按任务完成的顺序返回结果：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+    <span class="n">futures</span> <span class="o">=</span> <span class="p">[</span><span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">iterables</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">as_completed</span><span class="p">(</span><span class="n">futures</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="k">pass</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html">https://docs.python.org/3/library/concurrent.futures.html</a></p>
+</div>
+<div class="section" id="venv">
+<h2>venv<a class="headerlink" href="#venv" title="Permalink to this headline">¶</a></h2>
+<p>标准库内置了对 virtual environment 的支持。</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<p>$ python3 -m venv /path/to/new/virtual/environment</p>
+</div>
+<div class="section" id="multiple-unpacking">
+<h2>Multiple Unpacking<a class="headerlink" href="#multiple-unpacking" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="o">**</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">b</span><span class="p">,</span> <span class="o">**</span><span class="n">c</span><span class="p">}</span>
+<span class="p">[</span><span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="o">*</span><span class="n">c</span><span class="p">]</span>
+<span class="p">{</span><span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="o">*</span><span class="n">c</span><span class="p">}</span>
+<span class="p">(</span><span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="o">*</span><span class="n">c</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>另外函数调用也支持多个 unpacking，不再限于以前的一个：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">pass</span>
+<span class="c1"># 在 2 中报语法错误，在 3 中 OK。</span>
+<span class="n">foo</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="o">*</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://www.python.org/dev/peps/pep-0448/">https://www.python.org/dev/peps/pep-0448/</a></p>
+</div>
+<div class="section" id="keyword-only-arguments">
+<h2>Keyword-only arguments<a class="headerlink" href="#keyword-only-arguments" title="Permalink to this headline">¶</a></h2>
+<p>使用 <code class="docutils literal"><span class="pre">*</span></code> 号指定其后所有的参数只可以通过 keyword arguments 来传递。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SVC</span><span class="p">(</span><span class="n">BaseSVC</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="s1">&#39;rbf&#39;</span><span class="p">,</span> <span class="n">degree</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">coef0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">...</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://www.python.org/dev/peps/pep-3102/">https://www.python.org/dev/peps/pep-3102/</a></p>
+</div>
+<div class="section" id="pathlib">
+<h2>pathlib<a class="headerlink" href="#pathlib" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pathlib</span> <span class="k">import</span> <span class="n">Path</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Path</span><span class="p">(</span><span class="s1">&#39;/a&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="s1">&#39;b&#39;</span> <span class="o">/</span> <span class="s1">&#39;c&#39;</span>
+<span class="go">PosixPath(&#39;/a/b/c&#39;)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="ipaddress">
+<h2>ipaddress<a class="headerlink" href="#ipaddress" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ipaddress</span> <span class="k">import</span> <span class="n">ip_address</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ipaddress</span><span class="p">(</span><span class="s1">&#39;1.2.3.4&#39;</span><span class="p">)</span>
+<span class="go">IPv4Address(&#39;1.2.3.4&#39;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ip_address</span><span class="p">(</span><span class="s1">&#39;::&#39;</span><span class="p">)</span>
+<span class="go">IPv6Address(&#39;::&#39;)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">一些 Python 3 新特性及其使用方法</a><ul>
+<li><a class="reference internal" href="#to3">2to3</a></li>
+<li><a class="reference internal" href="#literal-string-interpolation">Literal String Interpolation</a></li>
+<li><a class="reference internal" href="#fine-grained-os-exceptions">Fine-grained OS Exceptions</a></li>
+<li><a class="reference internal" href="#extended-iterable-unpacking">Extended Iterable Unpacking</a></li>
+<li><a class="reference internal" href="#faulthandler">faulthandler</a></li>
+<li><a class="reference internal" href="#exception-chaining">Exception Chaining</a></li>
+<li><a class="reference internal" href="#enum">Enum</a></li>
+<li><a class="reference internal" href="#thousands-separator">Thousands Separator</a></li>
+<li><a class="reference internal" href="#cocurrent-future">cocurrent.future</a></li>
+<li><a class="reference internal" href="#venv">venv</a></li>
+<li><a class="reference internal" href="#multiple-unpacking">Multiple Unpacking</a></li>
+<li><a class="reference internal" href="#keyword-only-arguments">Keyword-only arguments</a></li>
+<li><a class="reference internal" href="#pathlib">pathlib</a></li>
+<li><a class="reference internal" href="#ipaddress">ipaddress</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/python3-features.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/python3-features.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
