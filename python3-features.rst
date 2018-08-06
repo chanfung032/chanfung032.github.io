@@ -1,7 +1,7 @@
 一些 Python 3 新特性及其使用方法
 ================================
 
-Python 2 转 3 的流水账。
+流水账。
 
 https://docs.python.org/3/whatsnew/index.html
 
@@ -212,7 +212,7 @@ venv
 
 .. code-block:: shell
 
-$ python3 -m venv /path/to/new/virtual/environment
+    $ python3 -m venv /path/to/new/virtual/environment
 
 Multiple Unpacking
 -----------------------
@@ -262,5 +262,5 @@ ipaddress
     IPv4Address('1.2.3.4')
     >>> ip_address('::')
     IPv6Address('::')
-    
+
 
