@@ -212,7 +212,7 @@ venv
 
 .. code-block:: shell
 
-$ python3 -m venv /path/to/new/virtual/environment
+    $ python3 -m venv /path/to/new/virtual/environment
 
 Multiple Unpacking
 -----------------------
