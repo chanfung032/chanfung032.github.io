@@ -8,6 +8,7 @@ Feng's blog
 .. toctree::
    :maxdepth: 1
 
+   regexp.rst
    android-wexin-export-with-no-root.rst
    python3-features.rst
    the-hungry-beast-and-ugly-baby.rst
