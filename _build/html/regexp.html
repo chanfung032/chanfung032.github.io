@@ -1,0 +1,172 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Regular Expression Matching Can Be Simple And Fast &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Android 无 ROOT 导出微信聊天记录" href="android-wexin-export-with-no-root.html" />
+    <link rel="prev" title="Feng’s blog" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="regular-expression-matching-can-be-simple-and-fast">
+<h1>Regular Expression Matching Can Be Simple And Fast<a class="headerlink" href="#regular-expression-matching-can-be-simple-and-fast" title="Permalink to this headline">¶</a></h1>
+<p>原文： <a class="reference external" href="https://swtch.com/~rsc/regexp/regexp1.html">https://swtch.com/~rsc/regexp/regexp1.html</a></p>
+<div class="section" id="id1">
+<h2>概要<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>Russ Cox 在这篇文章里介绍的算法和一般语言（PHP，Perl，Python等）的实现最大的区别在与不用回溯，该算法在遇到分支时，不是任选一个分支继续往下执行（失败时回溯选择下一分支），而是同时执行所有分支（将可能的状态加入一个集合），这样即使最坏的情况也可保证算法线性执行时间。</p>
+</div>
+<div class="section" id="nfa">
+<h2>将正则表达式转换为 NFA<a class="headerlink" href="#nfa" title="Permalink to this headline">¶</a></h2>
+<p>正则表达式的 NFA 可以由以下 NFA 片段组合而成：</p>
+<p>匹配单个字符</p>
+<img alt="_images/regexp-1.png" src="_images/regexp-1.png" />
+<p>字符串连接</p>
+<img alt="_images/regexp-2.png" src="_images/regexp-2.png" />
+<p>分支</p>
+<img alt="_images/regexp-3.png" src="_images/regexp-3.png" />
+<p>匹配 0 或 1 次</p>
+<img alt="_images/regexp-4.png" src="_images/regexp-4.png" />
+<p>匹配 0 或多次</p>
+<img alt="_images/regexp-5.png" src="_images/regexp-5.png" />
+<p>匹配 1 次或以上</p>
+<img alt="_images/regexp-6.png" src="_images/regexp-6.png" />
+<p>(a*b?c+)* 的完整 NFA 如下图所示：</p>
+<img alt="_images/regexp-nfa.png" src="_images/regexp-nfa.png" />
+</div>
+<div class="section" id="id2">
+<h2>正则表达式匹配算法<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<p>遇到分支我们执行所有可能分支，记录下所有可能的下一步状态，然后接下去继续跟踪所有这些状态。如下图所示。</p>
+<img alt="_images/regexp-7.png" src="_images/regexp-7.png" />
+<p>这一段代码使用 Go 描述大致如下：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">State</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">c</span>    <span class="kt">byte</span>
+    <span class="nx">out</span>  <span class="o">*</span><span class="nx">State</span>
+    <span class="nx">out1</span> <span class="o">*</span><span class="nx">State</span>
+<span class="p">}</span>
+
+<span class="c1">// 输入当前状态集合以及遇到的下一个字符，返回下一步的状态集合</span>
+<span class="c1">// map 的 key 为所有的可能状态。</span>
+<span class="kd">func</span> <span class="nx">step</span><span class="p">(</span><span class="nx">states</span> <span class="kd">map</span><span class="p">[</span><span class="o">*</span><span class="nx">State</span><span class="p">]</span><span class="kt">bool</span><span class="p">,</span> <span class="nx">c</span> <span class="kt">byte</span><span class="p">)</span> <span class="kd">map</span><span class="p">[</span><span class="o">*</span><span class="nx">State</span><span class="p">]</span><span class="kt">bool</span> <span class="p">{</span>
+    <span class="nx">nstates</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="o">*</span><span class="nx">State</span><span class="p">]</span><span class="kt">bool</span><span class="p">)</span>
+    <span class="k">for</span> <span class="nx">s</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">states</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">c</span> <span class="o">==</span> <span class="nx">c</span> <span class="p">{</span>
+            <span class="nx">addstate</span><span class="p">(</span><span class="nx">nstates</span><span class="p">,</span> <span class="nx">s</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">nstates</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nx">addstate</span><span class="p">(</span><span class="nx">states</span> <span class="kd">map</span><span class="p">[</span><span class="o">*</span><span class="nx">State</span><span class="p">]</span><span class="kt">bool</span><span class="p">,</span> <span class="nx">s</span> <span class="o">*</span><span class="nx">State</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="nx">s</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">||</span> <span class="nx">states</span><span class="p">[</span><span class="nx">s</span><span class="p">]</span> <span class="p">{</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="c1">// 对于分支状态节点，我们跟踪其所有的 out 状态</span>
+    <span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">c</span> <span class="o">==</span> <span class="nx">Split</span> <span class="p">{</span>
+        <span class="nx">addstate</span><span class="p">(</span><span class="nx">states</span><span class="p">,</span> <span class="nx">s</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span>
+        <span class="nx">addstate</span><span class="p">(</span><span class="nx">states</span><span class="p">,</span> <span class="nx">s</span><span class="p">.</span><span class="nx">out1</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">states</span><span class="p">[</span><span class="nx">s</span><span class="p">]</span> <span class="p">=</span> <span class="kc">true</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>我们可以根据最后的状态集合中是否包含了 <em>匹配状态</em> 来判断字符串是否匹配。</p>
+<p>完整实现（Go版本）：<a class="reference external" href="https://gist.github.com/chanfung032/85c9637d6a15ae68a478d0c47ac3d810">https://gist.github.com/chanfung032/85c9637d6a15ae68a478d0c47ac3d810</a></p>
+<p>Russ Cox 的 C 实现： <a class="reference external" href="https://swtch.com/~rsc/regexp/nfa.c.txt">https://swtch.com/~rsc/regexp/nfa.c.txt</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Regular Expression Matching Can Be Simple And Fast</a><ul>
+<li><a class="reference internal" href="#id1">概要</a></li>
+<li><a class="reference internal" href="#nfa">将正则表达式转换为 NFA</a></li>
+<li><a class="reference internal" href="#id2">正则表达式匹配算法</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Feng’s blog</a></li>
+      <li>Next: <a href="android-wexin-export-with-no-root.html" title="next chapter">Android 无 ROOT 导出微信聊天记录</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/regexp.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/regexp.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
