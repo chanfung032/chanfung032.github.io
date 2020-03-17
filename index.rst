@@ -28,6 +28,7 @@ Feng's blog
    kafka-storage-internals.rst
    speed-matters.rst
    simhash.rst
+   dot-lang-cheatsheet.rst
    sqlite-file-format.rst
 
 .. comment
