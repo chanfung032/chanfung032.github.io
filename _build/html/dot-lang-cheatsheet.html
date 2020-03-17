@@ -65,7 +65,7 @@
 <h2>图属性<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">label=&quot;My</span> <span class="pre">Graph&quot;</span></code> 给图添加标题。</li>
-<li><code class="docutils literal"><span class="pre">rankdir=LR</span></code> 默认图上下布局，修改为左右布局。</li>
+<li><code class="docutils literal"><span class="pre">rankdir=LR</span></code> 默认图为上下布局，修改为左右布局。</li>
 <li><code class="docutils literal"><span class="pre">{rank=same;</span> <span class="pre">a,</span> <span class="pre">b,</span> <span class="pre">c</span> <span class="pre">}</span></code>  将 a, b, c 画到同一个层级上</li>
 </ul>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">digraph</span> <span class="p">{</span>
@@ -97,8 +97,6 @@
 <li><code class="docutils literal"><span class="pre">penwidth=2.0</span></code> 修改边宽度</li>
 <li><code class="docutils literal"><span class="pre">style=dotted</span></code> 修改边的样式</li>
 </ul>
-<p>常见的节点和边样式属性：</p>
-<img alt="_images/dot-style.png" src="_images/dot-style.png" />
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">graph</span> <span class="p">{</span>
     <span class="n">rankdir</span><span class="o">=</span><span class="n">LR</span>
 
@@ -110,6 +108,8 @@
 </pre></div>
 </div>
 <img alt="_images/dot-node-attrs.png" src="_images/dot-node-attrs.png" />
+<p>常见的节点和边样式属性：</p>
+<img alt="_images/dot-style.png" src="_images/dot-style.png" />
 </div>
 <div class="section" id="record">
 <h2>Record 节点<a class="headerlink" href="#record" title="Permalink to this headline">¶</a></h2>
@@ -130,6 +130,7 @@
 </div>
 <div class="section" id="id8">
 <h2>命令行参数<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h2>
+<p>将图源码保存为 <code class="docutils literal"><span class="pre">input.dot</span></code> 文件，执行以下命令生成 png 图：</p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> dot -Tpng -o output.png input.dot
 </pre></div>
 </div>

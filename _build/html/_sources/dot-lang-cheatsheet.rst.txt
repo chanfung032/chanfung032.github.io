@@ -27,7 +27,7 @@ Dot 画图常用语法
 -----------
 
 - ``label="My Graph"`` 给图添加标题。
-- ``rankdir=LR`` 默认图上下布局，修改为左右布局。
+- ``rankdir=LR`` 默认图为上下布局，修改为左右布局。
 - ``{rank=same; a, b, c }``  将 a, b, c 画到同一个层级上
 
 ::
@@ -60,10 +60,6 @@ Dot 画图常用语法
 - ``penwidth=2.0`` 修改边宽度
 - ``style=dotted`` 修改边的样式
 
-常见的节点和边样式属性：
-
-.. image:: images/dot-style.png
-
 ::
 
     graph {
@@ -79,6 +75,9 @@ Dot 画图常用语法
 
 .. _颜色: http://graphviz.org/doc/info/colors.html
 
+常见的节点和边样式属性：
+
+.. image:: images/dot-style.png
 
 Record 节点
 ----------------
@@ -101,6 +100,8 @@ Record 节点
 
 命令行参数
 --------------
+
+将图源码保存为 ``input.dot`` 文件，执行以下命令生成 png 图：
 
 .. code-block:: console
 
