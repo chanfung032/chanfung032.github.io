@@ -70,7 +70,7 @@
 <h2>正则表达式匹配算法<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
 <p>遇到分支我们执行所有可能分支，记录下所有可能的下一步状态，然后接下去继续跟踪所有这些状态。如下图所示。</p>
 <img alt="_images/regexp-7.png" src="_images/regexp-7.png" />
-<p>这一段代码使用 Go 描述大致如下：</p>
+<p>这一段逻辑使用 Go 描述大致如下：</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">State</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">c</span>    <span class="kt">byte</span>
     <span class="nx">out</span>  <span class="o">*</span><span class="nx">State</span>

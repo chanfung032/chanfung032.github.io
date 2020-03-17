@@ -48,7 +48,7 @@ Russ Cox 在这篇文章里介绍的算法和一般语言（PHP，Perl，Python�
 
 .. image:: images/regexp-7.png
 
-这一段代码使用 Go 描述大致如下：
+这一段逻辑使用 Go 描述大致如下：
 
 .. code-block:: go
 

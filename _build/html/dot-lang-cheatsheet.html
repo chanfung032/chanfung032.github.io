@@ -1,0 +1,204 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Dot 画图常用语法 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="sqlite剖析（1）——文件格式" href="sqlite-file-format.html" />
+    <link rel="prev" title="Simhash 算法" href="simhash.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="dot">
+<h1>Dot 画图常用语法<a class="headerlink" href="#dot" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>有向图<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">digraph</span> <span class="p">{</span>
+    <span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<img alt="_images/dot-digraph.png" src="_images/dot-digraph.png" />
+</div>
+<div class="section" id="id2">
+<h2>无向图<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">graph</span> <span class="p">{</span>
+    <span class="n">a</span> <span class="o">--</span> <span class="n">b</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<img alt="_images/dot-graph.png" src="_images/dot-graph.png" />
+</div>
+<div class="section" id="id3">
+<h2>图属性<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">label=&quot;My</span> <span class="pre">Graph&quot;</span></code> 给图添加标题。</li>
+<li><code class="docutils literal"><span class="pre">rankdir=LR</span></code> 默认图上下布局，修改为左右布局。</li>
+<li><code class="docutils literal"><span class="pre">{rank=same;</span> <span class="pre">a,</span> <span class="pre">b,</span> <span class="pre">c</span> <span class="pre">}</span></code>  将 a, b, c 画到同一个层级上</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">digraph</span> <span class="p">{</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">&quot;xyz&quot;</span>
+    <span class="n">rankdir</span><span class="o">=</span><span class="n">LR</span>
+    <span class="p">{</span><span class="n">rank</span><span class="o">=</span><span class="n">same</span><span class="p">;</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">}</span>
+
+    <span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span>
+    <span class="n">b</span> <span class="o">-&gt;</span> <span class="n">c</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<img alt="_images/dot-graph-attrs.png" src="_images/dot-graph-attrs.png" />
+</div>
+<div class="section" id="id4">
+<h2>节点属性<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">label=&quot;XXX&quot;</span></code> 修改节点中的文字内容</li>
+<li><code class="docutils literal"><span class="pre">color=red</span></code> 修改节点边框 <a class="reference external" href="http://graphviz.org/doc/info/colors.html">颜色</a></li>
+<li><code class="docutils literal"><span class="pre">style=filled,</span> <span class="pre">fillcolor=yellow</span></code> 给节点添加填充色</li>
+<li><code class="docutils literal"><span class="pre">shape</span></code> <a class="reference external" href="http://graphviz.org/doc/info/shapes.html">节点形状</a></li>
+</ul>
+</div>
+<div class="section" id="id6">
+<h2>边属性<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">label=&quot;XXX&quot;</span></code> 给边添加说明信息</li>
+<li><code class="docutils literal"><span class="pre">color=red</span></code> 修改边 <a class="reference external" href="http://graphviz.org/doc/info/colors.html">颜色</a></li>
+<li><code class="docutils literal"><span class="pre">penwidth=2.0</span></code> 修改边宽度</li>
+<li><code class="docutils literal"><span class="pre">style=dotted</span></code> 修改边的样式</li>
+</ul>
+<p>常见的节点和边样式属性：</p>
+<img alt="_images/dot-style.png" src="_images/dot-style.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">graph</span> <span class="p">{</span>
+    <span class="n">rankdir</span><span class="o">=</span><span class="n">LR</span>
+
+    <span class="n">a</span> <span class="p">[</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;Foo&quot;</span><span class="p">]</span>
+    <span class="n">b</span> <span class="p">[</span><span class="n">shape</span><span class="o">=</span><span class="n">box</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">filled</span><span class="p">,</span> <span class="n">fillcolor</span><span class="o">=</span><span class="n">yellow</span><span class="p">]</span>
+    <span class="n">a</span> <span class="o">--</span> <span class="n">b</span> <span class="o">--</span> <span class="n">c</span> <span class="p">[</span><span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">]</span>
+    <span class="n">b</span> <span class="o">--</span> <span class="n">d</span> <span class="p">[</span><span class="n">style</span><span class="o">=</span><span class="n">dotted</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<img alt="_images/dot-node-attrs.png" src="_images/dot-node-attrs.png" />
+</div>
+<div class="section" id="record">
+<h2>Record 节点<a class="headerlink" href="#record" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">digraph</span> <span class="n">structs</span> <span class="p">{</span>
+    <span class="n">node</span> <span class="p">[</span><span class="n">shape</span><span class="o">=</span><span class="n">record</span><span class="p">];</span>
+
+    <span class="n">struct1</span> <span class="p">[</span><span class="n">shape</span><span class="o">=</span><span class="n">record</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;&lt;f0&gt; left|&lt;f1&gt; middle|&lt;f2&gt; right&quot;</span><span class="p">];</span>
+    <span class="n">struct2</span> <span class="p">[</span><span class="n">shape</span><span class="o">=</span><span class="n">record</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;&lt;f0&gt; one|&lt;f1&gt; two&quot;</span><span class="p">];</span>
+    <span class="n">struct3</span> <span class="p">[</span><span class="n">shape</span><span class="o">=</span><span class="n">record</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;hello</span><span class="se">\n</span><span class="s2">world |{ b |{c|&lt;here&gt; d|e}| f}| g | h&quot;</span><span class="p">];</span>
+
+    <span class="n">struct1</span><span class="p">:</span><span class="n">f1</span> <span class="o">-&gt;</span> <span class="n">struct2</span><span class="p">:</span><span class="n">f0</span><span class="p">;</span>
+    <span class="n">struct1</span><span class="p">:</span><span class="n">f2</span> <span class="o">-&gt;</span> <span class="n">struct3</span><span class="p">:</span><span class="n">here</span><span class="p">;</span>
+    <span class="n">struct2</span> <span class="o">-&gt;</span> <span class="n">struct3</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<img alt="_images/dot-record.png" src="_images/dot-record.png" />
+</div>
+<div class="section" id="id8">
+<h2>命令行参数<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> dot -Tpng -o output.png input.dot
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Dot 画图常用语法</a><ul>
+<li><a class="reference internal" href="#id1">有向图</a></li>
+<li><a class="reference internal" href="#id2">无向图</a></li>
+<li><a class="reference internal" href="#id3">图属性</a></li>
+<li><a class="reference internal" href="#id4">节点属性</a></li>
+<li><a class="reference internal" href="#id6">边属性</a></li>
+<li><a class="reference internal" href="#record">Record 节点</a></li>
+<li><a class="reference internal" href="#id8">命令行参数</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="simhash.html" title="previous chapter">Simhash 算法</a></li>
+      <li>Next: <a href="sqlite-file-format.html" title="next chapter">sqlite剖析（1）——文件格式</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/dot-lang-cheatsheet.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/dot-lang-cheatsheet.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
