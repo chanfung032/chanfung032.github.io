@@ -1,6 +1,6 @@
-_build/doctrees/
-_build/html/.doctrees/
-_build/html/searchindex.js
-_build/html/objects.inv
-_*.rst
+src/_build/
+src/_*.rst
 .vscode/
+.buildinfo
+objects.inv
+searchindex.js

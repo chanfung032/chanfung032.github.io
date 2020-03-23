@@ -49,10 +49,10 @@ help:
 	@echo "  coverage   to run coverage check of the documentation (if enabled)"
 
 clean:
-	rm -rf $(BUILDDIR)/*
+	cd .. && rm -rf $(shell ls -p ../|grep -v 'src/')
 
 html:
-	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(shell pwd)/../
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
@@ -190,10 +190,3 @@ pseudoxml:
 	$(SPHINXBUILD) -b pseudoxml $(ALLSPHINXOPTS) $(BUILDDIR)/pseudoxml
 	@echo
 	@echo "Build finished. The pseudo-XML files are in $(BUILDDIR)/pseudoxml."
-
-p: publish
-
-publish: html
-	touch _build/html/.nojekyll
-	-git add _build/html && git commit -m "Update _build/html"
-	git subtree push  --prefix _build/html origin master
