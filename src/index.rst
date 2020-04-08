@@ -19,6 +19,7 @@ Feng's blog
    bitcoin-explained.rst
    nginx-lua-internals.rst
    user-experience-design-for-apis.rst
+   skiplist.rst
    golang-internals-malloc.rst
    golang-internals-io.rst
    golang-internals-goroutine.rst
