@@ -8,6 +8,7 @@ Feng's blog
 .. toctree::
    :maxdepth: 1
 
+   bayesian-method.rst
    手写一个简单的递归下降Parser <https://gist.github.com/chanfung032/968e6054ce21b9655bcb6634123aa637>
    regexp.rst
    android-wexin-export-with-no-root.rst
