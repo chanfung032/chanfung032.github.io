@@ -1,0 +1,180 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Graphite+StatsD 服务Metrics监控 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="如何构建一个All In One的Python Package" href="build-all-in-one-package-for-python-application.html" />
+    <link rel="prev" title="SystemTap" href="systemtap.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="graphite-statsd-metrics">
+<h1>Graphite+StatsD 服务Metrics监控<a class="headerlink" href="#graphite-statsd-metrics" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="graphite">
+<h2>Graphite<a class="headerlink" href="#graphite" title="Permalink to this headline">¶</a></h2>
+<p>Graphite是一个database + 图形展示工具，我们可以将服务的各种指标数据发送给Graphite，Graphite的Web页面中会以曲线的形式展现这些数据，方便我们观察对比服务的运行状况。</p>
+<p>下面是Graphite的架构图：</p>
+<img alt="_images/graphite-architecher.png" src="_images/graphite-architecher.png" />
+<div class="section" id="feed-in">
+<h3>如何Feed in数据<a class="headerlink" href="#feed-in" title="Permalink to this headline">¶</a></h3>
+<p>纯文本协议</p>
+<p>Shell:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>echo &quot;local.random.diceroll 4 `date +%s`&quot; | nc -q0 ${SERVER} ${PORT}
+</pre></div>
+</div>
+<p>Python:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">socket</span>
+<span class="n">sock</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">AF_DGRAM</span><span class="p">)</span>
+<span class="n">sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="s1">&#39;runtime.py.yq30.instances 200 1324567980&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>数据Feed in地址：udp://metrics.sae.sina.com.cn:2006</p>
+</div>
+<div class="section" id="id1">
+<h3>数据展示页面<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>数据展示页面：<a class="reference external" href="http://metrics.sae.sina.com.cn">http://metrics.sae.sina.com.cn</a></p>
+<img alt="_images/graphite-ui.png" src="_images/graphite-ui.png" />
+</div>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h3>
+<p>grahpite中所有的曲线数据都是可以使用函数进行操作的</p>
+<img alt="_images/graphite-composer-1.png" src="_images/graphite-composer-1.png" />
+<p>你也可以对这些生成的函数进行手工编辑：</p>
+<img alt="_images/graphite-composer-2.png" src="_images/graphite-composer-2.png" />
+<p>Read more: <a class="reference external" href="http://graphite.readthedocs.org/en/1.0/functions.html">http://graphite.readthedocs.org/en/1.0/functions.html</a></p>
+</div>
+<div class="section" id="dashboard">
+<h3>制作Dashboard<a class="headerlink" href="#dashboard" title="Permalink to this headline">¶</a></h3>
+<p>效果图：</p>
+<img alt="_images/dashboard.png" src="_images/dashboard.png" />
+<p>点击graphite页面页面右上角的Dashboard链接，进入Dashboard页面，你可以直接在上面的面板中选择需要的曲线加入到dashboard中，所有的曲线都可以拖曳编辑。</p>
+<p>当然你也可以直接打开dashboard的edit页面，按照下面两图手工编辑曲线的生成参数（生成复杂曲线的时候很有用）。</p>
+<img alt="_images/dashboard-menu-1.png" src="_images/dashboard-menu-1.png" />
+<img alt="_images/dashboard-edit.png" src="_images/dashboard-edit.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="p">[</span>
+      <span class="s2">&quot;runtime.py.yq30.instances&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;runtime.py.yq34.instances&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Instances&quot;</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;5xx Ratio&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="p">[</span>
+      <span class="s2">&quot;divideSeries(runtime.py.yq30.http.5xx,runtime.py.yq30.http.requests)&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;divideSeries(runtime.py.yq34.http.5xx,runtime.py.yq34.http.requests)&quot;</span>
+    <span class="p">]</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>这个json数组里的每一个元素定义了一张图，target定义了在图上要显示哪几条曲线，title是图的标题。</p>
+<p>target可以是单个曲线，也可以是多个曲线使用function进行的变换后的曲线。比如上面的例子中，第二张图就展示了yq30和yq34两台机器上的http 5xx出现比例的曲线（5xx出现的次数除上总请求数）。</p>
+</div>
+</div>
+<div class="section" id="statsd">
+<h2>StatsD<a class="headerlink" href="#statsd" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Graphite+StatsD 服务Metrics监控</a><ul>
+<li><a class="reference internal" href="#graphite">Graphite</a><ul>
+<li><a class="reference internal" href="#feed-in">如何Feed in数据</a></li>
+<li><a class="reference internal" href="#id1">数据展示页面</a></li>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+<li><a class="reference internal" href="#dashboard">制作Dashboard</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#statsd">StatsD</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="systemtap.html" title="previous chapter">SystemTap</a></li>
+      <li>Next: <a href="build-all-in-one-package-for-python-application.html" title="next chapter">如何构建一个All In One的Python Package</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/graphite.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/graphite.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

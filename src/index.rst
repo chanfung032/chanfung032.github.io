@@ -33,3 +33,7 @@ Feng's blog
    simhash.rst
    dot-lang-cheatsheet.rst
    sqlite-file-format.rst
+   systemtap.rst
+   graphite.rst
+   build-all-in-one-package-for-python-application.rst
+   dive-into-python/index.rst

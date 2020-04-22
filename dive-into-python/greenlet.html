@@ -1,0 +1,802 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>greenlet, eventlet, gevent etc &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Import模块分析" href="import.html" />
+    <link rel="prev" title="Python环境构建" href="build.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="greenlet-eventlet-gevent-etc">
+<h1>greenlet, eventlet, gevent etc<a class="headerlink" href="#greenlet-eventlet-gevent-etc" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="http://en.wikipedia.org/wiki/Coroutine">http://en.wikipedia.org/wiki/Coroutine</a></p>
+<p><a class="reference external" href="http://www.python.org/dev/peps/pep-0342/">http://www.python.org/dev/peps/pep-0342/</a></p>
+<div class="section" id="greenlet">
+<h2>greenlet的实现原理<a class="headerlink" href="#greenlet" title="Permalink to this headline">¶</a></h2>
+<p>-let .suffix (forming nouns) Denoting a smaller or lesser kind</p>
+<p>stackless</p>
+<p>eventlet和gevent是基于greenlet的。</p>
+<ol class="arabic">
+<li><p class="first">创建一个greenlet。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typedef</span> <span class="n">struct</span> <span class="n">_greenlet</span> <span class="p">{</span>
+        <span class="n">PyObject_HEAD</span>
+        <span class="n">char</span><span class="o">*</span> <span class="n">stack_start</span><span class="p">;</span>
+        <span class="n">char</span><span class="o">*</span> <span class="n">stack_stop</span><span class="p">;</span>
+        <span class="n">char</span><span class="o">*</span> <span class="n">stack_copy</span><span class="p">;</span>
+        <span class="n">intptr_t</span> <span class="n">stack_saved</span><span class="p">;</span>
+        <span class="n">struct</span> <span class="n">_greenlet</span><span class="o">*</span> <span class="n">stack_prev</span><span class="p">;</span>
+        <span class="n">struct</span> <span class="n">_greenlet</span><span class="o">*</span> <span class="n">parent</span><span class="p">;</span>
+        <span class="n">PyObject</span><span class="o">*</span> <span class="n">run_info</span><span class="p">;</span>
+        <span class="n">struct</span> <span class="n">_frame</span><span class="o">*</span> <span class="n">top_frame</span><span class="p">;</span>
+        <span class="nb">int</span> <span class="n">recursion_depth</span><span class="p">;</span>
+        <span class="n">PyObject</span><span class="o">*</span> <span class="n">weakreflist</span><span class="p">;</span>
+        <span class="n">PyObject</span><span class="o">*</span> <span class="n">exc_type</span><span class="p">;</span>
+        <span class="n">PyObject</span><span class="o">*</span> <span class="n">exc_value</span><span class="p">;</span>
+        <span class="n">PyObject</span><span class="o">*</span> <span class="n">exc_traceback</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">PyGreenlet</span><span class="p">;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">greenlet.switch()</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>static PyMethodDef green_methods[] = {
+    // okay，入口函数是green_switch
+    {&quot;switch&quot;, (PyCFunction)green_switch,
+     METH_VARARGS | METH_KEYWORDS, green_switch_doc},
+    {&quot;throw&quot;,  (PyCFunction)green_throw,  METH_VARARGS, green_throw_doc},
+    {NULL,     NULL}            /* sentinel */
+};
+
+static PyObject* green_switch(
+        PyGreenlet* self,
+        PyObject* args,
+        PyObject* kwargs)
+{
+        if (!STATE_OK)
+                return NULL;
+        Py_INCREF(args);
+        Py_XINCREF(kwargs);
+        return single_result(g_switch(self, args, kwargs));
+}
+
+static PyObject *
+g_switch(PyGreenlet* target, PyObject* args, PyObject* kwargs)
+{
+    /* _consumes_ a reference to the args tuple and kwargs dict,
+       and return a new tuple reference */
+
+    /* check ts_current */
+    if (!STATE_OK) {
+        Py_DECREF(args);
+        Py_XDECREF(kwargs);
+        return NULL;
+    }
+    if (green_statedict(target) != ts_current-&gt;run_info) {
+        PyErr_SetString(PyExc_GreenletError,
+                &quot;cannot switch to a different thread&quot;);
+        Py_DECREF(args);
+        Py_XDECREF(kwargs);
+        return NULL;
+    }
+
+    ts_passaround_args = args;
+    ts_passaround_kwargs = kwargs;
+
+    /* find the real target by ignoring dead greenlets,
+       and if necessary starting a greenlet. */
+    while (1) {
+        // 如果目标greenlet已经创建并且未结束，切换到该greenlet
+        if (PyGreenlet_ACTIVE(target)) {
+            ts_target = target;
+            g_switchstack();
+            break;
+        }
+
+        // 如果目标greenlet还未创建，初始化该greenlet
+        if (!PyGreenlet_STARTED(target)) {
+            // 这个变量所在的内存地址为当前greenlet的stack_stop的位置
+            void* dummymarker;
+            ts_target = target;
+            g_initialstub(&amp;dummymarker);
+            break;
+        }
+
+        target = target-&gt;parent;
+    }
+
+    /* We need to figure out what values to pass to the target greenlet
+       based on the arguments that have been passed to greenlet.switch(). If
+       switch() was just passed an arg tuple, then we&#39;ll just return that.
+       If only keyword arguments were passed, then we&#39;ll pass the keyword
+       argument dict. Otherwise, we&#39;ll create a tuple of (args, kwargs) and
+       return both. */
+    if (ts_passaround_kwargs == NULL)
+    {
+        g_passaround_return_args();
+    }
+    else if (PyDict_Size(ts_passaround_kwargs) == 0)
+    {
+        g_passaround_return_args();
+    }
+    else if (PySequence_Length(ts_passaround_args) == 0)
+    {
+        g_passaround_return_kwargs();
+    }
+    else
+    {
+        PyObject *tuple = PyTuple_New(2);
+        PyTuple_SetItem(tuple, 0, ts_passaround_args);
+        PyTuple_SetItem(tuple, 1, ts_passaround_kwargs);
+        ts_passaround_args = NULL;
+        ts_passaround_kwargs = NULL;
+        return tuple;
+    }
+}
+
+static void GREENLET_NOINLINE(g_initialstub)(void* mark)
+{
+    int err;
+    PyObject* o;
+
+    /* ts_target.run is the object to call in the new greenlet */
+    PyObject* run = PyObject_GetAttrString((PyObject*) ts_target, &quot;run&quot;);
+    if (run == NULL) {
+        g_passaround_clear();
+        return;
+    }
+    /* now use run_info to store the statedict */
+    o = ts_target-&gt;run_info;
+    ts_target-&gt;run_info = green_statedict(ts_target-&gt;parent);
+    Py_INCREF(ts_target-&gt;run_info);
+    Py_XDECREF(o);
+
+    /* start the greenlet */
+    ts_target-&gt;stack_start = NULL;
+    ts_target-&gt;stack_stop = (char*) mark;
+    if (ts_current-&gt;stack_start == NULL) {
+        /* ts_current is dying */
+        ts_target-&gt;stack_prev = ts_current-&gt;stack_prev;
+    }
+    else {
+        ts_target-&gt;stack_prev = ts_current;
+    }
+    ts_target-&gt;top_frame = NULL;
+    ts_target-&gt;exc_type = NULL;
+    ts_target-&gt;exc_value = NULL;
+    ts_target-&gt;exc_traceback = NULL;
+    ts_target-&gt;recursion_depth = PyThreadState_GET()-&gt;recursion_depth;
+    err = g_switchstack();
+    /* returns twice!
+       The 1st time with err=1: we are in the new greenlet
+       The 2nd time with err=0: back in the caller&#39;s greenlet
+    */
+    if (err == 1) {
+        /* in the new greenlet */
+        PyObject* args;
+        PyObject* kwargs;
+        PyObject* result;
+        PyGreenlet* ts_self = ts_current;
+        ts_self-&gt;stack_start = (char*) 1;  /* running */
+
+        args = ts_passaround_args;
+        kwargs = ts_passaround_kwargs;
+        if (args == NULL)    /* pending exception */
+            result = NULL;
+        else {
+            /* call g.run(*args, **kwargs) */
+            result = PyEval_CallObjectWithKeywords(
+                run, args, kwargs);
+            Py_DECREF(args);
+            Py_XDECREF(kwargs);
+        }
+        Py_DECREF(run);
+        result = g_handle_exit(result);
+
+        /* jump back to parent */
+        ts_self-&gt;stack_start = NULL;  /* dead */
+        g_switch(ts_self-&gt;parent, result, NULL);
+        /* must not return from here! */
+        PyErr_WriteUnraisable((PyObject *) ts_self);
+        Py_FatalError(&quot;greenlets cannot continue&quot;);
+    }
+    /* back in the parent */
+}
+
+static int g_switchstack(void)
+{
+    /* perform a stack switch according to some global variables
+       that must be set before:
+       - ts_current: current greenlet (holds a reference)
+       - ts_target: greenlet to switch to
+       - ts_passaround_args: NULL if PyErr_Occurred(),
+                 else a tuple of args sent to ts_target (holds a reference)
+       - ts_passaround_kwargs: same as ts_passaround_args
+    */
+    int err;
+    {   /* save state */
+        PyGreenlet* current = ts_current;
+        PyThreadState* tstate = PyThreadState_GET();
+        current-&gt;recursion_depth = tstate-&gt;recursion_depth;
+        current-&gt;top_frame = tstate-&gt;frame;
+        current-&gt;exc_type = tstate-&gt;exc_type;
+        current-&gt;exc_value = tstate-&gt;exc_value;
+        current-&gt;exc_traceback = tstate-&gt;exc_traceback;
+    }
+    err = slp_switch();
+    if (err &lt; 0) {   /* error */
+        g_passaround_clear();
+    }
+    else {
+        PyGreenlet* target = ts_target;
+        PyGreenlet* origin = ts_current;
+        PyThreadState* tstate = PyThreadState_GET();
+        tstate-&gt;recursion_depth = target-&gt;recursion_depth;
+        tstate-&gt;frame = target-&gt;top_frame;
+        target-&gt;top_frame = NULL;
+        tstate-&gt;exc_type = target-&gt;exc_type;
+        target-&gt;exc_type = NULL;
+        tstate-&gt;exc_value = target-&gt;exc_value;
+        target-&gt;exc_value = NULL;
+        tstate-&gt;exc_traceback = target-&gt;exc_traceback;
+        target-&gt;exc_traceback = NULL;
+
+        ts_current = target;
+        Py_INCREF(target);
+        Py_DECREF(origin);
+    }
+    return err;
+}
+
+platform/switch_x86_unix.h
+===========================
+
+static int
+slp_switch(void)
+{
+    void *ebp, *ebx;
+    unsigned short cw;
+    register int *stackref, stsizediff;
+    __asm__ volatile (&quot;&quot; : : : &quot;esi&quot;, &quot;edi&quot;);
+    __asm__ volatile (&quot;fstcw %0&quot; : &quot;=m&quot; (cw));
+    __asm__ volatile (&quot;movl %%ebp, %0&quot; : &quot;=m&quot; (ebp));
+    __asm__ volatile (&quot;movl %%ebx, %0&quot; : &quot;=m&quot; (ebx));
+    // 取当前c stack的栈顶指针，当前greenlet stack_start的位置
+    __asm__ (&quot;movl %%esp, %0&quot; : &quot;=g&quot; (stackref));
+    {
+        SLP_SAVE_STATE(stackref, stsizediff);
+        __asm__ volatile (
+            &quot;addl %0, %%esp\n&quot;
+            &quot;addl %0, %%ebp\n&quot;
+            :
+            : &quot;r&quot; (stsizediff)
+            );
+        SLP_RESTORE_STATE();
+    }
+    __asm__ volatile (&quot;movl %0, %%ebx&quot; : : &quot;m&quot; (ebx));
+    __asm__ volatile (&quot;movl %0, %%ebp&quot; : : &quot;m&quot; (ebp));
+    __asm__ volatile (&quot;fldcw %0&quot; : : &quot;m&quot; (cw));
+    __asm__ volatile (&quot;&quot; : : : &quot;esi&quot;, &quot;edi&quot;);
+    return 0;
+}
+
+greenlet.c
+==============
+
+#define SLP_SAVE_STATE(stackref, stsizediff)            \
+  stackref += STACK_MAGIC;                              \
+  if (slp_save_state((char*)stackref)) return -1;       \
+  // 创建greenlet？直接返回1
+  if (!PyGreenlet_ACTIVE(ts_target)) return 1;          \
+  stsizediff = ts_target-&gt;stack_start - (char*)stackref
+
+#define SLP_RESTORE_STATE()                     \
+  slp_restore_state()
+
+
+static int GREENLET_NOINLINE(slp_save_state)(char* stackref)
+{
+    /* must free all the C stack up to target_stop */
+    char* target_stop = ts_target-&gt;stack_stop;
+    PyGreenlet* owner = ts_current;
+    assert(owner-&gt;stack_saved == 0);
+    if (owner-&gt;stack_start == NULL)
+        owner = owner-&gt;stack_prev;  /* not saved if dying */
+    else
+        owner-&gt;stack_start = stackref;
+
+    while (owner-&gt;stack_stop &lt; target_stop) {
+        /* ts_current is entierely within the area to free */
+        if (g_save(owner, owner-&gt;stack_stop))
+            return -1;  /* XXX */
+        owner = owner-&gt;stack_prev;
+    }
+    if (owner != ts_target) {
+        if (g_save(owner, target_stop))
+            return -1;  /* XXX */
+    }
+    return 0;
+}
+
+static void GREENLET_NOINLINE(slp_restore_state)(void)
+{
+    PyGreenlet* g = ts_target;
+    PyGreenlet* owner = ts_current;
+
+    /* Restore the heap copy back into the C stack */
+    if (g-&gt;stack_saved != 0) {
+        memcpy(g-&gt;stack_start, g-&gt;stack_copy, g-&gt;stack_saved);
+        PyMem_Free(g-&gt;stack_copy);
+        g-&gt;stack_copy = NULL;
+        g-&gt;stack_saved = 0;
+    }
+    if (owner-&gt;stack_start == NULL)
+        owner = owner-&gt;stack_prev; /* greenlet is dying, skip it */
+    while (owner &amp;&amp; owner-&gt;stack_stop &lt;= g-&gt;stack_stop)
+        owner = owner-&gt;stack_prev; /* find greenlet with more stack */
+    g-&gt;stack_prev = owner;
+}
+</pre></div>
+</div>
+</li>
+</ol>
+<p>切换到目标greenlet时，需要将在目标greenlet之后创建的的greenlet执行的c stack现场
+保存到堆上去，因为切换到目标greenlet后，其执行可能会覆盖这些stack。</p>
+<p>所有的greenlet执行使用同一个PyThreadState。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">PyThreadState</span> <span class="o">&lt;-</span> <span class="n">frame1</span> <span class="o">&lt;-</span> <span class="n">frame11</span> <span class="o">&lt;-</span> <span class="n">frame12</span> <span class="o">&lt;-</span> <span class="n">frame13</span> <span class="o">...</span><span class="n">frame1n</span> <span class="o">&lt;-</span> <span class="n">top_frame</span>
+                         \<span class="n">_</span> <span class="n">frame21</span> <span class="o">&lt;-</span> <span class="n">frame22</span> <span class="o">&lt;-</span> <span class="n">frame23</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>两个greenlet执行时，内存中PyFrame的大致是上图所示，切换greenlet时，python调用栈
+的切换只是换一下top_frame的指针而已。</p>
+<p><a class="reference external" href="http://www.posix.nl/linuxassembly/nasmdochtml/nasmdoca.html">http://www.posix.nl/linuxassembly/nasmdochtml/nasmdoca.html</a></p>
+<p><a class="reference external" href="http://www.ibm.com/developerworks/linux/library/l-ia/index.html">http://www.ibm.com/developerworks/linux/library/l-ia/index.html</a></p>
+</div>
+<div class="section" id="gevent">
+<h2>gevent<a class="headerlink" href="#gevent" title="Permalink to this headline">¶</a></h2>
+<p>gevent2011.pdf</p>
+<p><a class="reference external" href="http://www.gevent.org/contents.html">http://www.gevent.org/contents.html</a></p>
+<p>Example by: <a class="reference external" href="http://www.gevent.org/intro.html#example">http://www.gevent.org/intro.html#example</a></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gevent</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">gevent</span> <span class="k">import</span> <span class="n">socket</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">urls</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;www.google.com&#39;</span><span class="p">,</span> <span class="s1">&#39;www.example.com&#39;</span><span class="p">,</span> <span class="s1">&#39;www.python.org&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">jobs</span> <span class="o">=</span> <span class="p">[</span><span class="n">gevent</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">gethostbyname</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span> <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gevent</span><span class="o">.</span><span class="n">joinall</span><span class="p">(</span><span class="n">jobs</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">job</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">job</span> <span class="ow">in</span> <span class="n">jobs</span><span class="p">]</span>
+<span class="go">[&#39;74.125.79.106&#39;, &#39;208.77.188.166&#39;, &#39;82.94.164.162&#39;]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>greenlet的创建</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="fm">__init__</span><span class="o">.</span><span class="n">py</span>
+<span class="o">===========</span>
+
+<span class="kn">from</span> <span class="nn">gevent.greenlet</span> <span class="k">import</span> <span class="n">Greenlet</span><span class="p">,</span> <span class="n">joinall</span><span class="p">,</span> <span class="n">killall</span>
+<span class="n">spawn</span> <span class="o">=</span> <span class="n">Greenlet</span><span class="o">.</span><span class="n">spawn</span>
+
+<span class="n">greenlet</span><span class="o">.</span><span class="n">py</span>
+<span class="o">===========</span>
+
+<span class="kn">from</span> <span class="nn">gevent.hub</span> <span class="k">import</span> <span class="n">greenlet</span><span class="p">,</span> <span class="n">getcurrent</span><span class="p">,</span> <span class="n">get_hub</span><span class="p">,</span> <span class="n">GreenletExit</span><span class="p">,</span> <span class="n">Waiter</span><span class="p">,</span> <span class="n">PY3</span><span class="p">,</span> <span class="n">iwait</span><span class="p">,</span> <span class="n">wait</span>
+
+<span class="k">class</span> <span class="nc">Greenlet</span><span class="p">(</span><span class="n">greenlet</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A light-weight cooperatively-scheduled execution unit.&quot;&quot;&quot;</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">spawn</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a new :class:`Greenlet` object, scheduled to start.</span>
+
+<span class="sd">        The arguments are passed to :meth:`Greenlet.__init__`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">g</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">hub</span> <span class="o">=</span> <span class="n">get_hub</span><span class="p">()</span>
+        <span class="n">greenlet</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">hub</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">run</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_run</span> <span class="o">=</span> <span class="n">run</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_links</span> <span class="o">=</span> <span class="n">deque</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_exception</span> <span class="o">=</span> <span class="n">_NONE</span>
+        <span class="n">loop</span> <span class="o">=</span> <span class="n">hub</span><span class="o">.</span><span class="n">loop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_notifier</span> <span class="o">=</span> <span class="n">loop</span><span class="o">.</span><span class="n">callback</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start_event</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Schedule the greenlet to run in this loop iteration&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_event</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># 添加一个伪监控事件，用于启动该greenlet</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_start_event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">callback</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_start_event</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switch</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">joinall</span><span class="p">(</span><span class="n">greenlets</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">raise_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">raise_error</span><span class="p">:</span>
+        <span class="c1"># 等待所有的greenlets结束</span>
+        <span class="n">wait</span><span class="p">(</span><span class="n">greenlets</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">iwait</span><span class="p">(</span><span class="n">greenlets</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="s1">&#39;exception&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">obj</span><span class="o">.</span><span class="n">exception</span>
+            <span class="k">if</span> <span class="n">count</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">count</span> <span class="o">-=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">count</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+<span class="n">hub</span><span class="o">.</span><span class="n">py</span>
+<span class="o">======</span>
+
+<span class="k">def</span> <span class="nf">wait</span><span class="p">(</span><span class="n">objects</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">objects</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_hub</span><span class="p">()</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">count</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">iwait</span><span class="p">(</span><span class="n">objects</span><span class="p">,</span> <span class="n">timeout</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">iwait</span><span class="p">(</span><span class="n">objects</span><span class="o">=</span><span class="n">objects</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+        <span class="n">count</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+<span class="k">def</span> <span class="nf">iwait</span><span class="p">(</span><span class="n">objects</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="c1"># QQQ would be nice to support iterable here that can be generated slowly (why?)</span>
+    <span class="n">waiter</span> <span class="o">=</span> <span class="n">Waiter</span><span class="p">()</span>
+    <span class="n">switch</span> <span class="o">=</span> <span class="n">waiter</span><span class="o">.</span><span class="n">switch</span>
+    <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">timer</span> <span class="o">=</span> <span class="n">get_hub</span><span class="p">()</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">timer</span><span class="p">(</span><span class="n">timeout</span><span class="p">,</span> <span class="n">priority</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">timer</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">waiter</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span> <span class="n">_NONE</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">objects</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">objects</span><span class="p">:</span>
+            <span class="c1"># 设置该greenlet结束后调用switch切会本greenlet</span>
+            <span class="n">obj</span><span class="o">.</span><span class="n">rawlink</span><span class="p">(</span><span class="n">switch</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">xrange</span><span class="p">(</span><span class="n">count</span><span class="p">):</span>
+            <span class="c1"># 切到Hub，开始事件循环，等待有greenlet结束切会</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="n">waiter</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">waiter</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="n">_NONE</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">yield</span> <span class="n">item</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">timer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">objects</span><span class="p">:</span>
+            <span class="n">obj</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">switch</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>greenlet的切换</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">socket</span><span class="o">.</span><span class="n">py</span>
+<span class="o">=========</span>
+
+<span class="k">class</span> <span class="nc">socket</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">AF_INET</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="n">proto</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">_sock</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">_sock</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sock</span> <span class="o">=</span> <span class="n">_realsocket</span><span class="p">(</span><span class="n">family</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">proto</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">_socket</span><span class="o">.</span><span class="n">getdefaulttimeout</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">_sock</span><span class="p">,</span> <span class="s1">&#39;_sock&#39;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sock</span> <span class="o">=</span> <span class="n">_sock</span><span class="o">.</span><span class="n">_sock</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">_sock</span><span class="p">,</span> <span class="s1">&#39;timeout&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">_socket</span><span class="o">.</span><span class="n">getdefaulttimeout</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_sock</span> <span class="o">=</span> <span class="n">_sock</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">_socket</span><span class="o">.</span><span class="n">getdefaulttimeout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sock</span><span class="o">.</span><span class="n">setblocking</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">fileno</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sock</span><span class="o">.</span><span class="n">fileno</span><span class="p">()</span>
+        <span class="c1"># 获取本线程的Hub</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hub</span> <span class="o">=</span> <span class="n">get_hub</span><span class="p">()</span>
+        <span class="n">io</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">io</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_read_event</span> <span class="o">=</span> <span class="n">io</span><span class="p">(</span><span class="n">fileno</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_event</span> <span class="o">=</span> <span class="n">io</span><span class="p">(</span><span class="n">fileno</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+   <span class="k">def</span> <span class="nf">accept</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sock</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sock</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">client_socket</span><span class="p">,</span> <span class="n">address</span> <span class="o">=</span> <span class="n">sock</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+                <span class="k">break</span>
+            <span class="k">except</span> <span class="n">error</span><span class="p">:</span>
+                <span class="n">ex</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">ex</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">EWOULDBLOCK</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+                    <span class="k">raise</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exc_clear</span><span class="p">()</span>
+            <span class="c1"># EAGAIN，等待对self._sock的读事件</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_wait</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_read_event</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">socket</span><span class="p">(</span><span class="n">_sock</span><span class="o">=</span><span class="n">client_socket</span><span class="p">),</span> <span class="n">address</span>
+
+    <span class="k">def</span> <span class="nf">_wait</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">watcher</span><span class="p">,</span> <span class="n">timeout_exc</span><span class="o">=</span><span class="n">timeout</span><span class="p">(</span><span class="s1">&#39;timed out&#39;</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">timeout</span> <span class="o">=</span> <span class="n">Timeout</span><span class="o">.</span><span class="n">start_new</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span> <span class="n">timeout_exc</span><span class="p">,</span> <span class="n">ref</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">timeout</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># XXX</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">watcher</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">timeout</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+
+<span class="n">hub</span><span class="o">.</span><span class="n">py</span>
+<span class="o">======</span>
+
+<span class="k">class</span> <span class="nc">Hub</span><span class="p">(</span><span class="n">greenlet</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A greenlet that runs the event loop.</span>
+
+<span class="sd">    It is created automatically by :func:`get_hub`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="o">...</span>
+
+    <span class="k">def</span> <span class="nf">switch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_value</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">switch_out</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">getcurrent</span><span class="p">(),</span> <span class="s1">&#39;switch_out&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">switch_out</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">switch_out</span><span class="p">()</span>
+            <span class="n">exc_clear</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">greenlet</span><span class="o">.</span><span class="n">switch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">set_exc_info</span><span class="p">(</span><span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">wait</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">watcher</span><span class="p">):</span>
+        <span class="n">waiter</span> <span class="o">=</span> <span class="n">Waiter</span><span class="p">()</span>
+        <span class="n">unique</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
+        <span class="c1"># 添加新的事件监控，事件为watcher，回调函数为waiter.switch</span>
+        <span class="n">watcher</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">waiter</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span> <span class="n">unique</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># XXX</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">waiter</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="k">assert</span> <span class="n">result</span> <span class="ow">is</span> <span class="n">unique</span><span class="p">,</span> <span class="s1">&#39;Invalid switch into </span><span class="si">%s</span><span class="s1">: </span><span class="si">%r</span><span class="s1"> (expected </span><span class="si">%r</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">getcurrent</span><span class="p">(),</span> <span class="n">result</span><span class="p">,</span> <span class="n">unique</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">watcher</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+<span class="o">...</span>
+
+
+<span class="k">class</span> <span class="nc">Waiter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A low level communication utility for greenlets.&quot;&quot;&quot;</span>
+
+<span class="o">...</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hub</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">hub</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># 获取本线程的的Hub</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hub</span> <span class="o">=</span> <span class="n">get_hub</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hub</span> <span class="o">=</span> <span class="n">hub</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_exception</span> <span class="o">=</span> <span class="n">_NONE</span>
+
+    <span class="k">def</span> <span class="nf">switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Switch to the greenlet if one&#39;s available. Otherwise store the value.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_exception</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">getcurrent</span><span class="p">()</span> <span class="ow">is</span> <span class="bp">self</span><span class="o">.</span><span class="n">hub</span><span class="p">,</span> <span class="s2">&quot;Can only use Waiter.switch method from the Hub greenlet&quot;</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># 切回到self.greenlet</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span><span class="o">.</span><span class="n">switch</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">handle_error</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span> <span class="o">*</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;If a value/an exception is stored, return/raise it. Otherwise until switch() or throw() is called.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">_NONE</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exception</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">getcurrent</span><span class="p">()</span><span class="o">.</span><span class="n">throw</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_exception</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;This Waiter is already used by </span><span class="si">%r</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span><span class="p">,</span> <span class="p">)</span>
+            <span class="c1"># 记录下当前的greenlet为self.greenlet</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="o">=</span> <span class="n">getcurrent</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># 切换到Hub这个greenlet，等待Hub切回</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">switch</span><span class="p">()</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">greenlet</span> <span class="o">=</span> <span class="kc">None</span>
+</pre></div>
+</div>
+<p>总结：</p>
+<p>gevent还是有一个事件循环的，只是不需要显式的调用而已。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">main</span> <span class="n">greenlet</span>  <span class="o">-&gt;</span>  <span class="n">hub</span>  <span class="o">-&gt;</span> <span class="n">g1</span><span class="o">/</span><span class="n">g2</span><span class="o">/</span><span class="n">g3</span><span class="o">/</span><span class="n">g4</span>
+</pre></div>
+</div>
+<ol class="arabic simple">
+<li>创建hub这个greenlet，所有spawn出来的greenlet使用callback伪事件（该事件随时触发）注册到hub。</li>
+<li>切换到hub，开始事件循环。</li>
+<li>spawn出来的greenlet遇到阻塞时注册对应的io/timer/…事件，并切换到hub。</li>
+<li>spawn出来的greenlet执行结束后会switch到main greenlet，再从main greenlet switch到hub。</li>
+<li>如此循环直至所有的greenlet执行结束为止。</li>
+</ol>
+</div>
+<div class="section" id="gunicorn">
+<h2>gunicorn<a class="headerlink" href="#gunicorn" title="Permalink to this headline">¶</a></h2>
+<p><strong>TornadoWorker</strong></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">TornadoWorker</span><span class="p">(</span><span class="n">Worker</span><span class="p">):</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># patch web.RequestHandler.clear</span>
+        <span class="n">web</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;tornado.web&quot;</span><span class="p">)</span>
+        <span class="n">old_clear</span> <span class="o">=</span> <span class="n">web</span><span class="o">.</span><span class="n">RequestHandler</span><span class="o">.</span><span class="n">clear</span>
+
+        <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="n">old_clear</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_headers</span><span class="p">[</span><span class="s2">&quot;Server&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="s2">&quot; (Gunicorn/</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">gversion</span>
+        <span class="n">web</span><span class="o">.</span><span class="n">RequestHandler</span><span class="o">.</span><span class="n">clear</span> <span class="o">=</span> <span class="n">clear</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s2">&quot;tornado.web&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">web</span>
+
+    <span class="k">def</span> <span class="nf">handle_quit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TornadoWorker</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">handle_quit</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">frame</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ioloop</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">handle_request</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nr</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">alive</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_requests</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alive</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Autorestarting worker after current request.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ioloop</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">watchdog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">alive</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">notify</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ppid</span> <span class="o">!=</span> <span class="n">os</span><span class="o">.</span><span class="n">getppid</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Parent changed, shutting down: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ioloop</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">setblocking</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ioloop</span> <span class="o">=</span> <span class="n">IOLoop</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alive</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="c1"># 让tornado定时执行self.watchdog函数</span>
+        <span class="n">PeriodicCallback</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">watchdog</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">io_loop</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ioloop</span><span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="c1"># Assume the app is a WSGI callable if its not an</span>
+        <span class="c1"># instance of tornardo.web.Application</span>
+        <span class="n">app</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wsgi</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">tornado</span><span class="o">.</span><span class="n">web</span><span class="o">.</span><span class="n">Application</span><span class="p">)</span> <span class="ow">or</span> \
+           <span class="nb">isinstance</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">tornado</span><span class="o">.</span><span class="n">wsgi</span><span class="o">.</span><span class="n">WSGIApplication</span><span class="p">):</span>
+            <span class="n">app</span> <span class="o">=</span> <span class="n">WSGIContainer</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+        <span class="c1"># Monkey-patching HTTPConnection.finish to count the</span>
+        <span class="c1"># number of requests being handled by Tornado. This</span>
+        <span class="c1"># will help gunicorn shutdown the worker if max_requests</span>
+        <span class="c1"># is exceeded.</span>
+        <span class="n">httpserver</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s2">&quot;tornado.httpserver&quot;</span><span class="p">]</span>
+        <span class="n">old_connection_finish</span> <span class="o">=</span> <span class="n">httpserver</span><span class="o">.</span><span class="n">HTTPConnection</span><span class="o">.</span><span class="n">finish</span>
+
+        <span class="k">def</span> <span class="nf">finish</span><span class="p">(</span><span class="n">other</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">handle_request</span><span class="p">()</span>
+            <span class="n">old_connection_finish</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="n">httpserver</span><span class="o">.</span><span class="n">HTTPConnection</span><span class="o">.</span><span class="n">finish</span> <span class="o">=</span> <span class="n">finish</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s2">&quot;tornado.httpserver&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">httpserver</span>
+
+        <span class="n">server</span> <span class="o">=</span> <span class="n">tornado</span><span class="o">.</span><span class="n">httpserver</span><span class="o">.</span><span class="n">HTTPServer</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">io_loop</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ioloop</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">server</span><span class="p">,</span> <span class="s2">&quot;add_socket&quot;</span><span class="p">):</span>  <span class="c1"># tornado &gt; 2.0</span>
+            <span class="n">server</span><span class="o">.</span><span class="n">add_socket</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">server</span><span class="p">,</span> <span class="s2">&quot;_sockets&quot;</span><span class="p">):</span>  <span class="c1"># tornado 2.0</span>
+            <span class="n">server</span><span class="o">.</span><span class="n">_sockets</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">fileno</span><span class="p">()]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">socket</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># tornado 1.2 or earlier</span>
+            <span class="n">server</span><span class="o">.</span><span class="n">_socket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">socket</span>
+
+        <span class="n">server</span><span class="o">.</span><span class="n">no_keep_alive</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">keepalive</span> <span class="o">&lt;=</span> <span class="mi">0</span>
+        <span class="n">server</span><span class="o">.</span><span class="n">xheaders</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">x_forwarded_for_header</span><span class="p">)</span>
+
+        <span class="n">server</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">num_processes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Torando主循环</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ioloop</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">greenlet, eventlet, gevent etc</a><ul>
+<li><a class="reference internal" href="#greenlet">greenlet的实现原理</a></li>
+<li><a class="reference internal" href="#gevent">gevent</a></li>
+<li><a class="reference internal" href="#gunicorn">gunicorn</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Python 源码相关</a><ul>
+      <li>Previous: <a href="build.html" title="previous chapter">Python环境构建</a></li>
+      <li>Next: <a href="import.html" title="next chapter">Import模块分析</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/dive-into-python/greenlet.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="../_sources/dive-into-python/greenlet.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

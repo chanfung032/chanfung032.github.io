@@ -1,0 +1,316 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Import模块分析 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Python中的信号处理" href="others.html" />
+    <link rel="prev" title="greenlet, eventlet, gevent etc" href="greenlet.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="import">
+<h1>Import模块分析<a class="headerlink" href="#import" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dis</span><span class="o">.</span><span class="n">dis</span><span class="p">(</span><span class="nb">compile</span><span class="p">(</span><span class="s2">&quot;import os&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;none&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;exec&quot;</span><span class="p">))</span>
+<span class="go">  1           0 LOAD_CONST               0 (-1)</span>
+<span class="go">              3 LOAD_CONST               1 (None)</span>
+<span class="go">              6 IMPORT_NAME              0 (os)</span>
+<span class="go">              9 STORE_NAME               0 (os)</span>
+<span class="go">             12 LOAD_CONST               1 (None)</span>
+<span class="go">             15 RETURN_VALUE</span>
+
+<span class="go">Python/ceval.c</span>
+<span class="go">==============</span>
+
+<span class="go">case IMPORT_NAME:</span>
+<span class="go">    w = GETITEM(names, oparg);</span>
+
+<span class="go">    // 取__import__这个builtin函数</span>
+<span class="go">    x = PyDict_GetItemString(f-&gt;f_builtins, &quot;__import__&quot;);</span>
+<span class="go">    if (x == NULL) {</span>
+<span class="go">        PyErr_SetString(PyExc_ImportError,</span>
+<span class="go">                        &quot;__import__ not found&quot;);</span>
+<span class="go">        break;</span>
+<span class="go">    }</span>
+<span class="go">    Py_INCREF(x);</span>
+
+<span class="go">    // 打包参数</span>
+<span class="go">    v = POP();</span>
+<span class="go">    u = TOP();</span>
+<span class="go">    if (PyInt_AsLong(u) != -1 || PyErr_Occurred())</span>
+<span class="go">        w = PyTuple_Pack(5,</span>
+<span class="go">                    w,</span>
+<span class="go">                    f-&gt;f_globals,</span>
+<span class="go">                    f-&gt;f_locals == NULL ?</span>
+<span class="go">                          Py_None : f-&gt;f_locals,</span>
+<span class="go">                    v,</span>
+<span class="go">                    u);</span>
+<span class="go">    else</span>
+<span class="go">        w = PyTuple_Pack(4,</span>
+<span class="go">                    w,</span>
+<span class="go">                    f-&gt;f_globals,</span>
+<span class="go">                    f-&gt;f_locals == NULL ?</span>
+<span class="go">                          Py_None : f-&gt;f_locals,</span>
+<span class="go">                    v);</span>
+<span class="go">    Py_DECREF(v);</span>
+<span class="go">    Py_DECREF(u);</span>
+<span class="go">    if (w == NULL) {</span>
+<span class="go">        u = POP();</span>
+<span class="go">        Py_DECREF(x);</span>
+<span class="go">        x = NULL;</span>
+<span class="go">        break;</span>
+<span class="go">    }</span>
+<span class="go">    READ_TIMESTAMP(intr0);</span>
+
+<span class="go">    // 调用__import__函数</span>
+<span class="go">    // __import__(name, globals={}, locals={}, fromlist=[], level=-1) -&gt; module</span>
+<span class="go">    v = x;</span>
+<span class="go">    x = PyEval_CallObject(v, w);</span>
+<span class="go">    Py_DECREF(v);</span>
+<span class="go">    READ_TIMESTAMP(intr1);</span>
+<span class="go">    Py_DECREF(w);</span>
+<span class="go">    SET_TOP(x);</span>
+<span class="go">    if (x != NULL) continue;</span>
+<span class="go">    break;</span>
+
+<span class="go">Python/bltinmodule.c</span>
+<span class="go">====================</span>
+
+<span class="go">static PyMethodDef builtin_methods[] = {</span>
+<span class="go">    {&quot;__import__&quot;,      (PyCFunction)builtin___import__, METH_VARARGS | METH_KEYWORDS, import_doc},</span>
+<span class="go">    ...</span>
+<span class="go">};</span>
+
+<span class="go">static PyObject *</span>
+<span class="go">builtin___import__(PyObject *self, PyObject *args, PyObject *kwds)</span>
+<span class="go">{</span>
+<span class="go">    static char *kwlist[] = {&quot;name&quot;, &quot;globals&quot;, &quot;locals&quot;, &quot;fromlist&quot;,</span>
+<span class="go">                             &quot;level&quot;, 0};</span>
+<span class="go">    char *name;</span>
+<span class="go">    PyObject *globals = NULL;</span>
+<span class="go">    PyObject *locals = NULL;</span>
+<span class="go">    PyObject *fromlist = NULL;</span>
+<span class="go">    int level = -1;</span>
+
+<span class="go">    if (!PyArg_ParseTupleAndKeywords(args, kwds, &quot;s|OOOi:__import__&quot;,</span>
+<span class="go">                    kwlist, &amp;name, &amp;globals, &amp;locals, &amp;fromlist, &amp;level))</span>
+<span class="go">        return NULL;</span>
+
+<span class="go">    // ok，import模块的入口</span>
+<span class="go">    return PyImport_ImportModuleLevel(name, globals, locals,</span>
+<span class="go">                                      fromlist, level);</span>
+<span class="go">}</span>
+
+<span class="go">Python/import.c</span>
+<span class="go">=================</span>
+
+<span class="go">PyObject *</span>
+<span class="go">PyImport_ImportModuleLevel(char *name, PyObject *globals, PyObject *locals,</span>
+<span class="go">                         PyObject *fromlist, int level)</span>
+<span class="go">{</span>
+<span class="go">    PyObject *result;</span>
+<span class="go">    _PyImport_AcquireLock();</span>
+
+<span class="go">    // 好吧，这个才是最终的入口</span>
+<span class="go">    result = import_module_level(name, globals, locals, fromlist, level);</span>
+<span class="go">    if (_PyImport_ReleaseLock() &lt; 0) {</span>
+<span class="go">        Py_XDECREF(result);</span>
+<span class="go">        PyErr_SetString(PyExc_RuntimeError,</span>
+<span class="go">                        &quot;not holding the import lock&quot;);</span>
+<span class="go">        return NULL;</span>
+<span class="go">    }</span>
+<span class="go">    return result;</span>
+<span class="go">}</span>
+
+<span class="go">static PyObject *</span>
+<span class="go">import_module_level(char *name, PyObject *globals, PyObject *locals,</span>
+<span class="go">                    PyObject *fromlist, int level)</span>
+<span class="go">{</span>
+<span class="go">    char buf[MAXPATHLEN+1];</span>
+<span class="go">    Py_ssize_t buflen = 0;</span>
+<span class="go">    PyObject *parent, *head, *next, *tail;</span>
+
+<span class="go">    if (strchr(name, &#39;/&#39;) != NULL</span>
+<span class="go">#ifdef MS_WINDOWS</span>
+<span class="go">        || strchr(name, &#39;\\&#39;) != NULL</span>
+<span class="go">#endif</span>
+<span class="go">        ) {</span>
+<span class="go">        PyErr_SetString(PyExc_ImportError,</span>
+<span class="go">                        &quot;Import by filename is not supported.&quot;);</span>
+<span class="go">        return NULL;</span>
+<span class="go">    }</span>
+
+<span class="go">    // 获取import语句所在的package</span>
+<span class="go">    parent = get_parent(globals, buf, &amp;buflen, level);</span>
+<span class="go">    if (parent == NULL)</span>
+<span class="go">        return NULL;</span>
+
+<span class="go">    head = load_next(parent, level &lt; 0 ? Py_None : parent, &amp;name, buf,</span>
+<span class="go">                        &amp;buflen);</span>
+<span class="go">    if (head == NULL)</span>
+<span class="go">        return NULL;</span>
+
+<span class="go">    tail = head;</span>
+<span class="go">    Py_INCREF(tail);</span>
+<span class="go">    while (name) {</span>
+<span class="go">        next = load_next(tail, tail, &amp;name, buf, &amp;buflen);</span>
+<span class="go">        Py_DECREF(tail);</span>
+<span class="go">        if (next == NULL) {</span>
+<span class="go">            Py_DECREF(head);</span>
+<span class="go">            return NULL;</span>
+<span class="go">        }</span>
+<span class="go">        tail = next;</span>
+<span class="go">    }</span>
+<span class="go">    if (tail == Py_None) {</span>
+<span class="go">        /* If tail is Py_None, both get_parent and load_next found</span>
+<span class="go">           an empty module name: someone called __import__(&quot;&quot;) or</span>
+<span class="go">           doctored faulty bytecode */</span>
+<span class="go">        Py_DECREF(tail);</span>
+<span class="go">        Py_DECREF(head);</span>
+<span class="go">        PyErr_SetString(PyExc_ValueError,</span>
+<span class="go">                        &quot;Empty module name&quot;);</span>
+<span class="go">        return NULL;</span>
+<span class="go">    }</span>
+
+<span class="go">    if (fromlist != NULL) {</span>
+<span class="go">        if (fromlist == Py_None || !PyObject_IsTrue(fromlist))</span>
+<span class="go">            fromlist = NULL;</span>
+<span class="go">    }</span>
+
+<span class="go">    if (fromlist == NULL) {</span>
+<span class="go">        Py_DECREF(tail);</span>
+<span class="go">        return head;</span>
+<span class="go">    }</span>
+
+<span class="go">    Py_DECREF(head);</span>
+<span class="go">    if (!ensure_fromlist(tail, fromlist, buf, buflen, 0)) {</span>
+<span class="go">        Py_DECREF(tail);</span>
+<span class="go">        return NULL;</span>
+<span class="go">    }</span>
+
+<span class="go">    return tail;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<p>reload一个模块会复用已经载入的该模块的md_dict。对于pure python的模块，如果要干净
+的reload，可以先将该模块从sys.modules中删除。当然这个对于builtin和c module是无效
+的。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ cat foo.py
+a = 1
+b = 2
+
+print &#39;foo&#39;
+
+&gt;&gt;&gt; import foo
+foo
+&gt;&gt;&gt; dir(foo)
+[&#39;__builtins__&#39;, &#39;__doc__&#39;, &#39;__file__&#39;, &#39;__name__&#39;, &#39;__package__&#39;, &#39;a&#39;, &#39;b&#39;]
+
+$cat foo.py
+a = 1
+c = 2
+
+print &#39;foo&#39;
+
+&gt;&gt;&gt; reload(foo)
+foo
+&lt;module &#39;foo&#39; from &#39;foo.py&#39;&gt;
+&gt;&gt;&gt; dir(foo)
+[&#39;__builtins__&#39;, &#39;__doc__&#39;, &#39;__file__&#39;, &#39;__name__&#39;, &#39;__package__&#39;, &#39;a&#39;, &#39;b&#39;, &#39;c&#39;]
+
+&gt;&gt;&gt; import sys
+&gt;&gt;&gt; del sys.modules[&#39;foo&#39;]
+&gt;&gt;&gt; import foo
+foo
+&gt;&gt;&gt; dir(foo)
+[&#39;__builtins__&#39;, &#39;__doc__&#39;, &#39;__file__&#39;, &#39;__name__&#39;, &#39;__package__&#39;, &#39;a&#39;, &#39;c&#39;]
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Python 源码相关</a><ul>
+      <li>Previous: <a href="greenlet.html" title="previous chapter">greenlet, eventlet, gevent etc</a></li>
+      <li>Next: <a href="others.html" title="next chapter">Python中的信号处理</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/dive-into-python/import.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="../_sources/dive-into-python/import.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,703 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Python中的信号处理 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Python中多线程的实现" href="thread.html" />
+    <link rel="prev" title="Import模块分析" href="import.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="python">
+<h1>Python中的信号处理<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-default"><div class="highlight"><pre><span></span>Modules/signalmodule.c
+========================
+
+/*
+   NOTES ON THE INTERACTION BETWEEN SIGNALS AND THREADS
+
+   When threads are supported, we want the following semantics:
+
+   - only the main thread can set a signal handler
+   - any thread can get a signal handler
+   - signals are only delivered to the main thread
+
+    ...
+*/
+
+static struct {
+    int tripped;
+    PyObject *func;
+} Handlers[NSIG];
+
+static PyObject *
+signal_signal(PyObject *self, PyObject *args)
+{
+    PyObject *obj;
+    int sig_num;
+    PyObject *old_handler;
+    void (*func)(int);
+    if (!PyArg_ParseTuple(args, &quot;iO:signal&quot;, &amp;sig_num, &amp;obj))
+        return NULL;
+#ifdef WITH_THREAD
+    if (PyThread_get_thread_ident() != main_thread) {
+        PyErr_SetString(PyExc_ValueError,
+                        &quot;signal only works in main thread&quot;);
+        return NULL;
+    }
+#endif
+    if (sig_num &lt; 1 || sig_num &gt;= NSIG) {
+        PyErr_SetString(PyExc_ValueError,
+                        &quot;signal number out of range&quot;);
+        return NULL;
+    }
+    if (obj == IgnoreHandler)
+        func = SIG_IGN;
+    else if (obj == DefaultHandler)
+        func = SIG_DFL;
+    else if (!PyCallable_Check(obj)) {
+        PyErr_SetString(PyExc_TypeError,
+&quot;signal handler must be signal.SIG_IGN, signal.SIG_DFL, or a callable object&quot;);
+                return NULL;
+    }
+    else
+        // 设置信号的处理函数为signal_handler
+        func = signal_handler;
+    if (PyOS_setsig(sig_num, func) == SIG_ERR) {
+        PyErr_SetFromErrno(PyExc_RuntimeError);
+        return NULL;
+    }
+
+    // 这里保存的才是实际设置的处理函数
+    old_handler = Handlers[sig_num].func;
+    Handlers[sig_num].tripped = 0;
+    Py_INCREF(obj);
+    Handlers[sig_num].func = obj;
+    return old_handler;
+}
+
+static void
+signal_handler(int sig_num)
+{
+#ifdef WITH_THREAD
+#ifdef WITH_PTH
+    if (PyThread_get_thread_ident() != main_thread) {
+        pth_raise(*(pth_t *) main_thread, sig_num);
+        return;
+    }
+#endif
+    /* See NOTES section above */
+    if (getpid() == main_pid) {
+#endif
+        // 这个信号被触发了
+        Handlers[sig_num].tripped = 1;
+        /* Set is_tripped after setting .tripped, as it gets
+           cleared in PyErr_CheckSignals() before .tripped. */
+        is_tripped = 1;
+        // 添加调用信号处理函数的pending call
+        Py_AddPendingCall(checksignals_witharg, NULL);
+        if (wakeup_fd != -1)
+            write(wakeup_fd, &quot;\0&quot;, 1);
+#ifdef WITH_THREAD
+    }
+#endif
+#ifdef SIGCHLD
+    if (sig_num == SIGCHLD) {
+        /* To avoid infinite recursion, this signal remains
+           reset until explicit re-instated.
+           Don&#39;t clear the &#39;func&#39; field as it is our pointer
+           to the Python handler... */
+        return;
+    }
+#endif
+#ifndef HAVE_SIGACTION
+    /* If the handler was not set up with sigaction, reinstall it.  See
+     * Python/pythonrun.c for the implementation of PyOS_setsig which
+     * makes this true.  See also issue8354. */
+    PyOS_setsig(sig_num, signal_handler);
+#endif
+}
+
+Python/ceval.c
+===============
+
+int
+Py_AddPendingCall(int (*func)(void *), void *arg)
+{
+    static volatile int busy = 0;
+    int i, j;
+    /* XXX Begin critical section */
+    /* XXX If you want this to be safe against nested
+       XXX asynchronous calls, you&#39;ll have to work harder! */
+    if (busy)
+        return -1;
+    busy = 1;
+    i = pendinglast;
+    j = (i + 1) % NPENDINGCALLS;
+    if (j == pendingfirst) {
+        busy = 0;
+        return -1; /* Queue full */
+    }
+    pendingcalls[i].func = func;
+    pendingcalls[i].arg = arg;
+    pendinglast = j;
+
+    _Py_Ticker = 0;
+    things_to_do = 1; /* Signal main loop */
+    busy = 0;
+    /* XXX End critical section */
+    return 0;
+}
+
+PyObject *
+PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
+{
+
+    ...
+
+    for (;;) {
+
+        ...
+
+        if (--_Py_Ticker &lt; 0) {
+            if (*next_instr == SETUP_FINALLY) {
+                /* Make the last opcode before
+                   a try: finally: block uninterruptable. */
+                goto fast_next_opcode;
+            }
+            _Py_Ticker = _Py_CheckInterval;
+            tstate-&gt;tick_counter++;
+
+            if (things_to_do) {
+                // 调用pending calls，信号处理函数是在这个里面处理的。
+                if (Py_MakePendingCalls() &lt; 0) {
+                    why = WHY_EXCEPTION;
+                    goto on_error;
+                }
+                if (things_to_do)
+                    /* MakePendingCalls() didn&#39;t succeed.
+                       Force early re-execution of this
+                       &quot;periodic&quot; code, possibly after
+                       a thread switch */
+                    _Py_Ticker = 0;
+            }
+
+        ...
+    }
+}
+
+int
+Py_MakePendingCalls(void)
+{
+    static int busy = 0;
+#ifdef WITH_THREAD
+    // !!!只有在主线程中才能执行
+    if (main_thread &amp;&amp; PyThread_get_thread_ident() != main_thread)
+        return 0;
+#endif
+    if (busy)
+        return 0;
+    busy = 1;
+    things_to_do = 0;
+    for (;;) {
+        int i;
+        int (*func)(void *);
+        void *arg;
+        i = pendingfirst;
+        if (i == pendinglast)
+            break; /* Queue empty */
+        func = pendingcalls[i].func;
+        arg = pendingcalls[i].arg;
+        pendingfirst = (i + 1) % NPENDINGCALLS;
+        if (func(arg) &lt; 0) {
+            busy = 0;
+            things_to_do = 1; /* We&#39;re not done yet */
+            return -1;
+        }
+    }
+    busy = 0;
+    return 0;
+}
+</pre></div>
+</div>
+<p>Python中的信号是异步处理的，信号处理函数只有主线程才能设置，</p>
+<p>Py_AddPendingCall是个好东西，可以用其往运行中的Python虚拟机中插入执行逻辑。</p>
+<p>PyErr_SetInterrupt()可以用来停止正在运行中的Python虚拟机。</p>
+</div>
+<div class="section" id="unicode">
+<h1>unicode<a class="headerlink" href="#unicode" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-default"><div class="highlight"><pre><span></span>binascii.b2a_base64(u&#39;你好&#39;)
+Traceback (most recent call last):
+  File &quot;&lt;stdin&gt;&quot;, line 1, in &lt;module&gt;
+  UnicodeEncodeError: &#39;ascii&#39; codec can&#39;t encode characters in position 0-1: ordinal not in range(128)
+
+static PyObject *
+binascii_b2a_base64(PyObject *self, PyObject *args)
+{
+    ...
+
+    if ( !PyArg_ParseTuple(args, &quot;s#:b2a_base64&quot;, &amp;bin_data, &amp;bin_len) )
+        return NULL;
+
+    ...
+}
+
+int
+PyArg_ParseTuple(PyObject *args, const char *format, ...)
+{
+    int retval;
+    va_list va;
+
+    va_start(va, format);
+    retval = vgetargs1(args, format, &amp;va, 0);
+    va_end(va);
+    return retval;
+}
+
+static int
+vgetargs1(PyObject *args, const char *format, va_list *p_va, int flags)
+{
+    ...
+
+    while (endfmt == 0) {
+        int c = *format++;
+        switch (c) {
+
+        ...
+
+        case &#39;s&#39;:
+
+        ...
+
+        } else if (*format == &#39;#&#39;) {
+            void **p = (void **)va_arg(*p_va, char **);
+            FETCH_SIZE;
+
+            if (PyString_Check(arg)) {
+                *p = PyString_AS_STRING(arg);
+                STORE_SIZE(PyString_GET_SIZE(arg));
+            }
+#ifdef Py_USING_UNICODE
+            else if (PyUnicode_Check(arg)) {
+
+                // !!!如果是unicode字符串，将其转化为默认编码。
+                uarg = UNICODE_DEFAULT_ENCODING(arg);
+                if (uarg == NULL)
+                    return converterr(CONV_UNICODE,
+                                      arg, msgbuf, bufsize);
+                *p = PyString_AS_STRING(uarg);
+                STORE_SIZE(PyString_GET_SIZE(uarg));
+            }
+#endif
+            ...
+        }
+
+        ...
+    }
+
+    ...
+}
+</pre></div>
+</div>
+<p>Python中的默认编码是ascii，编码规则为</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>If the code point is &lt; 128, each byte is the same as the value of the code point.
+If the code point is 128 or greater, the Unicode string can’t be represented in this encoding. (Python raises a UnicodeEncodeError exception in this case.)
+</pre></div>
+</div>
+<p>so，就看到了上面的那个异常，当然上面的例子也是有问题的，Unicode不是一个Portable
+的格式，将其base64编码是没有意义的，一般在网络中交换数据时都是先转换为基于字节编
+码的utf-8格式。（还是Unicode，只是表现形式不一样而已）。</p>
+<p>关于 <cite># -*- coding: utf-8 -*-</cite></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Gramma</span><span class="o">/</span><span class="n">Gramma</span>
+<span class="o">===============</span>
+<span class="c1"># not used in grammar, but may appear in &quot;node&quot; passed from Parser to Compiler</span>
+<span class="n">encoding_decl</span><span class="p">:</span> <span class="n">NAME</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="http://docs.python.org/howto/unicode.html">http://docs.python.org/howto/unicode.html</a></p>
+</div>
+<div class="section" id="socketdup">
+<h1>socket模块跨平台dup的实现<a class="headerlink" href="#socketdup" title="Permalink to this headline">¶</a></h1>
+<p>在本地起一个server监听8080端口</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>alan@sina:~$ nc -l 8080
+</pre></div>
+</div>
+<p>打开python shell，输入如下代码</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">socket</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">_sock</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;before close</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">13</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;after close by s&#39;</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+  File <span class="nb">&quot;&lt;stdin&gt;&quot;</span>, line <span class="m">1</span>, in <span class="n">&lt;module&gt;</span>
+  File <span class="nb">&quot;/usr/lib/python2.6/socket.py&quot;</span>, line <span class="m">165</span>, in <span class="n">_dummy</span>
+    <span class="k">raise</span> <span class="n">error</span><span class="p">(</span><span class="n">EBADF</span><span class="p">,</span> <span class="s1">&#39;Bad file descriptor&#39;</span><span class="p">)</span>
+<span class="gr">socket.error</span>: <span class="n">[Errno 9] Bad file descriptor</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;after close by _s&#39;</span><span class="p">)</span>
+<span class="go">17</span>
+</pre></div>
+</div>
+<p>以下为nc的输出：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">before</span> <span class="n">close</span>
+<span class="n">after</span> <span class="n">close</span> <span class="n">by</span> <span class="n">_s</span>
+</pre></div>
+</div>
+<p>看一下socket模块的代码</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">socket</span><span class="o">.</span><span class="n">py</span>
+<span class="o">=========</span>
+
+<span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c1"># 只是将self._sock的引用减1，</span>
+    <span class="c1"># 并且将self._sock替换为_closesocket的实例。</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_sock</span> <span class="o">=</span> <span class="n">_closedsocket</span><span class="p">()</span>
+    <span class="n">dummy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sock</span><span class="o">.</span><span class="n">_dummy</span>
+    <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">_delegate_methods</span><span class="p">:</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">dummy</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>socket是一个container对象，保存了实际的_socket对象（_sock）。</p>
+<p>对于一个socket的实例，如果调用了makefile或者dup等操作，会使该实例的_sock的引用计
+数不为1，这个时候调用socket的close方法不会关闭实际的连接，只是后续所有的操作变成
+了BADF异常，但实际持有_sock的引用者依然可以对该连接操作。只有在_sock的引用计数减
+至0的时候，实际的连接才会被关闭。_socket.close也是实际的关闭。</p>
+<p>P.S 因为需要将httplib模块使用的socket模块替换为有限制的intern_socket模块，过程中
+总是出现读完http header后，body莫名其妙timeout的问题，最后检查发现跟这个有关。</p>
+<p>poll在fd已经是-1的时候居然还返回超时阿！坑爹呢阿！</p>
+</div>
+<div class="section" id="number-hack-py">
+<h1>number_hack.py<a class="headerlink" href="#number-hack-py" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="http://gist.github.com/1208215">http://gist.github.com/1208215</a></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">ctypes</span>
+<span class="n">pyint_p</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">c_byte</span><span class="o">*</span><span class="n">sys</span><span class="o">.</span><span class="n">getsizeof</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+<span class="n">five</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">pyint_p</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">5</span><span class="p">)</span> <span class="c1"># False</span>
+<span class="n">five</span><span class="o">.</span><span class="n">contents</span><span class="p">[</span><span class="n">five</span><span class="o">.</span><span class="n">contents</span><span class="p">[:]</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="nb">print</span><span class="p">(</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">5</span><span class="p">)</span> <span class="c1"># True (must be sufficiently large values of 2 there...)</span>
+</pre></div>
+</div>
+<p>id(object): This is the address of the object in memory.</p>
+<p>int object的结构：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Include</span><span class="o">/</span><span class="n">intobject</span><span class="o">.</span><span class="n">h</span>
+<span class="o">===================</span>
+<span class="n">typedef</span> <span class="n">struct</span> <span class="p">{</span>
+    <span class="n">PyObject_HEAD</span>
+    <span class="n">long</span> <span class="n">ob_ival</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">PyIntObject</span><span class="p">;</span>
+
+<span class="c1">#define PyObject_HEAD                   \</span>
+    <span class="n">_PyObject_HEAD_EXTRA</span>                \
+    <span class="n">Py_ssize_t</span> <span class="n">ob_refcnt</span><span class="p">;</span>               \
+    <span class="n">struct</span> <span class="n">_typeobject</span> <span class="o">*</span><span class="n">ob_type</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>five中的内容结构如下:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">five</span><span class="o">.</span><span class="n">contents</span><span class="p">[:]</span>
+<span class="go">[17, 0, 0, 0, 0, -23, 34, 8, 5, 0, 0, 0]</span>
+<span class="go">| ob_refcnt | ob_type      | ob_ival   |</span>
+</pre></div>
+</div>
+<p>小整数在python中是共享的，所以所有的object(5)在python中都是引用的同一个对象，上
+面的代码修改了这个对象中ob_ival字段，所以所有的object(5)里面的raw数值就变成了4，
+所以。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Objects</span><span class="o">/</span><span class="n">intobject</span><span class="o">.</span><span class="n">c</span>
+<span class="o">===================</span>
+<span class="n">PyObject</span> <span class="o">*</span>
+<span class="n">PyInt_FromLong</span><span class="p">(</span><span class="n">long</span> <span class="n">ival</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">register</span> <span class="n">PyIntObject</span> <span class="o">*</span><span class="n">v</span><span class="p">;</span>
+
+    <span class="o">...</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">-</span><span class="n">NSMALLNEGINTS</span> <span class="o">&lt;=</span> <span class="n">ival</span> <span class="o">&amp;&amp;</span> <span class="n">ival</span> <span class="o">&lt;</span> <span class="n">NSMALLPOSINTS</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">small_ints</span><span class="p">[</span><span class="n">ival</span> <span class="o">+</span> <span class="n">NSMALLNEGINTS</span><span class="p">];</span>
+        <span class="n">Py_INCREF</span><span class="p">(</span><span class="n">v</span><span class="p">);</span>
+
+        <span class="o">...</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">PyObject</span> <span class="o">*</span><span class="p">)</span> <span class="n">v</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>再改回去:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pychar_p</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">c_char</span><span class="o">*</span><span class="n">sys</span><span class="o">.</span><span class="n">getsizeof</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">five1</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">pychar_p</span><span class="p">)</span>
+<span class="n">five1</span><span class="o">.</span><span class="n">contents</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\x05</span><span class="s1">&#39;</span>
+</pre></div>
+</div>
+<p>p.s. 查找替换5为4的过程还是是有问题的。如果在ob_refcnt或ob_type的任意一个字节
+里出现了5，就挂了。应该是找最后一个5才行。</p>
+</div>
+<div class="section" id="bound-method-unbound-method-etc">
+<h1>Bound method, Unbound Method etc<a class="headerlink" href="#bound-method-unbound-method-etc" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<span class="gp">... </span>            <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">A</span><span class="o">.</span><span class="vm">__dict__</span>
+<span class="go">&lt;dictproxy object at 0xb77c9524&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">A</span><span class="o">.</span><span class="n">foo</span>
+<span class="go">&lt;unbound method A.foo&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">A</span><span class="o">.</span><span class="n">foo</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+  File <span class="nb">&quot;&lt;stdin&gt;&quot;</span>, line <span class="m">1</span>, in <span class="n">&lt;module&gt;</span>
+<span class="gr">TypeError</span>: <span class="n">unbound method foo() must be called with A instance as first argument (got int instance instead)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">A</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">]</span>
+<span class="go">&lt;function foo at 0xb770133c&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">A</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="s1">&#39;foo&#39;</span><span class="p">](</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="go">2</span>
+</pre></div>
+</div>
+<p>现在我们来看看代码，解释以下为什么A.foo变成了和实际的foo不一样的东西。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dis</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dis</span><span class="o">.</span><span class="n">dis</span><span class="p">(</span><span class="nb">compile</span><span class="p">(</span><span class="s1">&#39;A.foo&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;none&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;exec&#39;</span><span class="p">))</span>
+<span class="go">  1           0 LOAD_NAME                0 (a)</span>
+<span class="go">              3 LOAD_ATTR                1 (foo)</span>
+<span class="go">              6 POP_TOP</span>
+<span class="go">              7 LOAD_CONST               0 (None)</span>
+<span class="go">             10 RETURN_VALUE</span>
+
+<span class="go">Python/ceval.c</span>
+<span class="go">==============</span>
+<span class="go">case LOAD_ATTR:</span>
+<span class="go">    w = GETITEM(names, oparg);</span>
+<span class="go">    v = TOP();</span>
+<span class="go">    x = PyObject_GetAttr(v, w);</span>
+<span class="go">    Py_DECREF(v);</span>
+<span class="go">    SET_TOP(x);</span>
+<span class="go">    if (x != NULL) continue;</span>
+<span class="go">    break;</span>
+
+<span class="go">Objects/object.c</span>
+<span class="go">================</span>
+<span class="go">PyObject *</span>
+<span class="go">PyObject_GetAttr(PyObject *v, PyObject *name)</span>
+<span class="go">{</span>
+<span class="go">    // #define Py_TYPE(ob) (((PyObject*)(ob))-&gt;ob_type)</span>
+<span class="go">    PyTypeObject *tp = Py_TYPE(v);</span>
+
+<span class="go">    if (!PyString_Check(name)) {</span>
+<span class="go">        {</span>
+<span class="go">            PyErr_Format(PyExc_TypeError,</span>
+<span class="go">                         &quot;attribute name must be string, not &#39;%.200s&#39;&quot;,</span>
+<span class="go">                         Py_TYPE(name)-&gt;tp_name);</span>
+<span class="go">            return NULL;</span>
+<span class="go">        }</span>
+<span class="go">    }</span>
+<span class="go">    if (tp-&gt;tp_getattro != NULL)</span>
+<span class="go">        return (*tp-&gt;tp_getattro)(v, name);</span>
+<span class="go">    if (tp-&gt;tp_getattr != NULL)</span>
+<span class="go">        return (*tp-&gt;tp_getattr)(v, PyString_AS_STRING(name));</span>
+<span class="go">    PyErr_Format(PyExc_AttributeError,</span>
+<span class="go">                 &quot;&#39;%.50s&#39; object has no attribute &#39;%.400s&#39;&quot;,</span>
+<span class="go">                 tp-&gt;tp_name, PyString_AS_STRING(name));</span>
+<span class="go">    return NULL;</span>
+<span class="go">}</span>
+
+<span class="gp">...</span>
+
+<span class="go">static PyObject *</span>
+<span class="go">func_descr_get(PyObject *func, PyObject *obj, PyObject *type)</span>
+<span class="go">{</span>
+<span class="go">    if (obj == Py_None)</span>
+<span class="go">        obj = NULL;</span>
+<span class="go">    return PyMethod_New(func, obj, type);</span>
+<span class="go">}</span>
+
+<span class="go">PyObject *</span>
+<span class="go">PyDescr_NewMethod(PyTypeObject *type, PyMethodDef *method)</span>
+<span class="go">{</span>
+<span class="go">    PyMethodDescrObject *descr;</span>
+
+<span class="go">    descr = (PyMethodDescrObject *)descr_new(&amp;PyMethodDescr_Type,</span>
+<span class="go">                                             type, method-&gt;ml_name);</span>
+<span class="go">    if (descr != NULL)</span>
+<span class="go">        descr-&gt;d_method = method;</span>
+<span class="go">    return (PyObject *)descr;</span>
+<span class="go">}</span>
+
+<span class="go">static PyTypeObject PyMethodDescr_Type = {</span>
+<span class="go">    PyVarObject_HEAD_INIT(&amp;PyType_Type, 0)</span>
+<span class="go">    &quot;method_descriptor&quot;,</span>
+<span class="go">    sizeof(PyMethodDescrObject),</span>
+
+<span class="go">    ...</span>
+
+<span class="go">    (descrgetfunc)method_get,                   /* tp_descr_get */</span>
+<span class="go">    0,                                          /* tp_descr_set */</span>
+<span class="go">};</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="y-combinator">
+<h1>递归 &amp; Y-Combinator<a class="headerlink" href="#y-combinator" title="Permalink to this headline">¶</a></h1>
+<p>求10!</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span> <span class="k">return</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="n">n</span> <span class="o">*</span> <span class="n">f</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>使用尾递归</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span> <span class="k">return</span> <span class="n">m</span>
+    <span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="n">f</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="o">*</span><span class="n">m</span><span class="p">)</span>
+
+<span class="nb">print</span> <span class="n">f</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>递归能够实现是因为在 <cite>def ….</cite> 定义函数的时候在当前的namespace里加入了 <cite>f</cite> 这个
+变量指向这个函数。</p>
+<p>但是这个变量并不是必须的，匿名函数一样可以实现递归，通过Y combinator。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Y</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">function</span> <span class="n">that</span> <span class="n">takes</span> <span class="n">a</span> <span class="n">function</span> <span class="n">that</span> <span class="n">could</span> <span class="n">be</span> <span class="n">viewed</span> <span class="k">as</span> <span class="n">describing</span> <span class="n">a</span>
+<span class="n">recursive</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">-</span><span class="n">referential</span> <span class="n">function</span><span class="p">,</span> <span class="ow">and</span> <span class="n">returns</span> <span class="n">another</span> <span class="n">function</span> <span class="n">that</span>
+<span class="n">implements</span> <span class="n">that</span> <span class="n">recursive</span> <span class="n">function</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>以下是Y cominator的推导过程。基本是 www.dreamsongs.com/Files/WhyOfY.pdf 这篇文章
+的一个python版</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># currying</span>
+<span class="c1"># http://en.wikipedia.org/wiki/Currying</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span> <span class="o">==</span> <span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">b</span><span class="p">:</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+</pre></div>
+</div>
+<p>首先，使用匿名函数来实现10！</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">h</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">n</span><span class="o">*</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">apply</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+<span class="go">3628800</span>
+</pre></div>
+</div>
+<p>第一步，currying</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">n</span><span class="o">*</span><span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="n">g</span><span class="p">,)),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,))</span>
+<span class="go">3628800</span>
+</pre></div>
+</div>
+<p>第二步，从 <cite>1 if n &lt; 2 else n*apply(apply(h, (h,)), (n-1,))</cite> 中提取出 <cite>apply(h, (h,))</cite></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">q</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">n</span><span class="o">*</span><span class="n">apply</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">((</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>从而整个函数可以改写为</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="n">g</span><span class="p">,)),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,))</span>
+<span class="go">3628800</span>
+</pre></div>
+</div>
+<p>最后，合并为：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Y</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">)),</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">)),))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="p">(</span><span class="n">f</span><span class="p">,)),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Y</span><span class="p">(</span><span class="n">f</span><span class="p">)(</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>使用Y  Combinator计算Fibonacci number</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Y</span><span class="p">(</span><span class="k">lambda</span> <span class="n">q</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">apply</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span> <span class="o">+</span> <span class="n">apply</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">2</span><span class="p">,)))(</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>more:</p>
+<p><a class="reference external" href="http://en.wikipedia.org/wiki/Fixed-point_combinator#Y_combinator">http://en.wikipedia.org/wiki/Fixed-point_combinator#Y_combinator</a></p>
+<p><a class="reference external" href="http://en.wikipedia.org/wiki/Lambda_calculus">http://en.wikipedia.org/wiki/Lambda_calculus</a></p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Python中的信号处理</a></li>
+<li><a class="reference internal" href="#unicode">unicode</a></li>
+<li><a class="reference internal" href="#socketdup">socket模块跨平台dup的实现</a></li>
+<li><a class="reference internal" href="#number-hack-py">number_hack.py</a></li>
+<li><a class="reference internal" href="#bound-method-unbound-method-etc">Bound method, Unbound Method etc</a></li>
+<li><a class="reference internal" href="#y-combinator">递归 &amp; Y-Combinator</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Python 源码相关</a><ul>
+      <li>Previous: <a href="import.html" title="previous chapter">Import模块分析</a></li>
+      <li>Next: <a href="thread.html" title="next chapter">Python中多线程的实现</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/dive-into-python/others.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="../_sources/dive-into-python/others.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

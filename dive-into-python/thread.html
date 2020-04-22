@@ -1,0 +1,442 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Python中多线程的实现 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Python中的信号处理" href="others.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="python">
+<h1>Python中多线程的实现<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h1>
+<p>Python在Py_Initialize中会创建一个默认的PyInterpreterState对象以及一个默认的
+PyThreadState 对象。默认情况下不会初始化线程环境（也就是创建GIL），这个任务
+是在第一次调用thread.start_new_thread是初始化的。</p>
+<p><a class="reference external" href="http://docs.python.org/c-api/init.html#thread-state-and-the-global-interpreter-lock">http://docs.python.org/c-api/init.html#thread-state-and-the-global-interpreter-lock</a></p>
+<p><a class="reference external" href="http://www.linuxjournal.com/article/3641">http://www.linuxjournal.com/article/3641</a></p>
+<div class="section" id="id1">
+<h2>线程的创建<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span>Modules/threadmodule.c
+========================
+
+static PyObject *
+thread_PyThread_start_new_thread(PyObject *self, PyObject *fargs)
+{
+    PyObject *func, *args, *keyw = NULL;
+    struct bootstate *boot;
+    long ident;
+
+    if (!PyArg_UnpackTuple(fargs, &quot;start_new_thread&quot;, 2, 3,
+                           &amp;func, &amp;args, &amp;keyw))
+        return NULL;
+    if (!PyCallable_Check(func)) {
+        PyErr_SetString(PyExc_TypeError,
+                        &quot;first arg must be callable&quot;);
+        return NULL;
+    }
+    if (!PyTuple_Check(args)) {
+        PyErr_SetString(PyExc_TypeError,
+                        &quot;2nd arg must be a tuple&quot;);
+        return NULL;
+    }
+    if (keyw != NULL &amp;&amp; !PyDict_Check(keyw)) {
+        PyErr_SetString(PyExc_TypeError,
+                        &quot;optional 3rd arg must be a dictionary&quot;);
+        return NULL;
+    }
+
+    boot = PyMem_NEW(struct bootstate, 1);
+    if (boot == NULL)
+        return PyErr_NoMemory();
+    boot-&gt;interp = PyThreadState_GET()-&gt;interp;
+    boot-&gt;func = func;
+    boot-&gt;args = args;
+    boot-&gt;keyw = keyw;
+    // 创建新线程对应的PyThreadState结构
+    boot-&gt;tstate = _PyThreadState_Prealloc(boot-&gt;interp);
+    if (boot-&gt;tstate == NULL) {
+        PyMem_DEL(boot);
+        return PyErr_NoMemory();
+    }
+    Py_INCREF(func);
+    Py_INCREF(args);
+    Py_XINCREF(keyw);
+    // 初始化线程环境
+    PyEval_InitThreads();
+    // 如果是pthread库，这个函数基本等于pthread_create
+    ident = PyThread_start_new_thread(t_bootstrap, (void*) boot);
+    if (ident == -1) {
+        PyErr_SetString(ThreadError, &quot;can&#39;t start new thread&quot;);
+        Py_DECREF(func);
+        Py_DECREF(args);
+        Py_XDECREF(keyw);
+        PyThreadState_Clear(boot-&gt;tstate);
+        PyMem_DEL(boot);
+        return NULL;
+    }
+    return PyInt_FromLong(ident);
+}
+
+Python/pystate.c
+==================
+
+PyThreadState *_PyThreadState_Current = NULL;
+
+PyThreadState *
+PyThreadState_Swap(PyThreadState *newts)
+{
+    PyThreadState *oldts = _PyThreadState_Current;
+    _PyThreadState_Current = newts;
+
+    return oldts;
+}
+
+Python/ceval.c
+===============
+
+// 这个就是GIL了
+static PyThread_type_lock interpreter_lock = 0;
+
+void
+PyEval_InitThreads(void)
+{
+    if (interpreter_lock)
+        return;
+    // 在这里创建GIL
+    interpreter_lock = PyThread_allocate_lock();
+    PyThread_acquire_lock(interpreter_lock, 1);
+    main_thread = PyThread_get_thread_ident();
+}
+
+Modules/threadmodule.c
+=========================
+
+static void
+t_bootstrap(void *boot_raw)
+{
+    struct bootstate *boot = (struct bootstate *) boot_raw;
+    PyThreadState *tstate;
+    PyObject *res;
+
+    tstate = boot-&gt;tstate;
+    tstate-&gt;thread_id = PyThread_get_thread_ident();
+    _PyThreadState_Init(tstate);
+    PyEval_AcquireThread(tstate);
+    res = PyEval_CallObjectWithKeywords(
+        boot-&gt;func, boot-&gt;args, boot-&gt;keyw);
+    if (res == NULL) {
+        if (PyErr_ExceptionMatches(PyExc_SystemExit))
+            PyErr_Clear();
+        else {
+            PyObject *file;
+            PySys_WriteStderr(
+                &quot;Unhandled exception in thread started by &quot;);
+            file = PySys_GetObject(&quot;stderr&quot;);
+            if (file)
+                PyFile_WriteObject(boot-&gt;func, file, 0);
+            else
+                PyObject_Print(boot-&gt;func, stderr, 0);
+            PySys_WriteStderr(&quot;\n&quot;);
+            PyErr_PrintEx(0);
+        }
+    }
+    else
+        Py_DECREF(res);
+    Py_DECREF(boot-&gt;func);
+    Py_DECREF(boot-&gt;args);
+    Py_XDECREF(boot-&gt;keyw);
+    PyMem_DEL(boot_raw);
+    PyThreadState_Clear(tstate);
+    PyThreadState_DeleteCurrent();
+    PyThread_exit_thread();
+}
+
+Python/ceval.c
+================
+
+void
+PyEval_AcquireThread(PyThreadState *tstate)
+{
+    if (tstate == NULL)
+        Py_FatalError(&quot;PyEval_AcquireThread: NULL new thread state&quot;);
+    /* Check someone has called PyEval_InitThreads() to create the lock */
+    assert(interpreter_lock);
+    // 请求获取GIL
+    PyThread_acquire_lock(interpreter_lock, 1);
+    // Got it! 我们现在是当前线程了，设置全局的PyThreadState指针
+    if (PyThreadState_Swap(tstate) != NULL)
+        Py_FatalError(
+            &quot;PyEval_AcquireThread: non-NULL old thread state&quot;);
+}
+</pre></div>
+</div>
+</div>
+<div class="section" id="id2">
+<h2>线程的调度<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">标准调度</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>Python/ceval.c
+===============
+
+volatile int _Py_Ticker = 100;
+
+PyObject *
+PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
+{
+    ...
+
+    PyThreadState *tstate = PyThreadState_GET();
+
+    ...
+
+    for (;;) {
+        ...
+
+        if (--_Py_Ticker &lt; 0) {
+            if (interpreter_lock) {
+
+                // 保存状态，释放GIL，从而触发操作系统进行线程的切换
+                if (PyThreadState_Swap(NULL) != tstate)
+                    Py_FatalError(&quot;ceval: tstate mix-up&quot;);
+                PyThread_release_lock(interpreter_lock);
+
+                // 请求GIL，等待下次被操作系统调度
+                PyThread_acquire_lock(interpreter_lock, 1);
+                if (PyThreadState_Swap(tstate) != NULL)
+                    Py_FatalError(&quot;ceval: orphan tstate&quot;);
+
+                ...
+            }
+        }
+
+    fast_next_code:
+
+        // dispatch opcode and execute
+        ...
+    }
+
+    ...
+}
+</pre></div>
+</div>
+</li>
+<li><p class="first">阻塞调度</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1">#define Py_BEGIN_ALLOW_THREADS { \</span>
+                        <span class="n">PyThreadState</span> <span class="o">*</span><span class="n">_save</span><span class="p">;</span> \
+                        <span class="n">_save</span> <span class="o">=</span> <span class="n">PyEval_SaveThread</span><span class="p">();</span>
+
+<span class="n">PyThreadState</span> <span class="o">*</span>
+<span class="n">PyEval_SaveThread</span><span class="p">(</span><span class="n">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">PyThreadState</span> <span class="o">*</span><span class="n">tstate</span> <span class="o">=</span> <span class="n">PyThreadState_Swap</span><span class="p">(</span><span class="n">NULL</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">tstate</span> <span class="o">==</span> <span class="n">NULL</span><span class="p">)</span>
+        <span class="n">Py_FatalError</span><span class="p">(</span><span class="s2">&quot;PyEval_SaveThread: NULL tstate&quot;</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">interpreter_lock</span><span class="p">)</span>
+        <span class="n">PyThread_release_lock</span><span class="p">(</span><span class="n">interpreter_lock</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="n">tstate</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">#define Py_END_ALLOW_THREADS    PyEval_RestoreThread(_save); \</span>
+                 <span class="p">}</span>
+</pre></div>
+</div>
+<p>在C extension中需要调用阻塞函数的时候时候会用到这两个宏，使用Py_BEGIN_ALLOW_THREADS
+保存当前线程状态，主动释放GIL，从而让其它线程可以获得调度的机会，这个时候才是
+实际意义上的多线程。阻塞函数返回后，需要操作Python对象时，在Py_END_ALLOW_THREADS
+重新请求获取GIL。</p>
+<p>multiprocessing</p>
+</li>
+</ol>
+</div>
+<div class="section" id="pygilstate">
+<h2>PyGILState*函数<a class="headerlink" href="#pygilstate" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>使用Python的thread模块创建出来的线程，Python会自动为其创建对应的PyThreadState对象，
+管理GIL。这些thread中的代码可以直接调用Python/C API。</p>
+<p>但是对于embed python或者python c extension中自行创建的线程，如果在这些线程需要调用
+Python/C API，就必须创建自己的PyThreadState对象，并且在操作Python API之前获取GIL，
+对于这类应用场景的支持，Python提供了PyGILState*函数。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>PyGILState_STATE
+PyGILState_Ensure(void)
+{
+    int current;
+    PyThreadState *tcur;
+    /* Note that we do not auto-init Python here - apart from
+       potential races with 2 threads auto-initializing, pep-311
+       spells out other issues.  Embedders are expected to have
+       called Py_Initialize() and usually PyEval_InitThreads().
+    */
+    assert(autoInterpreterState); /* Py_Initialize() hasn&#39;t been called! */
+
+    // 获取本线程的PyThreadState对象
+    tcur = (PyThreadState *)PyThread_get_key_value(autoTLSkey);
+    if (tcur == NULL) {
+        /* Create a new thread state for this thread */
+        tcur = PyThreadState_New(autoInterpreterState);
+        if (tcur == NULL)
+            Py_FatalError(&quot;Couldn&#39;t create thread-state for new thread&quot;);
+        /* This is our thread state!  We&#39;ll need to delete it in the
+           matching call to PyGILState_Release(). */
+        tcur-&gt;gilstate_counter = 0;
+        current = 0; /* new thread state is never current */
+    }
+    else
+        // Python线程在获得GIL之后，首先会将全局的当前ThreadState对象换成
+        // 本线程的PyThreadState对象，同样在释放GIL前，也会首先保存下这个
+        // 全局的当前ThreadState对象。
+        // 所以可以通过判断全局的当前线程ThreadState对象等于tcur判断本线程
+        // 是否已经获得了GIL。
+        current = PyThreadState_IsCurrent(tcur);
+    if (current == 0)
+        // 如果没有获取GIL，那么这里请求GIL。
+        PyEval_RestoreThread(tcur);
+    /* Update our counter in the thread-state - no need for locks:
+       - tcur will remain valid as we hold the GIL.
+       - the counter is safe as we are the only thread &quot;allowed&quot;
+         to modify this value
+    */
+    ++tcur-&gt;gilstate_counter;
+    return current ? PyGILState_LOCKED : PyGILState_UNLOCKED;
+}
+
+void
+PyGILState_Release(PyGILState_STATE oldstate)
+{
+    PyThreadState *tcur = (PyThreadState *)PyThread_get_key_value(
+                                                            autoTLSkey);
+    if (tcur == NULL)
+        Py_FatalError(&quot;auto-releasing thread-state, &quot;
+                      &quot;but no thread-state for this thread&quot;);
+    /* We must hold the GIL and have our thread state current */
+    /* XXX - remove the check - the assert should be fine,
+       but while this is very new (April 2003), the extra check
+       by release-only users can&#39;t hurt.
+    */
+    if (! PyThreadState_IsCurrent(tcur))
+        Py_FatalError(&quot;This thread state must be current when releasing&quot;);
+    assert(PyThreadState_IsCurrent(tcur));
+    --tcur-&gt;gilstate_counter;
+    assert(tcur-&gt;gilstate_counter &gt;= 0); /* illegal counter value */
+
+    /* If we&#39;re going to destroy this thread-state, we must
+     * clear it while the GIL is held, as destructors may run.
+     */
+    if (tcur-&gt;gilstate_counter == 0) {
+        /* can&#39;t have been locked when we created it */
+        assert(oldstate == PyGILState_UNLOCKED);
+        PyThreadState_Clear(tcur);
+        /* Delete the thread-state.  Note this releases the GIL too!
+         * It&#39;s vital that the GIL be held here, to avoid shutdown
+         * races; see bugs 225673 and 1061968 (that nasty bug has a
+         * habit of coming back).
+         */
+        PyThreadState_DeleteCurrent();
+    }
+    /* Release the lock if necessary */
+    else if (oldstate == PyGILState_UNLOCKED)
+        PyEval_SaveThread();
+}
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Python中多线程的实现</a><ul>
+<li><a class="reference internal" href="#id1">线程的创建</a></li>
+<li><a class="reference internal" href="#id2">线程的调度</a></li>
+<li><a class="reference internal" href="#pygilstate">PyGILState*函数</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Python 源码相关</a><ul>
+      <li>Previous: <a href="others.html" title="previous chapter">Python中的信号处理</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/dive-into-python/thread.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="../_sources/dive-into-python/thread.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
