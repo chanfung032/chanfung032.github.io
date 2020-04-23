@@ -41,10 +41,10 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="id1">
-<h1>比特币的工作原理<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id2">
-<h2>区块链<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+  <div class="section" id="bi-te-bi-di-gong-zuo-yuan-li">
+<h1>比特币的工作原理<a class="headerlink" href="#bi-te-bi-di-gong-zuo-yuan-li" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="qu-kuai-lian">
+<h2>区块链<a class="headerlink" href="#qu-kuai-lian" title="Permalink to this headline">¶</a></h2>
 <p>区块链（blockchain）是一个分布式强一致性但是写入性能极其低下的数据库。这个数据库中有且仅有一张区块（block）表，每个区块是这张表里的一条记录（Row）。区块里记录了比特币的交易（Transaction）信息。这张表只能插入新的数据，不能更改。</p>
 <p>区块表的表结构如下：</p>
 <div class="highlight-sql"><div class="highlight"><pre><span></span><span class="k">create</span> <span class="k">table</span> <span class="n">blocks</span> <span class="p">(</span>
@@ -111,8 +111,8 @@
 <p>difficulty 每 2016 个区块会调整一次，根据前 2016 个区块挖出的时间，目标是让区块的挖出速度能稳定在 10 分钟 1 个区块，2016 个区块大概需要两周时间挖出来，如果前 2016 个区块挖出的时间小于这个时间，那么 difficulty 参数就会增加，反之， difficulty 参数会下降。</p>
 <p><a class="reference external" href="https://en.bitcoin.it/wiki/Difficulty#What_is_the_formula_for_difficulty.3F">https://en.bitcoin.it/wiki/Difficulty#What_is_the_formula_for_difficulty.3F</a></p>
 </div>
-<div class="section" id="id4">
-<h2>比特币<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="bi-te-bi">
+<h2>比特币<a class="headerlink" href="#bi-te-bi" title="Permalink to this headline">¶</a></h2>
 <p>区块链中存储了比特币从开始到现在所有用户的所有交易记录。一个用户的比特币就是这些交易记录里和其相关的记录。比特币的交易过程就是引用这些已有交易记录来创建新的交易记录并插入区块链的过程。</p>
 <p>下面我们以 Alice 交易比特币给 Bob 为例来说明比特币的工作原理。</p>
 <p>首先，比特币使用公钥私钥来标示和验证用户，比特币地址是用户的公钥 hash 后使用 base58check（base58check 编码类似于 base64 编码，只是去除了 O, 0, I, l 这些易混淆的字符并添加了一个 4-byte 的校验码，因为交易给错误地址的比特币就永久消失了） 编码出来的。</p>
@@ -188,8 +188,8 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">比特币的工作原理</a><ul>
-<li><a class="reference internal" href="#id2">区块链</a></li>
-<li><a class="reference internal" href="#id4">比特币</a></li>
+<li><a class="reference internal" href="#qu-kuai-lian">区块链</a></li>
+<li><a class="reference internal" href="#bi-te-bi">比特币</a></li>
 </ul>
 </li>
 </ul>

@@ -41,8 +41,8 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="nginx-lua">
-<h1>Nginx Lua 剖析<a class="headerlink" href="#nginx-lua" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="nginx-lua-pou-xi">
+<h1>Nginx Lua 剖析<a class="headerlink" href="#nginx-lua-pou-xi" title="Permalink to this headline">¶</a></h1>
 <p>以下面的 nginx.conf 为例，我们来看下 nginx lua 的执行过程。</p>
 <div class="highlight-nginx"><div class="highlight"><pre><span></span><span class="k">http</span> <span class="p">{</span>
     <span class="kn">server</span> <span class="p">{</span>
@@ -55,8 +55,8 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="id1">
-<h2>配置加载和初始化<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="pei-zhi-jia-zai-he-chu-shi-hua">
+<h2>配置加载和初始化<a class="headerlink" href="#pei-zhi-jia-zai-he-chu-shi-hua" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">ngx_module_t</span> <span class="n">ngx_http_lua_module</span> <span class="o">=</span> <span class="p">{</span>
     <span class="n">NGX_MODULE_V1</span><span class="p">,</span>
     <span class="o">&amp;</span><span class="n">ngx_http_lua_module_ctx</span><span class="p">,</span>   <span class="cm">/*  module context */</span>
@@ -200,8 +200,8 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="id2">
-<h2>代码运行<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="dai-ma-yun-hang">
+<h2>代码运行<a class="headerlink" href="#dai-ma-yun-hang" title="Permalink to this headline">¶</a></h2>
 <p>在 nginx 请求处理的 content 阶段，nginx 会回调之前配置阶段设置的 <em>ngx_http_lua_content_handler</em> 来处理请求生成响应。（关于 nginx 多阶段处理请求可以参考：<a class="reference external" href="http://tengine.taobao.org/book/chapter_12.html#id8">http://tengine.taobao.org/book/chapter_12.html#id8</a>）</p>
 <p><em>ngx_http_lua_content_handler</em> 会创建将 content_by_lua 的 lua 代码放在下面的 … 处，编译，缓存。</p>
 <blockquote>
@@ -425,8 +425,8 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Nginx Lua 剖析</a><ul>
-<li><a class="reference internal" href="#id1">配置加载和初始化</a></li>
-<li><a class="reference internal" href="#id2">代码运行</a></li>
+<li><a class="reference internal" href="#pei-zhi-jia-zai-he-chu-shi-hua">配置加载和初始化</a></li>
+<li><a class="reference internal" href="#dai-ma-yun-hang">代码运行</a></li>
 <li><a class="reference internal" href="#cosocket">cosocket</a></li>
 </ul>
 </li>

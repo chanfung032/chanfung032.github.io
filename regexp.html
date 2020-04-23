@@ -25,7 +25,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Android 无 ROOT 导出微信聊天记录" href="android-wexin-export-with-no-root.html" />
-    <link rel="prev" title="Feng’s blog" href="index.html" />
+    <link rel="prev" title="贝叶斯方法" href="bayesian-method.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -44,12 +44,12 @@
   <div class="section" id="regular-expression-matching-can-be-simple-and-fast">
 <h1>Regular Expression Matching Can Be Simple And Fast<a class="headerlink" href="#regular-expression-matching-can-be-simple-and-fast" title="Permalink to this headline">¶</a></h1>
 <p>原文： <a class="reference external" href="https://swtch.com/~rsc/regexp/regexp1.html">https://swtch.com/~rsc/regexp/regexp1.html</a></p>
-<div class="section" id="id1">
-<h2>概要<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="gai-yao">
+<h2>概要<a class="headerlink" href="#gai-yao" title="Permalink to this headline">¶</a></h2>
 <p>Russ Cox 在这篇文章里介绍的算法和一般语言（PHP，Perl，Python等）的实现最大的区别在与不用回溯，该算法在遇到分支时，不是任选一个分支继续往下执行（失败时回溯选择下一分支），而是同时执行所有分支（将可能的状态加入一个集合），这样即使最坏的情况也可保证算法线性执行时间。</p>
 </div>
-<div class="section" id="nfa">
-<h2>将正则表达式转换为 NFA<a class="headerlink" href="#nfa" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="jiang-zheng-ze-biao-da-shi-zhuan-huan-wei-nfa">
+<h2>将正则表达式转换为 NFA<a class="headerlink" href="#jiang-zheng-ze-biao-da-shi-zhuan-huan-wei-nfa" title="Permalink to this headline">¶</a></h2>
 <p>正则表达式的 NFA 可以由以下 NFA 片段组合而成：</p>
 <p>匹配单个字符</p>
 <img alt="_images/regexp-1.png" src="_images/regexp-1.png" />
@@ -66,8 +66,8 @@
 <p>(a*b?c+)* 的完整 NFA 如下图所示：</p>
 <img alt="_images/regexp-nfa.png" src="_images/regexp-nfa.png" />
 </div>
-<div class="section" id="id2">
-<h2>正则表达式匹配算法<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="zheng-ze-biao-da-shi-pi-pei-suan-fa">
+<h2>正则表达式匹配算法<a class="headerlink" href="#zheng-ze-biao-da-shi-pi-pei-suan-fa" title="Permalink to this headline">¶</a></h2>
 <p>遇到分支我们执行所有可能分支，记录下所有可能的下一步状态，然后接下去继续跟踪所有这些状态。如下图所示。</p>
 <img alt="_images/regexp-7.png" src="_images/regexp-7.png" />
 <p>这一段逻辑使用 Go 描述大致如下：</p>
@@ -117,9 +117,9 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Regular Expression Matching Can Be Simple And Fast</a><ul>
-<li><a class="reference internal" href="#id1">概要</a></li>
-<li><a class="reference internal" href="#nfa">将正则表达式转换为 NFA</a></li>
-<li><a class="reference internal" href="#id2">正则表达式匹配算法</a></li>
+<li><a class="reference internal" href="#gai-yao">概要</a></li>
+<li><a class="reference internal" href="#jiang-zheng-ze-biao-da-shi-zhuan-huan-wei-nfa">将正则表达式转换为 NFA</a></li>
+<li><a class="reference internal" href="#zheng-ze-biao-da-shi-pi-pei-suan-fa">正则表达式匹配算法</a></li>
 </ul>
 </li>
 </ul>
@@ -127,7 +127,7 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">Feng’s blog</a></li>
+      <li>Previous: <a href="bayesian-method.html" title="previous chapter">贝叶斯方法</a></li>
       <li>Next: <a href="android-wexin-export-with-no-root.html" title="next chapter">Android 无 ROOT 导出微信聊天记录</a></li>
   </ul></li>
 </ul>

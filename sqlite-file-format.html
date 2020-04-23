@@ -24,6 +24,7 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SystemTap" href="systemtap.html" />
     <link rel="prev" title="Dot 画图常用语法" href="dot-lang-cheatsheet.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -40,8 +41,8 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="sqlite-1">
-<h1>sqlite剖析（1）——文件格式<a class="headerlink" href="#sqlite-1" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="sqlite-pou-xi-1-wen-jian-ge-shi">
+<h1>sqlite剖析（1）——文件格式<a class="headerlink" href="#sqlite-pou-xi-1-wen-jian-ge-shi" title="Permalink to this headline">¶</a></h1>
 <p>sqlite 数据库中的每一张表为一个 b-tree ，b-tree 的每一个节点映射为磁盘上的一个固定大小的 page （文件读写的最小单位），表中的一行数据映射为 b-tree 上叶子节点中的一个键值对，键为 rowid <a class="footnote-reference" href="#id3" id="id1">[1]</a> 。</p>
 <p>b-tree 的中间节点中保存了 K 个键和 K+1 个指向子节点的指针（child page number）。</p>
 <img alt="_images/sqlite-b-tree.jpg" src="_images/sqlite-b-tree.jpg" />
@@ -133,6 +134,7 @@ sqlite&gt; INSERT INTO user VALUES<span class="o">(</span><span class="s1">&#39;
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="dot-lang-cheatsheet.html" title="previous chapter">Dot 画图常用语法</a></li>
+      <li>Next: <a href="systemtap.html" title="next chapter">SystemTap</a></li>
   </ul></li>
 </ul>
 </div>

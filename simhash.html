@@ -41,8 +41,8 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="simhash">
-<h1>Simhash 算法<a class="headerlink" href="#simhash" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="simhash-suan-fa">
+<h1>Simhash 算法<a class="headerlink" href="#simhash-suan-fa" title="Permalink to this headline">¶</a></h1>
 <p>哈希算法经常会被用来生成文档的指纹。传统的哈希算法（md5等）对于不同的文档，即使只有细小的差别，也会哈希到完全不一样的值上去，这样生成的指纹只能用来做精确匹配。和这些算法不一样，Simhash 可以将类似的文档哈希到相近的值上去（这里说的距离是Hamming distance <a class="footnote-reference" href="#id2" id="id1">[1]</a> ），从而可以根据哈希值直接进行模糊匹配。</p>
 <p>原始 paper： <a class="reference external" href="http://www.cs.princeton.edu/courses/archive/spring04/cos598B/bib/CharikarEstim.pdf">similarity estimation techniques from rounding algorithms.pdf</a> 。</p>
 <p>计算过程：</p>

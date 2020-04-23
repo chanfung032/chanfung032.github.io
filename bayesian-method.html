@@ -24,6 +24,8 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Regular Expression Matching Can Be Simple And Fast" href="regexp.html" />
+    <link rel="prev" title="Feng’s blog" href="index.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -39,10 +41,10 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="id1">
-<h1>贝叶斯方法<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id2">
-<h2>推导<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+  <div class="section" id="bei-ye-si-fang-fa">
+<h1>贝叶斯方法<a class="headerlink" href="#bei-ye-si-fang-fa" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="tui-dao">
+<h2>推导<a class="headerlink" href="#tui-dao" title="Permalink to this headline">¶</a></h2>
 <p>根据 <a class="reference external" href="https://zh.wikipedia.org/wiki/%E6%9D%A1%E4%BB%B6%E7%8B%AC%E7%AB%8B">条件独立</a> 公式，如果事件 X 和 Y 相互独立，那么：</p>
 <div class="math">
 \[P(X,Y) = P(X)P(Y)\]</div>
@@ -60,8 +62,8 @@ P(X|Y) = P(X,Y)/P(Y)\end{split}\]</div>
 <div class="math">
 \[P(Y_k|X) = \frac{P(X|Y_k)P(Y_k)}{\sum\limits_{k}P(X|Y =Y_k)P(Y_k)}\]</div>
 </div>
-<div class="section" id="id6">
-<h2>朴素贝叶斯分类<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="pu-su-bei-ye-si-fen-lei">
+<h2>朴素贝叶斯分类<a class="headerlink" href="#pu-su-bei-ye-si-fen-lei" title="Permalink to this headline">¶</a></h2>
 <p>朴素贝叶斯分类器：</p>
 <div class="math">
 \[y = \arg \max_{c_k} P(Y = c_k | X = x)\]</div>
@@ -75,8 +77,8 @@ P(X|Y) = P(X,Y)/P(Y)\end{split}\]</div>
 <div class="math">
 \[y = \arg \max_{c_k} P(Y = c_k) \prod_j P(X^{(j)}=x^{(j)} | Y = c_k)\]</div>
 </div>
-<div class="section" id="id7">
-<h2>实际应用：拼写纠正<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="shi-ji-ying-yong-pin-xie-jiu-zheng">
+<h2>实际应用：拼写纠正<a class="headerlink" href="#shi-ji-ying-yong-pin-xie-jiu-zheng" title="Permalink to this headline">¶</a></h2>
 <p>要解决的问题：用户输入了一个不在字典中的单词，猜测这个用户真正想要输入的单词是什么？ 用形式化的语言描述就是：</p>
 <div class="math">
 \[P(我们猜测用户想输入的单词|实际输入的单词)\]</div>
@@ -157,9 +159,9 @@ P(X|Y) = P(X,Y)/P(Y)\end{split}\]</div>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">贝叶斯方法</a><ul>
-<li><a class="reference internal" href="#id2">推导</a></li>
-<li><a class="reference internal" href="#id6">朴素贝叶斯分类</a></li>
-<li><a class="reference internal" href="#id7">实际应用：拼写纠正</a></li>
+<li><a class="reference internal" href="#tui-dao">推导</a></li>
+<li><a class="reference internal" href="#pu-su-bei-ye-si-fen-lei">朴素贝叶斯分类</a></li>
+<li><a class="reference internal" href="#shi-ji-ying-yong-pin-xie-jiu-zheng">实际应用：拼写纠正</a></li>
 </ul>
 </li>
 </ul>
@@ -167,6 +169,8 @@ P(X|Y) = P(X,Y)/P(Y)\end{split}\]</div>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Feng’s blog</a></li>
+      <li>Next: <a href="regexp.html" title="next chapter">Regular Expression Matching Can Be Simple And Fast</a></li>
   </ul></li>
 </ul>
 </div>

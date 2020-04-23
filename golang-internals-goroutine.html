@@ -41,10 +41,10 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="go-goroutine">
-<h1>Go 语言实现——goroutine<a class="headerlink" href="#go-goroutine" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id1">
-<h2>概述<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+  <div class="section" id="go-yu-yan-shi-xian-goroutine">
+<h1>Go 语言实现——goroutine<a class="headerlink" href="#go-yu-yan-shi-xian-goroutine" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="gai-shu">
+<h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
 <p>goroutine 是对线程的进一步抽象，就像操作系统的进程调度会将 CPU 时间分配给一个个的进程 or 线程去运行一样，goroutine 的调度器会将操作系统分配给 Go 程序各个线程的 CPU 时间再进一步的细分给一个个的 goroutine 去运行，实现了线程的 multiplexing。</p>
 <p>和操作系统的进程调度对 CPU 有完全的控制不一样，goroutine 的调度器调度的线程还受到操作系统的限制：</p>
 <ul class="simple">
@@ -71,8 +71,8 @@
 <li>Go’s work-stealing scheduler: <a class="reference external" href="https://rakyll.org/scheduler/">https://rakyll.org/scheduler/</a></li>
 </ul>
 </div>
-<div class="section" id="id2">
-<h2>创建<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="chuang-jian">
+<h2>创建<a class="headerlink" href="#chuang-jian" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
     <span class="nb">print</span><span class="p">(</span><span class="s">&quot;hello world&quot;</span><span class="p">)</span>
 <span class="p">}()</span>
@@ -163,8 +163,8 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="id3">
-<h2>执行<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="zhi-xing">
+<h2>执行<a class="headerlink" href="#zhi-xing" title="Permalink to this headline">¶</a></h2>
 <p>在 <a class="reference internal" href="golang-internals-bootstrap.html"><span class="doc">Go 语言实现——启动过程</span></a> 中可以看到主线程最后调用了 <em>mstart</em> 函数，这个函数会调度第一个 goroutine 上来执行，也就是 <em>runtime.main</em> 。</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">mstart</span><span class="p">()</span> <span class="p">{</span>
     <span class="nx">mstart1</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
@@ -259,8 +259,8 @@
 <p>wakep 最终可能会创建新的线程出来执行 goroutine，这些新线程的入口函数就是上面主线程最后调用的 <em>mstart</em> 函数。</p>
 <p>线程上执行的第一个 goroutine 阻塞、运行时间太长或者退出后会触发 Go 系统代码，从而调度第二个 goroutine 上来运行，如此往复，直到终结。</p>
 </div>
-<div class="section" id="id4">
-<h2>切换<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="qie-huan">
+<h2>切换<a class="headerlink" href="#qie-huan" title="Permalink to this headline">¶</a></h2>
 <p>以下条件下 Go 调度器会切换 goroutine：</p>
 <ul class="simple">
 <li>系统调用。</li>
@@ -313,8 +313,8 @@ TEXT    ·Syscall(SB),NOSPLIT,$0-56
 </div>
 <p>channel/network 在阻塞的时候会调用调度器的接口挂起对应的 goroutine，跟操作系统的 IPC 类似。</p>
 </div>
-<div class="section" id="id5">
-<h2>退出<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="tui-chu">
+<h2>退出<a class="headerlink" href="#tui-chu" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-asm"><div class="highlight"><pre><span></span>// asm_amd64.s
 TEXT runtime·goexit(SB),NOSPLIT,$0-0
     BYTE    $0x90   // &lt;- goroutine 会伪装成插入到这里被调用的样子
@@ -345,8 +345,8 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
 </pre></div>
 </div>
 </div>
-<div class="section" id="goroutine">
-<h2>goroutine 栈和系统栈<a class="headerlink" href="#goroutine" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="goroutine-zhan-he-xi-tong-zhan">
+<h2>goroutine 栈和系统栈<a class="headerlink" href="#goroutine-zhan-he-xi-tong-zhan" title="Permalink to this headline">¶</a></h2>
 <p>每个 goroutine 都会有自己的代码执行栈 <em>g.stack</em> ，这个栈开始的时候只有 2k ，如果栈空间不够了，Go 会申请一段更大的栈空间，然后将现在的栈的内容拷贝过去，如果堆上有指针指向旧栈上的变量，那么修改这个指针指向新栈，然后继续在新栈中执行，realloc stack 的操作叫做 split stack。</p>
 <p>Go 函数一开始一般都会有一段检测是否要 split stack 的代码，如果需要的话会先 split stack 然后再执行函数。</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span>&quot;&quot;.main t=1 size=78 args=0x0 locals=0x18
@@ -410,12 +410,12 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Go 语言实现——goroutine</a><ul>
-<li><a class="reference internal" href="#id1">概述</a></li>
-<li><a class="reference internal" href="#id2">创建</a></li>
-<li><a class="reference internal" href="#id3">执行</a></li>
-<li><a class="reference internal" href="#id4">切换</a></li>
-<li><a class="reference internal" href="#id5">退出</a></li>
-<li><a class="reference internal" href="#goroutine">goroutine 栈和系统栈</a></li>
+<li><a class="reference internal" href="#gai-shu">概述</a></li>
+<li><a class="reference internal" href="#chuang-jian">创建</a></li>
+<li><a class="reference internal" href="#zhi-xing">执行</a></li>
+<li><a class="reference internal" href="#qie-huan">切换</a></li>
+<li><a class="reference internal" href="#tui-chu">退出</a></li>
+<li><a class="reference internal" href="#goroutine-zhan-he-xi-tong-zhan">goroutine 栈和系统栈</a></li>
 <li><a class="reference internal" href="#runtime-gosched">runtime.Gosched()</a></li>
 </ul>
 </li>

@@ -41,14 +41,14 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="percolator">
-<h1>Percolator 的事务模型<a class="headerlink" href="#percolator" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="percolator-di-shi-wu-mo-xing">
+<h1>Percolator 的事务模型<a class="headerlink" href="#percolator-di-shi-wu-mo-xing" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
 <li>原文：<a class="reference external" href="https://research.google.com/pubs/pub36726.html">https://research.google.com/pubs/pub36726.html</a></li>
 <li>论文中的伪代码： <a class="reference external" href="https://gist.github.com/chanfung032/bbc6f753cefe25656839e12ad71b31f5">https://gist.github.com/chanfung032/bbc6f753cefe25656839e12ad71b31f5</a></li>
 </ul>
-<div class="section" id="id1">
-<h2>概述<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="gai-shu">
+<h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
 <li><p class="first">Bigtable 可以看作一个分布式、持久化存储的有序大 map。key-value 映射关系如下：</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="n">value</span>
@@ -80,8 +80,8 @@
 </ul>
 <p>其中 <em>start_ts</em> 是事务开始的时间， <em>commit_ts</em> 是事务提交的时间。</p>
 </div>
-<div class="section" id="id2">
-<h2>二阶段提交<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="er-jie-duan-ti-jiao">
+<h2>二阶段提交<a class="headerlink" href="#er-jie-duan-ti-jiao" title="Permalink to this headline">¶</a></h2>
 <p><strong>Prewrite阶段</strong></p>
 <p>对于事务中所有更新的 row，选择其中一行作为 primary row，其余作为 secondary row，对于每一行：</p>
 <ol class="arabic simple">
@@ -103,8 +103,8 @@
 <p>假设有事务 W 在 <span class="math">\(commit\_ts_w\)</span> 提交，<span class="math">\(commit\_ts_w &lt; start\_ts\)</span> ，因为事务在提交前必然要先给所有提交的 row 加锁，所以在 <span class="math">\(commit\_ts_w\)</span> 之后，事务 W 写的 row 要么已经是提交后的数据，要么是被锁，所以只要等待这个锁释放，start_ts 开始的事务就可以读到事务 W 的提交了。</p>
 <p>如果锁是其它失败的事务留下来的，Get() 中会根据锁对应的 primary row 是否已经提交决定是 roll back 还是 roll forward。如果 primary row 还没有提交，那么直接删除 primary row 的 lock，roll back，反之提交该锁对应的事务，roll forward。</p>
 </div>
-<div class="section" id="id3">
-<h2>示例<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="shi-li">
+<h2>示例<a class="headerlink" href="#shi-li" title="Permalink to this headline">¶</a></h2>
 <p>以 Bob 给 Joe 转账 $7 为例：</p>
 <p>初始状态下，Joe 的账户下有 $2，Bob $10 。</p>
 <img alt="_images/percolator-1.png" src="_images/percolator-1.png" />
@@ -128,11 +128,11 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Percolator 的事务模型</a><ul>
-<li><a class="reference internal" href="#id1">概述</a></li>
+<li><a class="reference internal" href="#gai-shu">概述</a></li>
 <li><a class="reference internal" href="#snapshot-isolation">Snapshot-Isolation</a></li>
-<li><a class="reference internal" href="#id2">二阶段提交</a></li>
+<li><a class="reference internal" href="#er-jie-duan-ti-jiao">二阶段提交</a></li>
 <li><a class="reference internal" href="#get">Get()</a></li>
-<li><a class="reference internal" href="#id3">示例</a></li>
+<li><a class="reference internal" href="#shi-li">示例</a></li>
 </ul>
 </li>
 </ul>

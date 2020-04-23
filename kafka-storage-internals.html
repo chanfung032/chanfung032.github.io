@@ -41,8 +41,8 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="kafka">
-<h1>Kafka的存储机制<a class="headerlink" href="#kafka" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="kafka-di-cun-chu-ji-zhi">
+<h1>Kafka的存储机制<a class="headerlink" href="#kafka-di-cun-chu-ji-zhi" title="Permalink to this headline">¶</a></h1>
 <p>原文：<a class="reference external" href="https://thehoard.blog/how-kafkas-storage-internals-work-3a29b02e026">https://thehoard.blog/how-kafkas-storage-internals-work-3a29b02e026</a></p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor <span class="m">1</span> --partitions <span class="m">3</span> --topic <span class="nb">test</span> --config retention.ms<span class="o">=</span><span class="m">172800000</span>
 </pre></div>

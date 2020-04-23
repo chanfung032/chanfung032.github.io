@@ -41,10 +41,10 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="skiplist">
-<h1>跳表 Skiplist<a class="headerlink" href="#skiplist" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id1">
-<h2>概述<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+  <div class="section" id="tiao-biao-skiplist">
+<h1>跳表 Skiplist<a class="headerlink" href="#tiao-biao-skiplist" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="gai-shu">
+<h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
 <p>跳表是一种数据结构，用于解决算法中的查找问题，即根据给定的 Key，快速查找到其位置（或对应的 Value）。</p>
 <p>原始论文： <a class="reference external" href="ftp://ftp.cs.umd.edu/pub/skipLists/skiplists.pdf">Skip Lists: A Probabilistic Alternative to Balanced Trees</a> （从标题可以看出，跳表是一个对标各种平衡树的数据结构）。</p>
 <p>跳表在有序链表的基础上发展而来。普通的有序链表的 查找/插入/删除 都需要从头逐个比较节点，时间复杂度为 O(n) 。</p>
@@ -69,8 +69,8 @@
 </div>
 <p>随机数包含两个参数，<code class="docutils literal"><span class="pre">p</span></code> 和 <code class="docutils literal"><span class="pre">maxLevel</span></code> ，节点数 小于 2<sup>16</sup> 的时候 <code class="docutils literal"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">1/2,</span> <span class="pre">maxLevel</span> <span class="pre">=</span> <span class="pre">16</span></code> 即可（来自原始论文）。</p>
 </div>
-<div class="section" id="id2">
-<h2>查找<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="cha-zhao">
+<h2>查找<a class="headerlink" href="#cha-zhao" title="Permalink to this headline">¶</a></h2>
 <p>定义跳表结构体：</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">SkipList</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">header</span> <span class="nx">node</span>
@@ -110,8 +110,8 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="id3">
-<h2>插入<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="cha-ru">
+<h2>插入<a class="headerlink" href="#cha-ru" title="Permalink to this headline">¶</a></h2>
 <p>插入过程的第一步同查找，查找的途中记录下插入点在每一层的前一个节点：</p>
 <ul class="simple">
 <li>上层链表的前一个节点是 <em>上层往下层跃迁的节点</em> 。</li>
@@ -177,9 +177,9 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">跳表 Skiplist</a><ul>
-<li><a class="reference internal" href="#id1">概述</a></li>
-<li><a class="reference internal" href="#id2">查找</a></li>
-<li><a class="reference internal" href="#id3">插入</a></li>
+<li><a class="reference internal" href="#gai-shu">概述</a></li>
+<li><a class="reference internal" href="#cha-zhao">查找</a></li>
+<li><a class="reference internal" href="#cha-ru">插入</a></li>
 </ul>
 </li>
 </ul>

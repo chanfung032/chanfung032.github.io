@@ -41,10 +41,10 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="go">
-<h1>Go 语言实现——函数<a class="headerlink" href="#go" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id1">
-<h2>调用规范<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+  <div class="section" id="go-yu-yan-shi-xian-han-shu">
+<h1>Go 语言实现——函数<a class="headerlink" href="#go-yu-yan-shi-xian-han-shu" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="diao-yong-gui-fan">
+<h2>调用规范<a class="headerlink" href="#diao-yong-gui-fan" title="Permalink to this headline">¶</a></h2>
 <p>代码：</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
     <span class="k">return</span> <span class="nx">x</span> <span class="o">-</span> <span class="nx">y</span>
@@ -183,8 +183,8 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="id2">
-<h2>闭包<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="bi-bao">
+<h2>闭包<a class="headerlink" href="#bi-bao" title="Permalink to this headline">¶</a></h2>
 <p>闭包（closure） = 函数（function） + 其外围的环境（environment）</p>
 <p>Go 中是通过结构体来实现闭包的。比如下面 foo 返回的匿名函数。</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">x</span> <span class="kt">int</span><span class="p">)</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
@@ -260,10 +260,10 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Go 语言实现——函数</a><ul>
-<li><a class="reference internal" href="#id1">调用规范</a></li>
+<li><a class="reference internal" href="#diao-yong-gui-fan">调用规范</a></li>
 <li><a class="reference internal" href="#defer">Defer</a></li>
 <li><a class="reference internal" href="#eacape-analysis">Eacape analysis</a></li>
-<li><a class="reference internal" href="#id2">闭包</a></li>
+<li><a class="reference internal" href="#bi-bao">闭包</a></li>
 </ul>
 </li>
 </ul>

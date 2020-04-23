@@ -41,11 +41,11 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="go">
-<h1>Go 语言实现——数据结构<a class="headerlink" href="#go" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="go-yu-yan-shi-xian-shu-ju-jie-gou">
+<h1>Go 语言实现——数据结构<a class="headerlink" href="#go-yu-yan-shi-xian-shu-ju-jie-gou" title="Permalink to this headline">¶</a></h1>
 <p>变量（variable） = 类型（type）+变量名（name）+值（value）。</p>
-<div class="section" id="value">
-<h2>值（value）的内存结构<a class="headerlink" href="#value" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="zhi-value-di-nei-cun-jie-gou">
+<h2>值（value）的内存结构<a class="headerlink" href="#zhi-value-di-nei-cun-jie-gou" title="Permalink to this headline">¶</a></h2>
 <p>基础类型</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">+---+</span>
 <span class="o">|</span> <span class="mi">1</span> <span class="o">|</span>  <span class="nb">int</span>
@@ -99,8 +99,8 @@
 </div>
 <p>从函数原型来看，答案应该就在这个 <em>interface{}</em> 里了 。</p>
 </div>
-<div class="section" id="interface">
-<h2>接口 interface 的实现<a class="headerlink" href="#interface" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="jie-kou-interface-di-shi-xian">
+<h2>接口 interface 的实现<a class="headerlink" href="#jie-kou-interface-di-shi-xian" title="Permalink to this headline">¶</a></h2>
 <p>interface 是 Go 语言中类型系统的注入点。</p>
 <p>根据 interface 是否包含有 method，interface 用  <a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/runtime2.go#L143">iface</a>  和 <a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/runtime2.go#L148">eface</a> 这两种结构体来保存。eface 是不含 method 的 interface 结构，即 interface{} 。</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">iface</span> <span class="kd">struct</span> <span class="p">{</span>
@@ -223,8 +223,8 @@ after walk main
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Go 语言实现——数据结构</a><ul>
-<li><a class="reference internal" href="#value">值（value）的内存结构</a></li>
-<li><a class="reference internal" href="#interface">接口 interface 的实现</a></li>
+<li><a class="reference internal" href="#zhi-value-di-nei-cun-jie-gou">值（value）的内存结构</a></li>
+<li><a class="reference internal" href="#jie-kou-interface-di-shi-xian">接口 interface 的实现</a></li>
 </ul>
 </li>
 </ul>

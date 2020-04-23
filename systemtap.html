@@ -24,7 +24,8 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="如何构建一个All In One的Python Package" href="build-all-in-one-package-for-python-application.html" />
+    <link rel="next" title="Graphite+StatsD 服务Metrics监控" href="graphite.html" />
+    <link rel="prev" title="sqlite剖析（1）——文件格式" href="sqlite-file-format.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -42,12 +43,12 @@
             
   <div class="section" id="systemtap">
 <h1>SystemTap<a class="headerlink" href="#systemtap" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id1">
-<h2>概述<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="gai-shu">
+<h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
 <p>SystempTap可以对运行中的内核和用户空间的进程进行实时的探测跟踪和分析。</p>
 </div>
-<div class="section" id="id2">
-<h2>工作原理<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="gong-zuo-yuan-li">
+<h2>工作原理<a class="headerlink" href="#gong-zuo-yuan-li" title="Permalink to this headline">¶</a></h2>
 <p>SystemTap的工作原理是使用linux提供的kprobe接口，将用户需要观测linux系统的行为转换成为c（使用kprobe)并且编译成为kernel object然后运行。systemtap使用一种触发式的工作方式，通过安装探针（probe）来监控系统的行为，一旦探针事件出现的话就会触发对应的代码。代码使用自己定义的</p>
 <img alt="_images/systemtap-prepare-workflow.gif" src="_images/systemtap-prepare-workflow.gif" />
 <ul class="simple">
@@ -82,8 +83,8 @@ Pass 5: run completed in 0usr/10sys/586real ms.
 </pre></div>
 </div>
 </div>
-<div class="section" id="id3">
-<h2>安装<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="an-zhuang">
+<h2>安装<a class="headerlink" href="#an-zhuang" title="Permalink to this headline">¶</a></h2>
 <p><strong>CentOS</strong></p>
 <ul class="simple">
 <li>yum install systemtap kernel-devel</li>
@@ -93,8 +94,8 @@ Pass 5: run completed in 0usr/10sys/586real ms.
 <p><strong>Ubuntu</strong> (a little troublesome)</p>
 <p>参考: <a class="reference external" href="http://posulliv.github.io/2010/02/26/installing-stap/">http://posulliv.github.io/2010/02/26/installing-stap/</a></p>
 </div>
-<div class="section" id="id4">
-<h2>基本使用方法<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="ji-ben-shi-yong-fang-fa">
+<h2>基本使用方法<a class="headerlink" href="#ji-ben-shi-yong-fang-fa" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
 <li><p class="first">执行 <code class="docutils literal"><span class="pre">stap</span> <span class="pre">-L</span> <span class="pre">PROBE</span></code> 列出匹配的PROBE及其上下文中可以使用的一些变量。</p>
 <div class="highlight-awk"><div class="highlight"><pre><span></span>$ stap -L &#39;syscall.open&#39;
@@ -116,8 +117,8 @@ mode:long argstr:string $filename:char const* $flags
 </ol>
 <p>更多更详细的内容请参考官方文档： <a class="reference external" href="https://sourceware.org/systemtap/documentation.html">https://sourceware.org/systemtap/documentation.html</a></p>
 </div>
-<div class="section" id="id5">
-<h2>使用示例<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="shi-yong-shi-li">
+<h2>使用示例<a class="headerlink" href="#shi-yong-shi-li" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
 <li><p class="first">谁删了我的文件</p>
 <div class="highlight-awk"><div class="highlight"><pre><span></span><span class="nx">global</span> <span class="nx">pid2cmdline</span>
@@ -178,12 +179,12 @@ mode:long argstr:string $filename:char const* $flags
 </li>
 </ol>
 </div>
-<div class="section" id="id6">
-<h2>使用SystemTap做性能分析<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="shi-yong-systemtap-zuo-xing-neng-fen-xi">
+<h2>使用SystemTap做性能分析<a class="headerlink" href="#shi-yong-systemtap-zuo-xing-neng-fen-xi" title="Permalink to this headline">¶</a></h2>
 <p><strong>2 Steps</strong></p>
 <ol class="arabic simple">
 <li>对进程的backtrace进行采样统计</li>
-<li>使用FlameGraph <a class="footnote-reference" href="#fg" id="id7">[1]</a> 对采样的结果进行可视化</li>
+<li>使用FlameGraph <a class="footnote-reference" href="#fg" id="id1">[1]</a> 对采样的结果进行可视化</li>
 </ol>
 <p>C级别的性能分析</p>
 <div class="highlight-awk"><div class="highlight"><pre><span></span>global s;
@@ -250,12 +251,12 @@ probe timer.s(20) { quit = 1 }
 <table class="docutils footnote" frame="void" id="fg" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id7">[1]</a></td><td><a class="reference external" href="https://github.com/brendangregg/FlameGraph">https://github.com/brendangregg/FlameGraph</a></td></tr>
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td><a class="reference external" href="https://github.com/brendangregg/FlameGraph">https://github.com/brendangregg/FlameGraph</a></td></tr>
 </tbody>
 </table>
 </div>
-<div class="section" id="id8">
-<h2>参考资料<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="can-kao-zi-liao">
+<h2>参考资料<a class="headerlink" href="#can-kao-zi-liao" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><a class="reference external" href="http://sourceware.org/systemtap/tapsets/">SystemTap Tapset Reference Manual</a></li>
 <li><a class="reference external" href="http://agentzh.org/misc/slides/yapc-na-2013-flame-graphs">Flame Graphs for Online Performance Profiling</a></li>
@@ -282,13 +283,13 @@ probe timer.s(20) { quit = 1 }
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">SystemTap</a><ul>
-<li><a class="reference internal" href="#id1">概述</a></li>
-<li><a class="reference internal" href="#id2">工作原理</a></li>
-<li><a class="reference internal" href="#id3">安装</a></li>
-<li><a class="reference internal" href="#id4">基本使用方法</a></li>
-<li><a class="reference internal" href="#id5">使用示例</a></li>
-<li><a class="reference internal" href="#id6">使用SystemTap做性能分析</a></li>
-<li><a class="reference internal" href="#id8">参考资料</a></li>
+<li><a class="reference internal" href="#gai-shu">概述</a></li>
+<li><a class="reference internal" href="#gong-zuo-yuan-li">工作原理</a></li>
+<li><a class="reference internal" href="#an-zhuang">安装</a></li>
+<li><a class="reference internal" href="#ji-ben-shi-yong-fang-fa">基本使用方法</a></li>
+<li><a class="reference internal" href="#shi-yong-shi-li">使用示例</a></li>
+<li><a class="reference internal" href="#shi-yong-systemtap-zuo-xing-neng-fen-xi">使用SystemTap做性能分析</a></li>
+<li><a class="reference internal" href="#can-kao-zi-liao">参考资料</a></li>
 </ul>
 </li>
 </ul>
@@ -296,7 +297,8 @@ probe timer.s(20) { quit = 1 }
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="build-all-in-one-package-for-python-application.html" title="previous chapter">如何构建一个All In One的Python Package</a></li>
+      <li>Previous: <a href="sqlite-file-format.html" title="previous chapter">sqlite剖析（1）——文件格式</a></li>
+      <li>Next: <a href="graphite.html" title="next chapter">Graphite+StatsD 服务Metrics监控</a></li>
   </ul></li>
 </ul>
 </div>

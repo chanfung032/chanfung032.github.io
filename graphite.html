@@ -41,15 +41,15 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="graphite-statsd-metrics">
-<h1>Graphite+StatsD 服务Metrics监控<a class="headerlink" href="#graphite-statsd-metrics" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="graphite-statsd-fu-wu-metrics-jian-kong">
+<h1>Graphite+StatsD 服务Metrics监控<a class="headerlink" href="#graphite-statsd-fu-wu-metrics-jian-kong" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="graphite">
 <h2>Graphite<a class="headerlink" href="#graphite" title="Permalink to this headline">¶</a></h2>
 <p>Graphite是一个database + 图形展示工具，我们可以将服务的各种指标数据发送给Graphite，Graphite的Web页面中会以曲线的形式展现这些数据，方便我们观察对比服务的运行状况。</p>
 <p>下面是Graphite的架构图：</p>
 <img alt="_images/graphite-architecher.png" src="_images/graphite-architecher.png" />
-<div class="section" id="feed-in">
-<h3>如何Feed in数据<a class="headerlink" href="#feed-in" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="ru-he-feed-in-shu-ju">
+<h3>如何Feed in数据<a class="headerlink" href="#ru-he-feed-in-shu-ju" title="Permalink to this headline">¶</a></h3>
 <p>纯文本协议</p>
 <p>Shell:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span>echo &quot;local.random.diceroll 4 `date +%s`&quot; | nc -q0 ${SERVER} ${PORT}
@@ -63,8 +63,8 @@
 </div>
 <p>数据Feed in地址：udp://metrics.sae.sina.com.cn:2006</p>
 </div>
-<div class="section" id="id1">
-<h3>数据展示页面<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="shu-ju-zhan-shi-ye-mian">
+<h3>数据展示页面<a class="headerlink" href="#shu-ju-zhan-shi-ye-mian" title="Permalink to this headline">¶</a></h3>
 <p>数据展示页面：<a class="reference external" href="http://metrics.sae.sina.com.cn">http://metrics.sae.sina.com.cn</a></p>
 <img alt="_images/graphite-ui.png" src="_images/graphite-ui.png" />
 </div>
@@ -76,8 +76,8 @@
 <img alt="_images/graphite-composer-2.png" src="_images/graphite-composer-2.png" />
 <p>Read more: <a class="reference external" href="http://graphite.readthedocs.org/en/1.0/functions.html">http://graphite.readthedocs.org/en/1.0/functions.html</a></p>
 </div>
-<div class="section" id="dashboard">
-<h3>制作Dashboard<a class="headerlink" href="#dashboard" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="zhi-zuo-dashboard">
+<h3>制作Dashboard<a class="headerlink" href="#zhi-zuo-dashboard" title="Permalink to this headline">¶</a></h3>
 <p>效果图：</p>
 <img alt="_images/dashboard.png" src="_images/dashboard.png" />
 <p>点击graphite页面页面右上角的Dashboard链接，进入Dashboard页面，你可以直接在上面的面板中选择需要的曲线加入到dashboard中，所有的曲线都可以拖曳编辑。</p>
@@ -121,10 +121,10 @@
   <ul>
 <li><a class="reference internal" href="#">Graphite+StatsD 服务Metrics监控</a><ul>
 <li><a class="reference internal" href="#graphite">Graphite</a><ul>
-<li><a class="reference internal" href="#feed-in">如何Feed in数据</a></li>
-<li><a class="reference internal" href="#id1">数据展示页面</a></li>
+<li><a class="reference internal" href="#ru-he-feed-in-shu-ju">如何Feed in数据</a></li>
+<li><a class="reference internal" href="#shu-ju-zhan-shi-ye-mian">数据展示页面</a></li>
 <li><a class="reference internal" href="#functions">Functions</a></li>
-<li><a class="reference internal" href="#dashboard">制作Dashboard</a></li>
+<li><a class="reference internal" href="#zhi-zuo-dashboard">制作Dashboard</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#statsd">StatsD</a></li>

@@ -25,7 +25,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Go 语言实现——网络 IO" href="golang-internals-io.html" />
-    <link rel="prev" title="User experience design for APIs" href="user-experience-design-for-apis.html" />
+    <link rel="prev" title="跳表 Skiplist" href="skiplist.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -41,10 +41,10 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="go">
-<h1>Go 语言实现——内存管理<a class="headerlink" href="#go" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id1">
-<h2>概述<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+  <div class="section" id="go-yu-yan-shi-xian-nei-cun-guan-li">
+<h1>Go 语言实现——内存管理<a class="headerlink" href="#go-yu-yan-shi-xian-nei-cun-guan-li" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="gai-shu">
+<h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
 <p>Go 语言的堆内存分配是基于 <a class="reference external" href="http://goog-perftools.sourceforge.net/doc/tcmalloc.html">TCMalloc</a> 的模型实现的，是一个带有 thread cache 的分配器。</p>
 <p>分配器一开始向操作系统申请一大片地址空间用于内存分配，分配器的分配单位是 page（8kb）。</p>
 <ul class="simple">
@@ -53,8 +53,8 @@
 </ul>
 <p>分配器中分配出去的连续 page 叫做 span ，线程会为每个 object class 缓存一个 span 用于本线程的 small object 分配，这样大部分情况下 small object 的分配就不用加全局锁了。</p>
 </div>
-<div class="section" id="id2">
-<h2>主要数据结构<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="zhu-yao-shu-ju-jie-gou">
+<h2>主要数据结构<a class="headerlink" href="#zhu-yao-shu-ju-jie-gou" title="Permalink to this headline">¶</a></h2>
 <p>和分配器相关的主要是 mheap、mcentral、mspan、mcache 这四个结构体。</p>
 <ul class="simple">
 <li>mheap 分配器相关的结构体。</li>
@@ -145,8 +145,8 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="id3">
-<h2>初始化<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="chu-shi-hua">
+<h2>初始化<a class="headerlink" href="#chu-shi-hua" title="Permalink to this headline">¶</a></h2>
 <p>在 Go 运行环境初始化的过程中，会调用 mallocinit() 函数初始化堆内存分配器，mallocinit() 会向操作系统申请如下的一段虚拟地址空间：</p>
 <table border="1" class="docutils">
 <colgroup>
@@ -227,8 +227,8 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="id4">
-<h2>分配<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="fen-pei">
+<h2>分配<a class="headerlink" href="#fen-pei" title="Permalink to this headline">¶</a></h2>
 <p>堆内存分配器的入口是 newobject，从其函数中能看到其对 small 和 large object 的不同处理。</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">newobject</span><span class="p">(</span><span class="nx">typ</span> <span class="o">*</span><span class="nx">_type</span><span class="p">)</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span> <span class="p">{</span>
     <span class="k">return</span> <span class="nx">mallocgc</span><span class="p">(</span><span class="nx">typ</span><span class="p">.</span><span class="nx">size</span><span class="p">,</span> <span class="nx">typ</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
@@ -436,8 +436,8 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="id5">
-<h2>回收<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="hui-shou">
+<h2>回收<a class="headerlink" href="#hui-shou" title="Permalink to this headline">¶</a></h2>
 <p>当一个 span 中所有的对象被释放时，这个 span 会被回收（对象的释放由 gc 来完成，这里暂且先跳过），回收的 span 会被加入到 mheap.free 和 mheap.freelarge 中，供后续新的 span 申请使用。</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">mheap</span><span class="p">)</span> <span class="nx">freeSpan</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">mspan</span><span class="p">,</span> <span class="nx">acct</span> <span class="kt">int32</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">systemstack</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
@@ -505,8 +505,8 @@
 <blockquote>
 <div>MADV_DONTNEED: Do not expect access in the near future. (For the time being, the application is finished with the given range, so the kernel can free resources associated with it.) Subsequent accesses of pages in this range will succeed, but will result either in reloading of the memory contents from the underlying mapped file (see mmap(2)) or zero-fill-on-demand pages for mappings without an underlying file.</div></blockquote>
 </div>
-<div class="section" id="id6">
-<h2>分配器自用的内存分配<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="fen-pei-qi-zi-yong-di-nei-cun-fen-pei">
+<h2>分配器自用的内存分配<a class="headerlink" href="#fen-pei-qi-zi-yong-di-nei-cun-fen-pei" title="Permalink to this headline">¶</a></h2>
 <p>分配器自用的一些结构体 mcache、mspan 等是通过 fixalloc 分配器来分配的。</p>
 <blockquote>
 <div>fixalloc is a SLAB-style allocator that allocates objects of a fixed
@@ -525,12 +525,12 @@ objects of the same type.</div></blockquote>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Go 语言实现——内存管理</a><ul>
-<li><a class="reference internal" href="#id1">概述</a></li>
-<li><a class="reference internal" href="#id2">主要数据结构</a></li>
-<li><a class="reference internal" href="#id3">初始化</a></li>
-<li><a class="reference internal" href="#id4">分配</a></li>
-<li><a class="reference internal" href="#id5">回收</a></li>
-<li><a class="reference internal" href="#id6">分配器自用的内存分配</a></li>
+<li><a class="reference internal" href="#gai-shu">概述</a></li>
+<li><a class="reference internal" href="#zhu-yao-shu-ju-jie-gou">主要数据结构</a></li>
+<li><a class="reference internal" href="#chu-shi-hua">初始化</a></li>
+<li><a class="reference internal" href="#fen-pei">分配</a></li>
+<li><a class="reference internal" href="#hui-shou">回收</a></li>
+<li><a class="reference internal" href="#fen-pei-qi-zi-yong-di-nei-cun-fen-pei">分配器自用的内存分配</a></li>
 </ul>
 </li>
 </ul>
@@ -538,7 +538,7 @@ objects of the same type.</div></blockquote>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="user-experience-design-for-apis.html" title="previous chapter">User experience design for APIs</a></li>
+      <li>Previous: <a href="skiplist.html" title="previous chapter">跳表 Skiplist</a></li>
       <li>Next: <a href="golang-internals-io.html" title="next chapter">Go 语言实现——网络 IO</a></li>
   </ul></li>
 </ul>

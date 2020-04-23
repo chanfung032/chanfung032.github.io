@@ -41,8 +41,8 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="go-io">
-<h1>Go 语言实现——网络 IO<a class="headerlink" href="#go-io" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="go-yu-yan-shi-xian-wang-luo-io">
+<h1>Go 语言实现——网络 IO<a class="headerlink" href="#go-yu-yan-shi-xian-wang-luo-io" title="Permalink to this headline">¶</a></h1>
 <p>Go 的 net 包提供的是阻塞的接口，但在底层实现上却是非阻塞的，类似于 Python 的 gevent 库。</p>
 <p>Go 在 runtime 底层实现了一个 netpoller，net 包里的网络函数在需要阻塞的地方会调用 runtime 提供的接口向 netpoller 注册对应 fd 的读写事件并将当前 goroutine 从 running 状态切换成 waiting 状态挂起，netpoller 后台有一个线程不断的 poll 所有注册的 fd，在事件触发后再将其关联的 goroutine 从 waiting 状态切换成 runnable 状态并加到全局 goroutine 运行队列中去。</p>
 <p>从非阻塞到阻塞相关的封装主要涉及以下三个结构体：</p>

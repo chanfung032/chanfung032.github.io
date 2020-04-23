@@ -41,10 +41,10 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="dot">
-<h1>Dot 画图常用语法<a class="headerlink" href="#dot" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id1">
-<h2>有向图<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+  <div class="section" id="dot-hua-tu-chang-yong-yu-fa">
+<h1>Dot 画图常用语法<a class="headerlink" href="#dot-hua-tu-chang-yong-yu-fa" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="you-xiang-tu">
+<h2>有向图<a class="headerlink" href="#you-xiang-tu" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">digraph</span> <span class="p">{</span>
     <span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span>
 <span class="p">}</span>
@@ -52,8 +52,8 @@
 </div>
 <img alt="_images/dot-digraph.png" src="_images/dot-digraph.png" />
 </div>
-<div class="section" id="id2">
-<h2>无向图<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="wu-xiang-tu">
+<h2>无向图<a class="headerlink" href="#wu-xiang-tu" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">graph</span> <span class="p">{</span>
     <span class="n">a</span> <span class="o">--</span> <span class="n">b</span>
 <span class="p">}</span>
@@ -61,8 +61,8 @@
 </div>
 <img alt="_images/dot-graph.png" src="_images/dot-graph.png" />
 </div>
-<div class="section" id="id3">
-<h2>图属性<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="tu-shu-xing">
+<h2>图属性<a class="headerlink" href="#tu-shu-xing" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">label=&quot;My</span> <span class="pre">Graph&quot;</span></code> 给图添加标题。</li>
 <li><code class="docutils literal"><span class="pre">rankdir=LR</span></code> 默认图为上下布局，修改为左右布局。</li>
@@ -80,8 +80,8 @@
 </div>
 <img alt="_images/dot-graph-attrs.png" src="_images/dot-graph-attrs.png" />
 </div>
-<div class="section" id="id4">
-<h2>节点属性<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="jie-dian-shu-xing">
+<h2>节点属性<a class="headerlink" href="#jie-dian-shu-xing" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">label=&quot;XXX&quot;</span></code> 修改节点中的文字内容</li>
 <li><code class="docutils literal"><span class="pre">color=red</span></code> 修改节点边框 <a class="reference external" href="http://graphviz.org/doc/info/colors.html">颜色</a></li>
@@ -89,8 +89,8 @@
 <li><code class="docutils literal"><span class="pre">shape</span></code> <a class="reference external" href="http://graphviz.org/doc/info/shapes.html">节点形状</a></li>
 </ul>
 </div>
-<div class="section" id="id6">
-<h2>边属性<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="bian-shu-xing">
+<h2>边属性<a class="headerlink" href="#bian-shu-xing" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">label=&quot;XXX&quot;</span></code> 给边添加说明信息</li>
 <li><code class="docutils literal"><span class="pre">color=red</span></code> 修改边 <a class="reference external" href="http://graphviz.org/doc/info/colors.html">颜色</a></li>
@@ -111,8 +111,8 @@
 <p>常见的节点和边样式属性：</p>
 <img alt="_images/dot-style.png" src="_images/dot-style.png" />
 </div>
-<div class="section" id="record">
-<h2>Record 节点<a class="headerlink" href="#record" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="record-jie-dian">
+<h2>Record 节点<a class="headerlink" href="#record-jie-dian" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">digraph</span> <span class="n">structs</span> <span class="p">{</span>
     <span class="n">node</span> <span class="p">[</span><span class="n">shape</span><span class="o">=</span><span class="n">record</span><span class="p">];</span>
 
@@ -128,8 +128,8 @@
 </div>
 <img alt="_images/dot-record.png" src="_images/dot-record.png" />
 </div>
-<div class="section" id="id8">
-<h2>命令行参数<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="ming-ling-hang-can-shu">
+<h2>命令行参数<a class="headerlink" href="#ming-ling-hang-can-shu" title="Permalink to this headline">¶</a></h2>
 <p>将图源码保存为 <code class="docutils literal"><span class="pre">input.dot</span></code> 文件，执行以下命令生成 png 图：</p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> dot -Tpng -o output.png input.dot
 </pre></div>
@@ -146,13 +146,13 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Dot 画图常用语法</a><ul>
-<li><a class="reference internal" href="#id1">有向图</a></li>
-<li><a class="reference internal" href="#id2">无向图</a></li>
-<li><a class="reference internal" href="#id3">图属性</a></li>
-<li><a class="reference internal" href="#id4">节点属性</a></li>
-<li><a class="reference internal" href="#id6">边属性</a></li>
-<li><a class="reference internal" href="#record">Record 节点</a></li>
-<li><a class="reference internal" href="#id8">命令行参数</a></li>
+<li><a class="reference internal" href="#you-xiang-tu">有向图</a></li>
+<li><a class="reference internal" href="#wu-xiang-tu">无向图</a></li>
+<li><a class="reference internal" href="#tu-shu-xing">图属性</a></li>
+<li><a class="reference internal" href="#jie-dian-shu-xing">节点属性</a></li>
+<li><a class="reference internal" href="#bian-shu-xing">边属性</a></li>
+<li><a class="reference internal" href="#record-jie-dian">Record 节点</a></li>
+<li><a class="reference internal" href="#ming-ling-hang-can-shu">命令行参数</a></li>
 </ul>
 </li>
 </ul>

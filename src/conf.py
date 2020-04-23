@@ -23,6 +23,15 @@ import shlex
 
 # -- General configuration ------------------------------------------------
 
+import docutils.nodes
+from pypinyin import lazy_pinyin
+make_id = docutils.nodes.make_id
+def _make_id(string):
+    # XXX: we could invoke google translate api here, use pinyin
+    # now for simplicity.
+    return make_id(' '.join(lazy_pinyin(string)))
+docutils.nodes.make_id = _make_id
+
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
 

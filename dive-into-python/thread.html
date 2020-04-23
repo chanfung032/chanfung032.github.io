@@ -40,15 +40,15 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="python">
-<h1>Python中多线程的实现<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="python-zhong-duo-xian-cheng-di-shi-xian">
+<h1>Python中多线程的实现<a class="headerlink" href="#python-zhong-duo-xian-cheng-di-shi-xian" title="Permalink to this headline">¶</a></h1>
 <p>Python在Py_Initialize中会创建一个默认的PyInterpreterState对象以及一个默认的
 PyThreadState 对象。默认情况下不会初始化线程环境（也就是创建GIL），这个任务
 是在第一次调用thread.start_new_thread是初始化的。</p>
 <p><a class="reference external" href="http://docs.python.org/c-api/init.html#thread-state-and-the-global-interpreter-lock">http://docs.python.org/c-api/init.html#thread-state-and-the-global-interpreter-lock</a></p>
 <p><a class="reference external" href="http://www.linuxjournal.com/article/3641">http://www.linuxjournal.com/article/3641</a></p>
-<div class="section" id="id1">
-<h2>线程的创建<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="xian-cheng-di-chuang-jian">
+<h2>线程的创建<a class="headerlink" href="#xian-cheng-di-chuang-jian" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-default"><div class="highlight"><pre><span></span>Modules/threadmodule.c
 ========================
 
@@ -204,8 +204,8 @@ PyEval_AcquireThread(PyThreadState *tstate)
 </pre></div>
 </div>
 </div>
-<div class="section" id="id2">
-<h2>线程的调度<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="xian-cheng-di-diao-du">
+<h2>线程的调度<a class="headerlink" href="#xian-cheng-di-diao-du" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
 <li><p class="first">标准调度</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span>Python/ceval.c
@@ -283,8 +283,8 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
 </li>
 </ol>
 </div>
-<div class="section" id="pygilstate">
-<h2>PyGILState*函数<a class="headerlink" href="#pygilstate" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="pygilstate-han-shu">
+<h2>PyGILState*函数<a class="headerlink" href="#pygilstate-han-shu" title="Permalink to this headline">¶</a></h2>
 <blockquote>
 <div><p>使用Python的thread模块创建出来的线程，Python会自动为其创建对应的PyThreadState对象，
 管理GIL。这些thread中的代码可以直接调用Python/C API。</p>
@@ -386,9 +386,9 @@ PyGILState_Release(PyGILState_STATE oldstate)
   <h3><a href="../index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Python中多线程的实现</a><ul>
-<li><a class="reference internal" href="#id1">线程的创建</a></li>
-<li><a class="reference internal" href="#id2">线程的调度</a></li>
-<li><a class="reference internal" href="#pygilstate">PyGILState*函数</a></li>
+<li><a class="reference internal" href="#xian-cheng-di-chuang-jian">线程的创建</a></li>
+<li><a class="reference internal" href="#xian-cheng-di-diao-du">线程的调度</a></li>
+<li><a class="reference internal" href="#pygilstate-han-shu">PyGILState*函数</a></li>
 </ul>
 </li>
 </ul>
@@ -396,7 +396,7 @@ PyGILState_Release(PyGILState_STATE oldstate)
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">Python 源码相关</a><ul>
+  <li><a href="index.html">Python 源码相关笔记</a><ul>
       <li>Previous: <a href="others.html" title="previous chapter">Python中的信号处理</a></li>
   </ul></li>
   </ul></li>
