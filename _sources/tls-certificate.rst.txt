@@ -1,4 +1,4 @@
-HTTPS——证书校验
+TLS——证书信任链
 =========================
 
 几个概念
@@ -16,7 +16,7 @@ HTTPS——证书校验
 校验方法
 ------------------
 
-HTTPS 证书（X.509 证书）的 ASN.1 描述主要部分如下： ::
+TLS 证书（X.509 证书）的 ASN.1 描述主要部分如下： ::
 
     Certificate  ::=  SEQUENCE  {
             tbsCertificate       TBSCertificate,
@@ -53,11 +53,11 @@ HTTPS 证书（X.509 证书）的 ASN.1 描述主要部分如下： ::
 3. 判断 1 和 2 中的签名是否相等，相等则说明下级证书校验通过，否则失败。
 4. 依次对各个相邻级别证书实施 1～3 步骤，直到根证书。
 
-.. image:: images/https-chain-of-trust.png
+.. image:: images/tls-chain-of-trust.png
 
 本质上来说，也就是上级证书颁发机构用其信用为其颁发的证书背书。
 
-我们以 ``wwww.baidu.com:443`` 为例，来看下其 https 证书的校验过程。
+我们以 ``wwww.baidu.com:443`` 为例，来看下其 TLS 证书的校验过程。
 
 首先，我们通过 ``openssl s_client`` 命令获取服务端发送的证书：
 

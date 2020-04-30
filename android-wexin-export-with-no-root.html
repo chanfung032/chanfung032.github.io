@@ -25,7 +25,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="一些 Python 3 新特性及其使用方法" href="python3-features.html" />
-    <link rel="prev" title="Regular Expression Matching Can Be Simple And Fast" href="regexp.html" />
+    <link rel="prev" title="Raft 共识算法" href="raft.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -71,22 +71,22 @@
 </div>
 <p>上面一串类似随机数的目录里的 <code class="docutils literal"><span class="pre">EnMicroMsg.db</span></code> 就是聊天记录的数据库文件，这个文件是一个使用 sqlcipher 加密过的 sqlite 数据库文件。加密的密码由手机的 IMEI 和 自己的微信 UIN 计算得到，所以首先我们需要先提取这两个的值。</p>
 <p>将下面的代码保存到 MapDumper.java 文件中：</p>
-<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.io.FileInputStream</span><span class="o">;</span>
-<span class="kn">import</span> <span class="nn">java.io.ObjectInputStream</span><span class="o">;</span>
-<span class="kn">import</span> <span class="nn">java.util.Map</span><span class="o">;</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.io.FileInputStream</span><span class="p">;</span>
+<span class="kn">import</span> <span class="nn">java.io.ObjectInputStream</span><span class="p">;</span>
+<span class="kn">import</span> <span class="nn">java.util.Map</span><span class="p">;</span>
 
-<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MapDumper</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">try</span> <span class="o">{</span>
-            <span class="n">FileInputStream</span> <span class="n">file</span> <span class="o">=</span> <span class="k">new</span> <span class="n">FileInputStream</span><span class="o">(</span><span class="n">args</span><span class="o">[</span><span class="mi">0</span><span class="o">]);</span>
-            <span class="n">ObjectInputStream</span> <span class="n">mObjectInputStream</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ObjectInputStream</span><span class="o">(</span><span class="n">file</span><span class="o">);</span>
-            <span class="n">Map</span> <span class="n">map</span> <span class="o">=</span> <span class="o">(</span><span class="n">Map</span><span class="o">)</span> <span class="n">mObjectInputStream</span><span class="o">.</span><span class="na">readObject</span><span class="o">();</span>
-            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">map</span><span class="o">);</span>
-        <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-            <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
-        <span class="o">}</span>
-    <span class="o">}</span>
-<span class="o">}</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MapDumper</span> <span class="p">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">try</span> <span class="p">{</span>
+            <span class="n">FileInputStream</span> <span class="n">file</span> <span class="o">=</span> <span class="k">new</span> <span class="n">FileInputStream</span><span class="p">(</span><span class="n">args</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span><span class="p">);</span>
+            <span class="n">ObjectInputStream</span> <span class="n">mObjectInputStream</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ObjectInputStream</span><span class="p">(</span><span class="n">file</span><span class="p">);</span>
+            <span class="n">Map</span> <span class="n">map</span> <span class="o">=</span> <span class="p">(</span><span class="n">Map</span><span class="p">)</span> <span class="n">mObjectInputStream</span><span class="p">.</span><span class="na">readObject</span><span class="p">();</span>
+            <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">map</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="n">Exception</span> <span class="n">e</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">e</span><span class="p">.</span><span class="na">printStackTrace</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>然后执行下面的命令来提取 IMEI 和 UIN：</p>
@@ -152,7 +152,7 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="regexp.html" title="previous chapter">Regular Expression Matching Can Be Simple And Fast</a></li>
+      <li>Previous: <a href="raft.html" title="previous chapter">Raft 共识算法</a></li>
       <li>Next: <a href="python3-features.html" title="next chapter">一些 Python 3 新特性及其使用方法</a></li>
   </ul></li>
 </ul>

@@ -390,7 +390,7 @@ static void GREENLET_NOINLINE(slp_restore_state)(void)
 <p><a class="reference external" href="http://www.gevent.org/contents.html">http://www.gevent.org/contents.html</a></p>
 <p>Example by: <a class="reference external" href="http://www.gevent.org/intro.html#example">http://www.gevent.org/intro.html#example</a></p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gevent</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">gevent</span> <span class="k">import</span> <span class="n">socket</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">gevent</span> <span class="kn">import</span> <span class="n">socket</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">urls</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;www.google.com&#39;</span><span class="p">,</span> <span class="s1">&#39;www.example.com&#39;</span><span class="p">,</span> <span class="s1">&#39;www.python.org&#39;</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">jobs</span> <span class="o">=</span> <span class="p">[</span><span class="n">gevent</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">gethostbyname</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span> <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">gevent</span><span class="o">.</span><span class="n">joinall</span><span class="p">(</span><span class="n">jobs</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
@@ -404,13 +404,13 @@ static void GREENLET_NOINLINE(slp_restore_state)(void)
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="fm">__init__</span><span class="o">.</span><span class="n">py</span>
 <span class="o">===========</span>
 
-<span class="kn">from</span> <span class="nn">gevent.greenlet</span> <span class="k">import</span> <span class="n">Greenlet</span><span class="p">,</span> <span class="n">joinall</span><span class="p">,</span> <span class="n">killall</span>
+<span class="kn">from</span> <span class="nn">gevent.greenlet</span> <span class="kn">import</span> <span class="n">Greenlet</span><span class="p">,</span> <span class="n">joinall</span><span class="p">,</span> <span class="n">killall</span>
 <span class="n">spawn</span> <span class="o">=</span> <span class="n">Greenlet</span><span class="o">.</span><span class="n">spawn</span>
 
 <span class="n">greenlet</span><span class="o">.</span><span class="n">py</span>
 <span class="o">===========</span>
 
-<span class="kn">from</span> <span class="nn">gevent.hub</span> <span class="k">import</span> <span class="n">greenlet</span><span class="p">,</span> <span class="n">getcurrent</span><span class="p">,</span> <span class="n">get_hub</span><span class="p">,</span> <span class="n">GreenletExit</span><span class="p">,</span> <span class="n">Waiter</span><span class="p">,</span> <span class="n">PY3</span><span class="p">,</span> <span class="n">iwait</span><span class="p">,</span> <span class="n">wait</span>
+<span class="kn">from</span> <span class="nn">gevent.hub</span> <span class="kn">import</span> <span class="n">greenlet</span><span class="p">,</span> <span class="n">getcurrent</span><span class="p">,</span> <span class="n">get_hub</span><span class="p">,</span> <span class="n">GreenletExit</span><span class="p">,</span> <span class="n">Waiter</span><span class="p">,</span> <span class="n">PY3</span><span class="p">,</span> <span class="n">iwait</span><span class="p">,</span> <span class="n">wait</span>
 
 <span class="k">class</span> <span class="nc">Greenlet</span><span class="p">(</span><span class="n">greenlet</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;A light-weight cooperatively-scheduled execution unit.&quot;&quot;&quot;</span>
@@ -425,7 +425,7 @@ static void GREENLET_NOINLINE(slp_restore_state)(void)
         <span class="n">g</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">g</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">hub</span> <span class="o">=</span> <span class="n">get_hub</span><span class="p">()</span>
         <span class="n">greenlet</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">hub</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">run</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -509,7 +509,7 @@ static void GREENLET_NOINLINE(slp_restore_state)(void)
 
 <span class="k">class</span> <span class="nc">socket</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">AF_INET</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="n">proto</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">_sock</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">AF_INET</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="n">proto</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">_sock</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">_sock</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_sock</span> <span class="o">=</span> <span class="n">_realsocket</span><span class="p">(</span><span class="n">family</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">proto</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">_socket</span><span class="o">.</span><span class="n">getdefaulttimeout</span><span class="p">()</span>
@@ -599,7 +599,7 @@ static void GREENLET_NOINLINE(slp_restore_state)(void)
 
 <span class="o">...</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hub</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hub</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">hub</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># 获取本线程的的Hub</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">hub</span> <span class="o">=</span> <span class="n">get_hub</span><span class="p">()</span>

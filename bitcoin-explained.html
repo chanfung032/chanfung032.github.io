@@ -79,7 +79,7 @@
 <p>直观来说，就是要让区块的 hash 值的前面出现足够多的 0。我们可以通过修改 nonce, timestamp, transactions 的方式来调整区块的 hash 值，让其满足这个条件，这个计算需要花费大量的 cpu 资源，所以这个计算过程也叫挖矿（Mine），目前这个计算大概需要花费 10 分钟的时间（所以区块链这个数据库的写入速率大概是 1 block／10 min）。</p>
 <p>下面是一个最简单的挖矿脚本：</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">nonce</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
     <span class="nb">hash</span> <span class="o">=</span> <span class="n">sha256</span><span class="p">(</span><span class="n">version</span> <span class="o">+</span> <span class="n">prev_block</span> <span class="o">+</span> <span class="n">merkle_root</span> <span class="o">+</span> <span class="n">timestamp</span> <span class="o">+</span> <span class="n">bits</span> <span class="o">+</span> <span class="n">nonce</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">hash</span> <span class="o">&lt;</span> <span class="n">target</span><span class="p">:</span>
         <span class="k">break</span>
@@ -95,14 +95,14 @@
 <span class="gp">... </span>    <span class="n">mant</span> <span class="o">=</span> <span class="n">bits</span> <span class="o">&amp;</span> <span class="mh">0xffffff</span>
 <span class="gp">... </span>    <span class="k">return</span> <span class="n">mant</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="mi">8</span><span class="o">*</span><span class="p">(</span><span class="n">exp</span> <span class="o">-</span> <span class="mi">3</span><span class="p">)))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">target</span> <span class="o">=</span> <span class="n">bits_2_target</span><span class="p">(</span><span class="mh">0x1b04864c</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="s1">&#39;</span><span class="si">%064x</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">target</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="s1">&#39;</span><span class="si">%064x</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">target</span>
 <span class="go">000000000004864c000000000000000000000000000000000000000000000000</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">target_max</span> <span class="o">=</span> <span class="mh">0x00000000FFFF0000000000000000000000000000000000000000000000000000</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">difficulty</span> <span class="o">=</span> <span class="n">target_max</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">difficulty</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="n">difficulty</span>
 <span class="go">14484.162361225399</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">hash</span> <span class="o">=</span> <span class="mh">0x000000000003ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="nb">hash</span> <span class="o">&lt;</span> <span class="n">target</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="nb">hash</span> <span class="o">&lt;</span> <span class="n">target</span>
 <span class="go">True</span>
 </pre></div>
 </div>

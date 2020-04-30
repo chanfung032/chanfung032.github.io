@@ -45,13 +45,13 @@
 <h1>Go 语言实现——启动过程<a class="headerlink" href="#go-yu-yan-shi-xian-qi-dong-guo-cheng" title="Permalink to this headline">¶</a></h1>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> gdb <span class="nb">test</span>
 <span class="go">...</span>
-<span class="go">(gdb) info files</span>
+<span class="gp gp-VirtualEnv">(gdb)</span> <span class="go">info files</span>
 <span class="go">Symbols from &quot;/root/test&quot;.</span>
 <span class="go">Local exec file:</span>
 <span class="go">    `/root/test&#39;, file type elf64-x86-64.</span>
 <span class="go">    Entry point: 0x44bb80</span>
 <span class="go">    ...</span>
-<span class="go">(gdb) b *0x44bb80</span>
+<span class="gp gp-VirtualEnv">(gdb)</span> <span class="go">b *0x44bb80</span>
 </pre></div>
 </div>
 <p>用 gdb 跟踪一下 Go 程序启动阶段的执行，可以得到其执行路径大致如下：</p>
