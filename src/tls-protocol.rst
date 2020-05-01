@@ -138,7 +138,9 @@ ServerHello
    00 02
     03 04 👌，我们使用 TLS 1.3
 
-接下来，服务端和客户端使用 curve25519 算法将对端的公钥和自己的私钥相乘得到一个共享密钥（原理见 :ref:`ECDH` ） 。为了让密钥更加安全，两端还会使用 HKDF 函数将这个密钥映射为下面一系列的密钥：
+接下来，服务端和客户端使用 curve25519 算法将对端的公钥和自己的私钥相乘得到一个共享密钥（原理见 :ref:`ECDH` ） 。
+
+得到了密钥后，两端并不是直接使用这个密钥来加密数据，而是使用 HKDF [*]_ 函数将这个密钥映射为下面一系列更安全的密钥：
 
 - handshake_secret
 - client handshake traffic secret
@@ -154,6 +156,9 @@ ServerHello
 - server handshake key/IV 会作为参数传给 aes_128_gcm 算法用来加密解密接下来的服务器下行 Handshake 消息。
 
 handshake 的 key 不变，但 IV 每发送一个包变化一次，保证每次对称算法用的密钥都不一样（IV 是 initialization vector 的意思，不是罗马数字 4）。
+
+.. [*] 在密码学中，KDF(Key derivation function，密钥派生函数) 使用伪随机函数从诸如主密钥或密码的秘密值中派生出一个或多个密钥。KDF可用于将密钥扩展为更长的密钥或获取所需格式的密钥。HKDF 就是基于 HMAC 的 KDF 函数
+
 
 ServerChangeCipherSpec
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -203,10 +208,3 @@ ClientHandshakeFinished
 - https://wiki.openssl.org/index.php/EVP_Authenticated_Encryption_and_Decryption
 - https://crypto.stackexchange.com/questions/3965/what-is-the-main-difference-between-a-key-an-iv-and-a-nonce
 - `实用密码学工具——KDF <https://zhuanlan.zhihu.com/p/24678857>`_
-
-
-
-
-
-
-
