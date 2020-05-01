@@ -89,7 +89,7 @@ Elliptic Curve Cryptography
   假设 :math:`P` 是切点，那么 :math:`P + P = -Q`，所以 :math:`P + Q = -P`，同理，如果 :math:`Q` 是切点，:math:`P + Q = -Q` 。
 
 以上就是几何加法的完整步骤，使用笔和尺子我们就可以完成椭圆曲线上任意两点的加法（或者可以使用这个 `可视化工具`_ ）。
- 
+
 代数加法（Algebraic addition）
 ----------------------------------
 
@@ -531,6 +531,8 @@ Schoof's algorithm 只能计算椭圆曲线群的序，不能用于计算点 :ma
 根据循环子群的特性，知道 :math:`d` 和 :math:`G` 可以很容易的计算得到 :math:`H`，相反，知道 :math:`H` 和 :math:`G` 想要得到私钥 :math:`d` 非常的困难，因为这是一个离散对数问题。
 
 椭圆曲线常用的有以下两个算法：用于加密的 ECDH (Elliptic curve Diffie-Hellman) 算法，用于计算数字签名的 ECDSA (Elliptic Curve Digital Signature Algorithm) 算法。
+
+.. _ECDH:
 
 ECDH 加密算法
 *******************

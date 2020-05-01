@@ -39,6 +39,8 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="elliptic-curve-cryptography">
@@ -466,7 +468,7 @@ y_R &amp; = &amp; [y_P + m(x_R - x_P)] \bmod{p} \\
 <p>根据循环子群的特性，知道 <span class="math">\(d\)</span> 和 <span class="math">\(G\)</span> 可以很容易的计算得到 <span class="math">\(H\)</span>，相反，知道 <span class="math">\(H\)</span> 和 <span class="math">\(G\)</span> 想要得到私钥 <span class="math">\(d\)</span> 非常的困难，因为这是一个离散对数问题。</p>
 <p>椭圆曲线常用的有以下两个算法：用于加密的 ECDH (Elliptic curve Diffie-Hellman) 算法，用于计算数字签名的 ECDSA (Elliptic Curve Digital Signature Algorithm) 算法。</p>
 <div class="section" id="ecdh-jia-mi-suan-fa">
-<h4>ECDH 加密算法<a class="headerlink" href="#ecdh-jia-mi-suan-fa" title="Permalink to this headline">¶</a></h4>
+<span id="ecdh"></span><h4>ECDH 加密算法<a class="headerlink" href="#ecdh-jia-mi-suan-fa" title="Permalink to this headline">¶</a></h4>
 <p>ECDH 是 <a class="reference external" href="https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange">Diffie-Hellman 算法</a> 的一个变种，它本质上是 <a class="reference external" href="https://en.wikipedia.org/wiki/Key-agreement_protocol">密钥协商算法</a> ，只负责通信双方密钥的生成和交换，如何使用这个密钥加密数据取决于用户，和 ECDH 算法无关。</p>
 <p>假设 Alice 和 Bob 想要交换信息，下面是使用 ECDH 交换密钥的过程：</p>
 <ol class="arabic simple">
@@ -557,6 +559,7 @@ P &amp; = s^{-1} (z + r d_A) G \\
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -638,7 +641,7 @@ P &amp; = s^{-1} (z + r d_A) G \\
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
       <a href="_sources/elliptic-curve-cryptography.rst.txt"

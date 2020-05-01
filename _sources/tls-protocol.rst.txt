@@ -138,7 +138,7 @@ ServerHello
    00 02
     03 04 👌，我们使用 TLS 1.3
 
-接下来，服务端和客户端使用 curve25519 算法将对端的公钥和自己的私钥相乘得到一个共享密钥。为了让密钥更加安全，两端还会使用 HKDF 函数将这个密钥映射为下面一系列的密钥：
+接下来，服务端和客户端使用 curve25519 算法将对端的公钥和自己的私钥相乘得到一个共享密钥（原理见 :ref:`ECDH` ） 。为了让密钥更加安全，两端还会使用 HKDF 函数将这个密钥映射为下面一系列的密钥：
 
 - handshake_secret
 - client handshake traffic secret
@@ -158,7 +158,7 @@ handshake 的 key 不变，但 IV 每发送一个包变化一次，保证每次�
 ServerChangeCipherSpec
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-服务器接下来会发送一个 ServerChangeCipherSpec 消息给服务端，这个消息在 TLS 1.3 中没有用，只是为了兼容以前协议用。
+服务器接下来会发送一个 ServerChangeCipherSpec 消息给客户端，这个消息在 TLS 1.3 中没有用，只是为了兼容以前协议用。
 
 从这个消息之后，服务端和客户端之间所有的通信都是加密的。
 
