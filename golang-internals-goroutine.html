@@ -262,7 +262,7 @@
 <p>线程上执行的第一个 goroutine 阻塞、运行时间太长或者退出后会触发 Go 系统代码，从而调度第二个 goroutine 上来运行，如此往复，直到终结。</p>
 </div>
 <div class="section" id="qie-huan">
-<h2>切换<a class="headerlink" href="#qie-huan" title="Permalink to this headline">¶</a></h2>
+<span id="golang-goroutine-schedule"></span><h2>切换<a class="headerlink" href="#qie-huan" title="Permalink to this headline">¶</a></h2>
 <p>以下条件下 Go 调度器会切换 goroutine：</p>
 <ul class="simple">
 <li>系统调用。</li>

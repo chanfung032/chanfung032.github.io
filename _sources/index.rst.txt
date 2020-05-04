@@ -8,6 +8,7 @@ Feng's blog
 .. toctree::
    :maxdepth: 1
 
+   golang-asynchronous-preemption.rst
    tls-protocol.rst
    tls-certificate.rst
    bayesian-method.rst

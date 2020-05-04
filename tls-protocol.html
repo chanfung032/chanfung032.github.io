@@ -25,7 +25,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="TLS——证书信任链" href="tls-certificate.html" />
-    <link rel="prev" title="Feng’s blog" href="index.html" />
+    <link rel="prev" title="Go 语言实现——异步抢占调度" href="golang-asynchronous-preemption.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -65,7 +65,7 @@
 <img alt="_images/tls-record.svg" src="_images/tls-record.svg" /><div class="section" id="clienthello">
 <h3>ClientHello<a class="headerlink" href="#clienthello" title="Permalink to this headline">¶</a></h3>
 <p>TLS Handshake 以客户端向服务端发送 ClientHello 开始。客户端使用 x25519 椭圆曲线算法生成一对公钥/密钥，然后将公钥放到 ClientHello 中发送给服务端。</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>16 类型 0x16，Handshake 消息
+<div class="highlight-default"><div class="highlight"><pre><span></span>16 Record 类型：Handshake
   03 01 Record 协议版本 “3，1”，也就是 TLS-1.0
   00 ca 剩余消息长度（下面空白的字段基本都是长度，省略不标注了）
 
@@ -137,7 +137,7 @@
 <div class="section" id="serverhello">
 <h3>ServerHello<a class="headerlink" href="#serverhello" title="Permalink to this headline">¶</a></h3>
 <p>服务端同样生成一对公钥密钥并将公钥通过 ServerHello 发送给客户端。</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>16 类型 0x16，Handshake 消息
+<div class="highlight-default"><div class="highlight"><pre><span></span>16 Record 类型：Handshake
  03 03 Record 协议版本 “3，3”，也就是 TLS-1.2 （升级了）
  00 7a
 
@@ -268,7 +268,7 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">Feng’s blog</a></li>
+      <li>Previous: <a href="golang-asynchronous-preemption.html" title="previous chapter">Go 语言实现——异步抢占调度</a></li>
       <li>Next: <a href="tls-certificate.html" title="next chapter">TLS——证书信任链</a></li>
   </ul></li>
 </ul>

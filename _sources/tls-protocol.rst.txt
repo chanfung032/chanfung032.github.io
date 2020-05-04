@@ -35,7 +35,7 @@ TLS Handshake 以客户端向服务端发送 ClientHello 开始。客户端使�
 
 ::
 
-    16 类型 0x16，Handshake 消息
+    16 Record 类型：Handshake
       03 01 Record 协议版本 “3，1”，也就是 TLS-1.0
       00 ca 剩余消息长度（下面空白的字段基本都是长度，省略不标注了）
 
@@ -107,7 +107,7 @@ ServerHello
 
 服务端同样生成一对公钥密钥并将公钥通过 ServerHello 发送给客户端。  ::
 
-  16 类型 0x16，Handshake 消息
+  16 Record 类型：Handshake
    03 03 Record 协议版本 “3，3”，也就是 TLS-1.2 （升级了）
    00 7a
 

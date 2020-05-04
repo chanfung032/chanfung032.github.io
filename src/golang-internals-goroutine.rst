@@ -234,6 +234,8 @@ wakep 最终可能会创建新的线程出来执行 goroutine，这些新线程�
 
 线程上执行的第一个 goroutine 阻塞、运行时间太长或者退出后会触发 Go 系统代码，从而调度第二个 goroutine 上来运行，如此往复，直到终结。
 
+.. _golang-goroutine-schedule:
+
 切换
 -----------
 
