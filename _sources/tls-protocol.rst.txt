@@ -39,10 +39,10 @@ TLS Handshake 以客户端向服务端发送 ClientHello 开始。客户端使�
       03 01 Record 协议版本 “3，1”，也就是 TLS-1.0
       00 ca 剩余消息长度（下面空白的字段基本都是长度，省略不标注了）
 
-    01 Handshake 消息类型 0x01，client hello
+    01 Handshake 消息，类型 0x01：client hello
     00 00 c6
 
-    03 03 客户端使用的 TLS 协议，“3，3”，也就是 TLS-1.2
+    03 03 客户端使用的 TLS 版本，“3，3”，也就是 TLS-1.2
 
     00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f
     10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f 随机数
@@ -101,6 +101,11 @@ TLS Handshake 以客户端向服务端发送 ClientHello 开始。客户端使�
     00 03
       02
        03 04 TLS 1.3 标示了客户端希望使用 TLS 1.3
+
+为了兼容
+
+- 发送 client hello 消息使用的 Record 版本是 TLS-1.0 版本，这样即使服务端版本低也能解析这个 Record 并返回错误。
+- 客户端 TLS 握手协议使用 TLS-1.2，但在扩展字段中声明自己支持 TLS-1.3。这样低版本的 Proxy 不会因为版本不支持就丢掉包。
 
 ServerHello
 ^^^^^^^^^^^^^^
