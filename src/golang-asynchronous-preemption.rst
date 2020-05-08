@@ -1,7 +1,7 @@
 Go 语言实现——异步抢占调度
 ============================
 
-Go 1.4 中添加了异步抢占调度：
+Go 1.14 中添加了异步抢占调度：
 
     Goroutines are now asynchronously preemptible. As a result, loops without function calls no longer potentially deadlock the scheduler or significantly delay garbage collection. This is supported on all platforms except windows/arm, darwin/arm, js/wasm, and plan9/\*.
 
