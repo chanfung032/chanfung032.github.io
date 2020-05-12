@@ -1,0 +1,255 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Imago Intentional Dialogue &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Go 语言实现——异步抢占调度" href="golang-asynchronous-preemption.html" />
+    <link rel="prev" title="Feng’s blog" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="imago-intentional-dialogue">
+<h1>Imago Intentional Dialogue<a class="headerlink" href="#imago-intentional-dialogue" title="Permalink to this headline">¶</a></h1>
+<p>Imago Intentional Dialogue 是一种用来修复情感的方法，但其中的核心范式也可以用于日常工作沟通，用来避免一些无谓的争论、鸡同鸭讲……</p>
+<hr class="docutils" />
+<p><a class="reference external" href="http://www.jdmcounselor.com/The_Imago_Intentional_Dialogue.pdf">http://www.jdmcounselor.com/The_Imago_Intentional_Dialogue.pdf</a></p>
+<ul class="simple">
+<li>Intentional Dialogue 将对话分成一个一个 Session。</li>
+<li>每个 Session 中，对话的双方一方为 Sender，一方为 Receiver，Sender 表达自己的感受，想法，Receiver 理解并复述。Sender 听完 Receiver 的复述后再对其中不准确的内容进行修正，如此往复直到 Receiver 清楚且准确的理解 Sender 要表达的内容。</li>
+<li>最后 Receiver 总结，Sender 确认无误，一个 Session 结束。</li>
+<li>下一个 Session 双方角色互换。</li>
+</ul>
+<p>简而言之，就是强制打断一方迫不及待表达自己想法或者辩解的冲动，保持单向表达，让一方能够真正明白另一方想要表达的内容，而不是 <em>自己以为的对方想要表达的内容</em> 。</p>
+<blockquote>
+<div>“Mirror my feelings even though you don’t agree with them. Let me know you understand what I’m trying to say.”</div></blockquote>
+<p>Intentional Dialogue 不是讨论问题，也不能解决问题，它只是通过这种强制的、有点怪异的方式让双方真正了解彼此的所思所想，为后续问题的解决开辟出一条路。</p>
+<p>其它一些技巧：</p>
+<ul class="simple">
+<li>不要有非言语行为（各种小动作），不要打断对方，Don’t be judgmental。</li>
+<li><em>Talk about yourself</em> 只表达自己的感受，而不要指责对方（finger pointing），使用 <em>I messages</em> ， 说：“when that happens I feel…”， “when you did that I felt…” 而不是说： “you make me feel…”</li>
+</ul>
+<p>对话示例：</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="13%" />
+<col width="20%" />
+<col width="67%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Sender</strong></td>
+<td><em>Initiates</em></td>
+<td>“I would like to have a dialogue, can we do this now?”</td>
+</tr>
+<tr class="row-even"><td><strong>Receiver</strong></td>
+<td><em>Respects</em></td>
+<td>“Yes.”</td>
+</tr>
+<tr class="row-odd"><td><strong>Sender</strong></td>
+<td><em>States Topic in One Sentence</em></td>
+<td>“I want to talk about what happens when you come home from work.”</td>
+</tr>
+<tr class="row-even"><td><strong>Receiver</strong></td>
+<td><em>Respects</em></td>
+<td>“Okay, I want to hear you.”</td>
+</tr>
+<tr class="row-odd"><td><strong>Sender</strong></td>
+<td><em>Sends</em></td>
+<td>“What I’m concerned about is that in the evening when you come home I don’t get greeted or acknowledge by you.”</td>
+</tr>
+<tr class="row-even"><td><strong>Receiver</strong></td>
+<td><em>Mirrors</em></td>
+<td>“What I heard you say is that I don’t acknowledge you.”</td>
+</tr>
+<tr class="row-odd"><td><strong>Receiver</strong></td>
+<td><em>Checks</em></td>
+<td>“Is this accurate?”</td>
+</tr>
+<tr class="row-even"><td><strong>Sender</strong></td>
+<td><em>Answers and sends a correction</em></td>
+<td>“No, what was missing is that in the evening when you come home I don’t get greeted by you.”</td>
+</tr>
+<tr class="row-odd"><td><strong>Receiver</strong></td>
+<td><em>Mirrors again</em></td>
+<td>“So what you said is that in the evening when I come home I don’t greet you or acknowledge you.”</td>
+</tr>
+<tr class="row-even"><td><strong>Receiver</strong></td>
+<td><em>Checks</em></td>
+<td>“Is this accurate now?”</td>
+</tr>
+<tr class="row-odd"><td><strong>Sender</strong></td>
+<td><em>Answers</em></td>
+<td>“Yes.”</td>
+</tr>
+<tr class="row-even"><td><strong>Receiver</strong></td>
+<td><em>Asks for More</em></td>
+<td>“Is there more about what you just said?”</td>
+</tr>
+<tr class="row-odd"><td><strong>Sender</strong></td>
+<td><em>Answers and Sends</em></td>
+<td>“Yes there’s more. When this happens I feel afraid that you don’t really love me and I feel alone.”</td>
+</tr>
+<tr class="row-even"><td><strong>Receiver</strong></td>
+<td><em>Mirrors</em></td>
+<td>“What I heard you say is that when this happens you feel afraid that I don’t really love you and you feel alone.”</td>
+</tr>
+<tr class="row-odd"><td><strong>Receiver</strong></td>
+<td><em>Checks</em></td>
+<td>“Is this accurate?”</td>
+</tr>
+<tr class="row-even"><td><strong>Sender</strong></td>
+<td><em>Answers</em></td>
+<td>“Yes.”</td>
+</tr>
+<tr class="row-odd"><td><strong>Receiver</strong></td>
+<td><em>Asks for More</em></td>
+<td>“Is there more about what you just said?”</td>
+</tr>
+<tr class="row-even"><td><strong>Sender</strong></td>
+<td><em>Answers</em></td>
+<td>“No.”</td>
+</tr>
+<tr class="row-odd"><td><strong>Receiver</strong></td>
+<td><em>Summarizes</em></td>
+<td>“To summarize, what I heard you say is that when I come home from work I don’t greet you or acknowledge you. And, this makes you afraid that I don’t really love you and it makes you feel alone.”</td>
+</tr>
+<tr class="row-even"><td><strong>Receiver</strong></td>
+<td><em>Checks</em></td>
+<td>“Was this a good summary?”</td>
+</tr>
+<tr class="row-odd"><td><strong>Sender</strong></td>
+<td><em>Answers</em></td>
+<td>“Yes.”</td>
+</tr>
+<tr class="row-even"><td><strong>Receiver</strong></td>
+<td><em>Validates</em></td>
+<td>“And what you said makes sense because if you’re not getting my attention you can’t know whether I love you, and that would make you feel alone, and in a relationship you are supposed to feel connected?”</td>
+</tr>
+<tr class="row-odd"><td><strong>Receiver</strong></td>
+<td><em>Empathizes(Sender Listens only)</em></td>
+<td>“And I imagine how this makes you feel is hurt.”</td>
+</tr>
+<tr class="row-even"><td><strong>Receiver</strong></td>
+<td><em>Checks</em></td>
+<td>“Is this accurate?”</td>
+</tr>
+<tr class="row-odd"><td><strong>Sender</strong></td>
+<td><em>Answers and sends a correction</em></td>
+<td>“No, what I need to hear you say is that it makes me feel unloved and alone.”</td>
+</tr>
+<tr class="row-even"><td><strong>Receiver</strong></td>
+<td><em>Empathizes Again</em></td>
+<td>“And how this makes you feel is unloved and alone.”</td>
+</tr>
+<tr class="row-odd"><td><strong>Receiver</strong></td>
+<td><em>Checks</em></td>
+<td>“Is this accurate?”</td>
+</tr>
+<tr class="row-even"><td><strong>Sender</strong></td>
+<td><em>Answers</em></td>
+<td>“Yes.”</td>
+</tr>
+<tr class="row-odd"><td><strong>Receiver</strong></td>
+<td><em>Encourages</em></td>
+<td>“In order to encourage you starting tomorrow when I come home I will give you a hug and a kiss.”</td>
+</tr>
+<tr class="row-even"><td><strong>Sender</strong></td>
+<td><em>Invites a Response</em></td>
+<td>“Would you like to respond and have me be the receiver?”</td>
+</tr>
+<tr class="row-odd"><td><strong>Receiver</strong></td>
+<td><em>Answers and sends</em></td>
+<td>“Yes, I would like you to understand how I feel after a long day at work.”</td>
+</tr>
+</tbody>
+</table>
+<p>(At this point the couple has switched roles, and a new dialogue begins.)</p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Feng’s blog</a></li>
+      <li>Next: <a href="golang-asynchronous-preemption.html" title="next chapter">Go 语言实现——异步抢占调度</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/imago-intentional-dialogue.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/imago-intentional-dialogue.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
