@@ -1,5 +1,5 @@
 table.noborder {
-    border: 0;
+    border-collapse:collapse;
 }
 
 table.noborder td {

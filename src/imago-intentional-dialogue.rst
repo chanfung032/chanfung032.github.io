@@ -7,10 +7,10 @@ Imago Intentional Dialogue 是一种用来修复情感的方法，但其中的�
 
 http://www.jdmcounselor.com/The_Imago_Intentional_Dialogue.pdf
 
-- Intentional Dialogue 将对话分成一个一个 Session。
-- 每个 Session 中，对话的双方一方为 Sender，一方为 Receiver，Sender 表达自己的感受，想法，Receiver 理解并复述。Sender 听完 Receiver 的复述后再对其中不准确的内容进行修正，如此往复直到 Receiver 清楚且准确的理解 Sender 要表达的内容。
-- 最后 Receiver 总结，Sender 确认无误，一个 Session 结束。
-- 下一个 Session 双方角色互换。
+- Intentional Dialogue 将对话分成一个一个子对话。
+- 每个子对话中，对话的双方一方为 Sender，一方为 Receiver，Sender 表达自己的感受，想法，Receiver 理解并复述。Sender 听完 Receiver 的复述后再对其中不准确的内容进行修正，如此往复直到 Receiver 清楚且准确的理解 Sender 要表达的内容。
+- 最后 Receiver 总结，Sender 确认无误，一个子对话结束。
+- 下一个子对话中双方角色互换。
 
 简而言之，就是强制打断一方迫不及待表达自己想法或者辩解的冲动，保持单向表达，让一方能够真正明白另一方想要表达的内容，而不是 *自己以为的对方想要表达的内容* 。
 
