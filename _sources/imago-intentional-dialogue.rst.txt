@@ -27,6 +27,7 @@ Intentional Dialogue 不是讨论问题，也不能解决问题，它只是通�
 
 .. list-table::
    :widths: 10 15 50
+   :class: noborder
 
    * - **Sender**
      - *Initiates*
