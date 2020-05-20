@@ -33,7 +33,8 @@ Feng's blog
    golang-internals-function.rst
    golang-internals-nil.rst
    golang-internals-variable.rst
-   linux-netns-and-docker-bridge.rst
+   docker-network.rst
+   docker-basics.rst
    kafka-storage-internals.rst
    speed-matters.rst
    simhash.rst

@@ -1,4 +1,4 @@
-Linux Network Namespace 和 Docker 桥接网络
+容器——Network Namespace 和桥接网络模式
 =============================================
 
 我们手工调用 Linux Network Namespace 的接口构建一个类似 Docker 桥接模式的网络来看下：
@@ -32,7 +32,7 @@ Linux Network Namespace 和 Docker 桥接网络
    Kernel IP routing table
    Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 
-此时 ``ping 127.0.0.1`` 会报网络不可达，我们需要先启动 lo 网络设备。
+此时在新创建的 namespace中 ``ping 127.0.0.1`` 会报网络不可达，我们需要先启动 lo 网络设备。
 
 .. code-block:: console
 
