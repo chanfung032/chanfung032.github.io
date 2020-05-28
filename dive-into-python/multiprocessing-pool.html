@@ -1,0 +1,206 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>multiprocessing.Pool 详解 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Python中多线程的实现" href="thread.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="multiprocessing-pool-xiang-jie">
+<h1>multiprocessing.Pool 详解<a class="headerlink" href="#multiprocessing-pool-xiang-jie" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="chuang-jian">
+<h2>创建<a class="headerlink" href="#chuang-jian" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Pool</span>
+<span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>创建 worker pool 一般只需指定 worker processes 的数目即可。</p>
+</div>
+<div class="section" id="apply">
+<h2>apply*<a class="headerlink" href="#apply" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="apply_async">
+<code class="descname">apply_async</code><span class="sig-paren">(</span><em>func</em><span class="optional">[</span>, <em>args</em><span class="optional">[</span>, <em>kwds</em><span class="optional">]</span><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#apply_async" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">apply</code><span class="sig-paren">(</span><em>func</em><span class="optional">[</span>, <em>args</em><span class="optional">[</span>, <em>kwds</em><span class="optional">]</span><span class="optional">]</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<p>apply_async 将任务提交后立即返回一个 result 对象，不阻塞，后续程序调用 <code class="docutils literal"><span class="pre">result.get()</span></code> 来阻塞获取执行的结果。</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">r1</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span><span class="n">func1</span><span class="p">,</span> <span class="n">args1</span><span class="p">,</span> <span class="n">kws1</span><span class="p">)</span>
+<span class="n">r2</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span><span class="n">func2</span><span class="p">,</span> <span class="n">args2</span><span class="p">,</span> <span class="n">kws2</span><span class="p">)</span>
+<span class="nb">print</span> <span class="n">r1</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+<span class="nb">print</span> <span class="n">r2</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>apply 就是 <code class="docutils literal"><span class="pre">apply_async(...).get()</span></code> 添加任务并立即阻塞等待结果。一般不会直接使用这个函数。</p>
+</div>
+<div class="section" id="map">
+<h2>map*<a class="headerlink" href="#map" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt>
+<code class="descname">map</code><span class="sig-paren">(</span><em>func</em>, <em>iterable</em><span class="optional">[</span>, <em>chunksize</em><span class="optional">]</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="map_async">
+<code class="descname">map_async</code><span class="sig-paren">(</span><em>func</em>, <em>iterable</em><span class="optional">[</span>, <em>chunksize</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#map_async" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="starmap">
+<code class="descname">starmap</code><span class="sig-paren">(</span><em>func</em>, <em>iterable</em><span class="optional">[</span>, <em>chunksize</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#starmap" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="starmap_async">
+<code class="descname">starmap_async</code><span class="sig-paren">(</span><em>func</em>, <em>iterable</em><span class="optional">[</span>, <em>chunksize</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#starmap_async" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p>首先，map 系列函数基本都有一个可选的 chunksize 参数，map 系列函数并不是一个一个迭代 iterable 发给 worker pool 去处理，而是将 iterable 按照 chunksize 切成一个一个的 chunk 然后再发给 worker pool 去处理。这样可以减少和 worker process 的交互，加快任务的执行速度。</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">task_batches</span> <span class="o">=</span> <span class="n">Pool</span><span class="o">.</span><span class="n">_get_tasks</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">iterable</span><span class="p">,</span> <span class="n">chunksize</span><span class="p">)</span>
+
+<span class="nd">@staticmethod</span>
+<span class="k">def</span> <span class="nf">_get_tasks</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">it</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+    <span class="n">it</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">it</span><span class="p">)</span>
+    <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">it</span><span class="p">,</span> <span class="n">size</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">x</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">yield</span> <span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>map 就是 <code class="docutils literal"><span class="pre">map_async(...).get()</span></code> ， starmap 就是 <code class="docutils literal"><span class="pre">starmap_async(...).get()</span></code> 。</p>
+<p>map 和 starmap 的区别就是 map 传给 func 的只能是一个参数，而 starmap 可以多个参数。当然 map 也可以将多个参数打包到 tuple 中再传给 func。</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">func_a</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span><span class="o">*</span><span class="n">x</span>
+<span class="k">def</span> <span class="nf">func_b</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span><span class="o">*</span><span class="n">y</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">func_a</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="n">p</span><span class="o">.</span><span class="n">starmap</span><span class="p">(</span><span class="n">func_b</span><span class="p">,</span> <span class="p">((</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)))</span>
+</pre></div>
+</div>
+<dl class="function">
+<dt id="imap">
+<code class="descname">imap</code><span class="sig-paren">(</span><em>func</em>, <em>iterable</em><span class="optional">[</span>, <em>chunksize</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#imap" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="imap_unordered">
+<code class="descname">imap_unordered</code><span class="sig-paren">(</span><em>func</em>, <em>iterable</em><span class="optional">[</span>, <em>chunksize</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#imap_unordered" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p>imap 和 map 不一样的地方在于，map 是先执行了 <code class="docutils literal"><span class="pre">list(iterable)</span></code> 然后再将任务分 chunk 提交给 worker pool，而 imap 一次只会 <code class="docutils literal"><span class="pre">list()</span></code> 一个 chunk，并且默认 chunksize 为 1。如果 <code class="docutils literal"><span class="pre">list(iterable)</span></code> 要消耗大量的内存，可以考虑使用 imap 函数。一般 imap 比 map 慢。</p>
+<p>imap 和 map 另外一个不一样的地方是 imap 函数返回的结果是一个迭代器，这样每个 func 执行完后可以立即获得执行结果，而不是像 map 要到所有全部执行完毕才能获得结果。</p>
+<p>imap 和 imap_unordered 不一样的地方在于一个是按输入参数 iterable 的顺序返回结果的，一个是按任务的完成先后返回结果的。</p>
+<p>参考：</p>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/python/cpython/blob/2.7/Lib/multiprocessing/pool.py">https://github.com/python/cpython/blob/2.7/Lib/multiprocessing/pool.py</a></li>
+<li><a class="reference external" href="https://stackoverflow.com/questions/26520781/multiprocessing-pool-whats-the-difference-between-map-async-and-imap/26521507#26521507">https://stackoverflow.com/questions/26520781/multiprocessing-pool-whats-the-difference-between-map-async-and-imap/26521507#26521507</a></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">multiprocessing.Pool 详解</a><ul>
+<li><a class="reference internal" href="#chuang-jian">创建</a></li>
+<li><a class="reference internal" href="#apply">apply*</a></li>
+<li><a class="reference internal" href="#map">map*</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Python 源码相关笔记</a><ul>
+      <li>Previous: <a href="thread.html" title="previous chapter">Python中多线程的实现</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/dive-into-python/multiprocessing-pool.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/dive-into-python/multiprocessing-pool.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
