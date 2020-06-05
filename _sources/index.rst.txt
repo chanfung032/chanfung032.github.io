@@ -33,6 +33,7 @@ Feng's blog
    golang-internals-function.rst
    golang-internals-nil.rst
    golang-internals-variable.rst
+   docker-seccomp-bpf.rst
    docker-network.rst
    docker-basics.rst
    kafka-storage-internals.rst
