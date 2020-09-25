@@ -1,0 +1,152 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>AC 自动机 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="一次 tcpdump bpf filter “失效”的问题排查" href="tcpdump-bpf-filter-vlan-tagged-and-untagged-traffic.html" />
+    <link rel="prev" title="Feng’s blog" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="ac-zi-dong-ji">
+<h1>AC 自动机<a class="headerlink" href="#ac-zi-dong-ji" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li>论文：<a class="reference external" href="https://dl.acm.org/doi/10.1145/360825.360855">https://dl.acm.org/doi/10.1145/360825.360855</a></li>
+<li>实现：<a class="reference external" href="https://github.com/chanfung032/labs/blob/master/Aho-Corasick/ac.go">https://github.com/chanfung032/labs/blob/master/Aho-Corasick/ac.go</a></li>
+</ul>
+<div class="section" id="gai-shu">
+<h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
+<p>给定一堆关键字和一篇文档，AC 自动机可以在文档中快速查找出所有的关键字匹配。算法复杂度为 O(n)，n 为文档的长度。AC 自动机正式的名字叫 Aho-Corasick 算法，以算法发明人 Alfred V. Aho 和 Margaret J.Corasick 的名字命名。</p>
+<p>AC 自动机的构建包含三个步骤： 构建前缀树、计算失配指针、计算后缀匹配项。</p>
+<p>我们以 {say, she, shr, he, her} 为例，来看下 AC 自动机的构建和查找过程。</p>
+</div>
+<div class="section" id="gou-jian-qian-zhui-shu-trie">
+<h2>构建前缀树 (Trie)<a class="headerlink" href="#gou-jian-qian-zhui-shu-trie" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://zh.wikipedia.org/wiki/Trie">https://zh.wikipedia.org/wiki/Trie</a></p>
+<p>将关键词列表中的关键词逐个字符的加入前缀树。</p>
+<img alt="_images/ac-trie.jpg" src="_images/ac-trie.jpg" />
+<p>因为前缀树只能顺着某一个路径往下匹配，如果中途遇到不匹配的节点，只能回溯然后从根节点选择另外一个分支继续往下匹配。以处理字符串 sher 为例：首先，我们匹配了 she 子树，下一个字符 r 无法匹配，这时需要回溯到开始，然后从前缀树的根节点再选择 her 分支往下匹配。但是观察可以发现 her 的前缀 he 是 she 的一个后缀，she 匹配也就意味着 he 已经匹配，我们可以直接跳过 her 子树的 he 匹配，直接从 e 节点开始继续往下匹配，这个横向的跳转就是 <strong>失配指针</strong> 。</p>
+<img alt="_images/ac-fail.jpg" src="_images/ac-fail.jpg" />
+<p>AC 自动机构建的主要过程就是计算失配指针的过程。</p>
+</div>
+<div class="section" id="ji-suan-shi-pei-zhi-zhen">
+<h2>计算失配指针<a class="headerlink" href="#ji-suan-shi-pei-zhi-zhen" title="Permalink to this headline">¶</a></h2>
+<p>AC 自动机的前缀树的节点都存在失配指针，它表示从当前状态节点往下匹配失败后，我们应该跳转到哪个节点继续匹配。如上图中红色的箭头。</p>
+<p>失配指针的计算过程如下：</p>
+<ol class="arabic simple">
+<li>第二层节点的失配指针为根节点。</li>
+<li>从第三层开始对前缀树做宽度优先遍历。若当前处理到节点 x，从它的父节点开始沿着失配指针上溯直到根节点，如果中间遇到某个节点存在一个子节点，其字符和节点 x 的相同，那么就将节点 x 的失配指针指向这个子节点。否则失配指针为根节点。</li>
+</ol>
+<p>完全计算完成后失配指针如下图所示：</p>
+<img alt="_images/ac-fail1.jpg" src="_images/ac-fail1.jpg" />
+</div>
+<div class="section" id="ji-suan-hou-zhui-pi-pei-xiang">
+<h2>计算后缀匹配项<a class="headerlink" href="#ji-suan-hou-zhui-pi-pei-xiang" title="Permalink to this headline">¶</a></h2>
+<p>我们看 she 字符串的匹配，当前缀树匹配到 e 这个节点的时候，代表匹配了 she 字符串，但其实 he 这个后缀也是匹配的。也就是说，对于前缀树上的每一个节点，我们除了判断节点本身是否是一个匹配项外，还需要判断其是否存在后缀匹配项。</p>
+<p>后缀匹配项的计算方式如下：</p>
+<p>宽度优先遍历所有节点，对于每一个节点 x，沿着其失配指针一直回溯直到根节点，中间遇到的节点如果是匹配节点（红色节点），那么这个节点代表的字符串就是节点 x 的一个后缀匹配项。实现中每个节点只需记录一个指向最长后缀匹配项节点的指针即可（下图中的蓝色箭头），查找的时候沿着这个指针上溯即可找到所有的后缀匹配项。</p>
+<img alt="_images/ac-output.jpg" src="_images/ac-output.jpg" />
+<hr class="docutils" />
+<p>这个算法可以用来解答 <a class="reference external" href="https://leetcode-cn.com/problems/stream-of-characters/">Leet#1032 字符流</a> 问题。 <a class="reference external" href="https://github.com/chanfung032/labs/blob/master/Aho-Corasick/leet-1032.go">解答</a> 。</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">AC 自动机</a><ul>
+<li><a class="reference internal" href="#gai-shu">概述</a></li>
+<li><a class="reference internal" href="#gou-jian-qian-zhui-shu-trie">构建前缀树 (Trie)</a></li>
+<li><a class="reference internal" href="#ji-suan-shi-pei-zhi-zhen">计算失配指针</a></li>
+<li><a class="reference internal" href="#ji-suan-hou-zhui-pi-pei-xiang">计算后缀匹配项</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Feng’s blog</a></li>
+      <li>Next: <a href="tcpdump-bpf-filter-vlan-tagged-and-untagged-traffic.html" title="next chapter">一次 tcpdump bpf filter “失效”的问题排查</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/aho-corasick-algo.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/aho-corasick-algo.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
