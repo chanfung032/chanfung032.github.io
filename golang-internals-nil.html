@@ -135,6 +135,28 @@
 <tr><td class="label"><a class="fn-backref" href="#id3">[3]</a></td><td><a class="reference external" href="https://golang.org/doc/faq#nil_error">https://golang.org/doc/faq#nil_error</a></td></tr>
 </tbody>
 </table>
+<hr class="docutils" />
+<p><strong>Go 是如何区分 empty slice 和 nil 的？</strong></p>
+<p>我们可以使用 reflect 包来看下 slice 的底层数据结构中的内容：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">var</span> <span class="nx">s1</span> <span class="p">[]</span><span class="kt">int</span>
+<span class="nx">s2</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">int</span><span class="p">{}</span>
+<span class="nx">s3</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">int</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;s1 (addr: %p): %+8v\n&quot;</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="nx">s1</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">SliceHeader</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">s1</span><span class="p">)))</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;s2 (addr: %p): %+8v\n&quot;</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="nx">s2</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">SliceHeader</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">s2</span><span class="p">)))</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;s3 (addr: %p): %+8v\n&quot;</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="nx">s3</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">SliceHeader</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">s3</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>以上代码中 s1 是 nil，s2，s3 是 empty slice，下面是程序运行的结果：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">s1</span> <span class="p">(</span><span class="n">addr</span><span class="p">:</span> <span class="mh">0xc0000ae040</span><span class="p">):</span> <span class="p">{</span><span class="n">Data</span><span class="p">:</span>       <span class="mi">0</span> <span class="n">Len</span><span class="p">:</span>       <span class="mi">0</span> <span class="n">Cap</span><span class="p">:</span>       <span class="mi">0</span><span class="p">}</span>
+<span class="n">s2</span> <span class="p">(</span><span class="n">addr</span><span class="p">:</span> <span class="mh">0xc0000ae060</span><span class="p">):</span> <span class="p">{</span><span class="n">Data</span><span class="p">:</span> <span class="mi">5788776</span> <span class="n">Len</span><span class="p">:</span>       <span class="mi">0</span> <span class="n">Cap</span><span class="p">:</span>       <span class="mi">0</span><span class="p">}</span>
+<span class="n">s3</span> <span class="p">(</span><span class="n">addr</span><span class="p">:</span> <span class="mh">0xc0000ae080</span><span class="p">):</span> <span class="p">{</span><span class="n">Data</span><span class="p">:</span> <span class="mi">5788776</span> <span class="n">Len</span><span class="p">:</span>       <span class="mi">0</span> <span class="n">Cap</span><span class="p">:</span>       <span class="mi">0</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>可以看到 nil 的结构体中是所有的值都为 0，但 empty slice 中指向底层数组的指针并不指向 0，因为数组的长度为 0，所以这个指针指向哪儿其实都可以，这样 nil 和 empty slice 就区分开来了。</p>
 </div>
 
 

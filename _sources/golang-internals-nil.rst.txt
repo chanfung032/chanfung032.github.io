@@ -83,3 +83,30 @@ Go 语言实现——nil
 .. [1] https://golang.org/ref/spec#The_zero_value
 .. [2] https://github.com/golang/go/blob/release-branch.go1.9/src/runtime/print.go#L231
 .. [3] https://golang.org/doc/faq#nil_error
+
+-----
+
+**Go 是如何区分 empty slice 和 nil 的？**
+
+我们可以使用 reflect 包来看下 slice 的底层数据结构中的内容：
+
+.. code-block:: go
+
+	var s1 []int
+	s2 := []int{}
+	s3 := make([]int, 0)
+
+	fmt.Printf("s1 (addr: %p): %+8v\n",
+		&s1, *(*reflect.SliceHeader)(unsafe.Pointer(&s1)))
+	fmt.Printf("s2 (addr: %p): %+8v\n",
+		&s2, *(*reflect.SliceHeader)(unsafe.Pointer(&s2)))
+	fmt.Printf("s3 (addr: %p): %+8v\n",
+		&s3, *(*reflect.SliceHeader)(unsafe.Pointer(&s3)))
+
+以上代码中 s1 是 nil，s2，s3 是 empty slice，下面是程序运行的结果： ::
+
+	s1 (addr: 0xc0000ae040): {Data:       0 Len:       0 Cap:       0}
+	s2 (addr: 0xc0000ae060): {Data: 5788776 Len:       0 Cap:       0}
+	s3 (addr: 0xc0000ae080): {Data: 5788776 Len:       0 Cap:       0}
+
+可以看到 nil 的结构体中是所有的值都为 0，但 empty slice 中指向底层数组的指针并不指向 0，因为数组的长度为 0，所以这个指针指向哪儿其实都可以，这样 nil 和 empty slice 就区分开来了。
