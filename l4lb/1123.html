@@ -1,0 +1,124 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Day 1: cloudflare 的四层代理架构 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="day-1-cloudflare-di-si-ceng-dai-li-jia-gou">
+<h1>Day 1: cloudflare 的四层代理架构<a class="headerlink" href="#day-1-cloudflare-di-si-ceng-dai-li-jia-gou" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://blog.cloudflare.com/unimog-cloudflares-edge-load-balancer/">https://blog.cloudflare.com/unimog-cloudflares-edge-load-balancer/</a></p>
+<p>首先，一个边缘机房中的服务器的角色都是对等的，共享一组 VIP。发给这些 ip 的数据包可以被任意服务器来处理。</p>
+<p>每个服务器上的 l4lb 架构如下：</p>
+<img alt="../_images/unimog-arch1.png" src="../_images/unimog-arch1.png" />
+<p>l4drop 是 ddos 丢包程序，unimog 是 4 层代理，xdpd 是 l4drop 和 unimog 的控制程序。</p>
+<p>l4drop 和 unimog 都是基于 xdp 来实现。一个简单的 xdp load balancer 代码，<a class="reference external" href="https://gist.github.com/summerwind/080750455a396a1b1ba78938b3178f6b">https://gist.github.com/summerwind/080750455a396a1b1ba78938b3178f6b</a> 也就是架构图中灰色部分代码大概是这个样子的，都是实现一个 callback 函数，然后通过返回 drop/tx/pass 等返回码等来继续处理包。</p>
+<p>unimog 选择转发的目标机器如果为本机，直接 xdp pass 就可以，如果目标机器是其他机器，要将包的目标 ip 替换为替换为目标机器 DIP（Direct IP），并且使用 GUE (Generic UDP Encapsulation) <a class="reference external" href="https://www.ietf.org/id/draft-ietf-intarea-gue-09.txt">https://www.ietf.org/id/draft-ietf-intarea-gue-09.txt</a>  格式重新封一下包（以保存原始的目标地址），然后返回 xdp tx 将包直接重新发出去。</p>
+<p>封包的逻辑可以参考：<a class="reference external" href="https://github.com/facebookincubator/katran/blob/master/katran/lib/bpf/pckt_encap.h">https://github.com/facebookincubator/katran/blob/master/katran/lib/bpf/pckt_encap.h</a></p>
+<p>unimog 中 c 代码部分，也就是上图中灰色的部分，这部分的代码按 cloudflare 博客中说的，大概代码量也就在 1000 行左右。</p>
+<p>比较复杂的还是在 xdpd 和中心控制的 conductor 程序上。这个整体的架构如下：</p>
+<img alt="../_images/unimog-arch2.png" src="../_images/unimog-arch2.png" />
+<ul class="simple">
+<li>xdpd 和 conductor 之间通过 consul 来间接通信。</li>
+<li>服务器的监控用的是 prometheus，conductor 从 prometheus 获取数据。</li>
+<li>控制程序这一块比较复杂的主要就是在 server 配置变化（上线、下线、修改权重）等情况下如何保持已经建立连接的包还是发到之前的目标服务器，而不是发错服务器导致连接被 reset，unimog 用的是 forwarding table（保存新旧配置以计算新旧服务器）+glb redirect（如果转发错了，将包重新转发给正确的目标服务器）。这个还有待细节搞清楚。</li>
+</ul>
+<hr class="docutils" />
+<p>最简单的 4 层代理方式，不封包的情况是 haproxy blog 中说的以下架构，只改包的 Dst MAC。</p>
+<p><a class="reference external" href="https://www.haproxy.com/blog/layer-4-load-balancing-direct-server-return-mode/">https://www.haproxy.com/blog/layer-4-load-balancing-direct-server-return-mode/</a></p>
+<hr class="docutils" />
+<p>其他：</p>
+<ul class="simple">
+<li>cloudflare 和 cilium 一起开发的一个 go ebf 库：<a class="reference external" href="https://github.com/cilium/ebpf">https://github.com/cilium/ebpf</a></li>
+<li><a class="reference external" href="https://github.com/xdp-project/xdp-tutorial">https://github.com/xdp-project/xdp-tutorial</a></li>
+<li>使用 xdp 需要内核版本 &gt;= 4.8，如果需要使用 AF_XDP socket family 的话需要 &gt;= 4.18（unimog 可能不需要使用这个？）。</li>
+</ul>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/1123.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/1123.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

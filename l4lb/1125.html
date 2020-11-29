@@ -1,0 +1,128 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Day 3: Stateless Datacenter Load-balancing with Beamer &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="day-3-stateless-datacenter-load-balancing-with-beamer">
+<h1>Day 3: Stateless Datacenter Load-balancing with Beamer<a class="headerlink" href="#day-3-stateless-datacenter-load-balancing-with-beamer" title="Permalink to this headline">¶</a></h1>
+<p>cf 的 unimog 不少思路来自 Stateless Datacenter Load-balancing with Beamer <a class="reference external" href="https://www.usenix.org/system/files/conference/nsdi18/nsdi18-olteanu.pdf">https://www.usenix.org/system/files/conference/nsdi18/nsdi18-olteanu.pdf</a> 这篇论文。</p>
+<p>这篇论文里也有一些 cf blog 里一带而过或者没说的细节：</p>
+<ol class="arabic">
+<li><p class="first">vip 是使用 Quagga <a class="reference external" href="https://www.quagga.net/">https://www.quagga.net/</a> 做的。</p>
+</li>
+<li><p class="first">从包到 forwarding table 中的条目的映射这个使用的 hash 算法就是普通的哈希算法（crc32），但是每一个条目到 DIP 映射的更新策略这一块可以使用一致性哈希、rendezvous 哈希、Maglev 的算法等，防止一变更基本所有的 hash 目标服务器都变了。</p>
+</li>
+<li><p class="first">beamer 是既有硬件产品也有软件产品的，在硬件情况下就是非对称部署，这个时候在目标服务器上解 GUE 包后需要将 VIP 改成 DIP，然后继续处理，处理完成后再将回包中的 DIP 改回 VIP 再发出去。</p>
+</li>
+<li><p class="first">根据 beamer 的 cf 的 blog，可以大致推断 unimog 的 consul 里存储的数据结构大致如下：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">/</span><span class="n">unimog</span><span class="o">/</span>
+    <span class="n">config</span><span class="o">/</span>
+        <span class="n">bucket_count</span> <span class="o">&lt;-</span> <span class="n">forwarding_table</span> <span class="n">的条目数</span>
+        <span class="n">vip</span><span class="o">/</span>
+        <span class="mf">141.85</span><span class="o">.</span><span class="mf">37.8</span>
+        <span class="o">...</span>
+    <span class="n">dips</span><span class="o">/</span>
+        <span class="n">dip1</span><span class="p">,</span><span class="n">weight1</span>
+        <span class="n">dip2</span><span class="p">,</span><span class="n">weight2</span>
+        <span class="o">...</span>
+    <span class="n">forwarding_table</span> <span class="o">&lt;-</span> <span class="n">unimog</span> <span class="n">xdp</span> <span class="n">程序只需要读这个数据</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<p>下图是从 beamer 论文里截出来的，基本将负载均衡的整个流程描述清楚了，图中 mux 是负载均衡，是非对称部署的，对称部署就是 mux 和 server 合二为一。</p>
+<img alt="../_images/beamer-arch.png" src="../_images/beamer-arch.png" />
+<hr class="docutils" />
+<p>今天还有就是配置开发环境，目前打算先用 vagrant+centos8（centos8 内核版本 &gt;=4.18.0-80，可以符合 xdp 程序开发的最低内核版本要求）。</p>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/CentOS#CentOS_version_8">https://en.wikipedia.org/wiki/CentOS#CentOS_version_8</a></p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/1125.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/1125.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
