@@ -1,0 +1,232 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Day 6: xdp &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="day-6-xdp">
+<h1>Day 6: xdp<a class="headerlink" href="#day-6-xdp" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="pinning-maps">
+<h2>Pinning Maps<a class="headerlink" href="#pinning-maps" title="Permalink to this headline">¶</a></h2>
+<p>前述 <a class="reference internal" href="1126.html#bpf-map"><span class="std std-ref">bpf map 操作</span></a> 中，bpf map 的操作需要 bpf 程序的 bpf_object 对象，通过其获取 bpf map 的 fd。bpf map 可以通过 pinning 操作将 map 和一个文件路径绑定在一起，这样要读取 map 直接从该文件路径获取 map 的 fd 就可以了。</p>
+<p>Mount BPF 文件系统：</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> mount -t bpf bpf /sys/fs/bpf/
+</pre></div>
+</div>
+<p>在 loader 程序中 pinning map：</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="c1">// 清理</span>
+<span class="n">bpf_object__unpin_maps</span><span class="p">(</span><span class="n">bpf_obj</span><span class="p">,</span> <span class="s">&quot;/sys/fs/bpf/eth1&quot;</span><span class="p">);</span>
+<span class="n">bpf_object__pin_maps</span><span class="p">(</span><span class="n">bpf_obj</span><span class="p">,</span> <span class="s">&quot;/sys/fs/bpf/eth1/xdp_stats_map&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>其它程序如果要操作 map，直接通过路径获取 map 的 fd 即可：</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="kt">int</span> <span class="n">stats_map_fd</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">bpf_map_info</span> <span class="n">info</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
+<span class="n">stats_map_fd</span> <span class="o">=</span> <span class="n">open_bpf_map_file</span><span class="p">(</span><span class="s">&quot;/sys/fs/bpf/eth1/&quot;</span><span class="p">,</span> <span class="s">&quot;xdp_stats_map&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">info</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="han-shu-nei-lian-xun-huan-zhan-kai">
+<h2>函数内联、循环展开<a class="headerlink" href="#han-shu-nei-lian-xun-huan-zhan-kai" title="Permalink to this headline">¶</a></h2>
+<p>bpf 对函数和循环的支持有限，所以 bpf 程序中</p>
+<ul class="simple">
+<li>如果使用子函数，需要在函数前面加上 <code class="docutils literal"><span class="pre">__always_inline</span></code>，让函数始终内联。</li>
+<li>如果有循环，需要在循环语句前加上 <code class="docutils literal"><span class="pre">#pragma</span> <span class="pre">unroll</span></code>，让循环展开。</li>
+</ul>
+<p>而不是让编译器自己去做决定。</p>
+</div>
+<div class="section" id="wang-luo-bao-jie-xi">
+<h2>网络包解析<a class="headerlink" href="#wang-luo-bao-jie-xi" title="Permalink to this headline">¶</a></h2>
+<p>下面是一个简单的 IPv6 版本的 ICMP 处理程序示例，功能是丢掉 sequence number 为偶数的 icmp 包。</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="kt">int</span>  <span class="nf">xdp_parser_func</span><span class="p">(</span><span class="k">struct</span> <span class="n">xdp_md</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// [data, data_end) 为网络包数据</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">data</span>     <span class="o">=</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)(</span><span class="kt">long</span><span class="p">)</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">;</span>
+    <span class="kt">void</span> <span class="o">*</span><span class="n">data_end</span> <span class="o">=</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)(</span><span class="kt">long</span><span class="p">)</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">data_end</span><span class="p">;</span>
+
+    <span class="k">struct</span> <span class="n">ethhdr</span> <span class="o">*</span><span class="n">eth</span> <span class="o">=</span> <span class="n">data</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">eth</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;</span> <span class="n">data_end</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">XDP_ABORT</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">eth</span><span class="o">-&gt;</span><span class="n">h_proto</span> <span class="o">!=</span> <span class="n">bpf_htons</span><span class="p">(</span><span class="n">ETH_P_IPV6</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">XDP_DROP</span><span class="p">;</span>
+
+    <span class="k">struct</span> <span class="n">ipv6hdr</span> <span class="o">*</span><span class="n">ip6h</span> <span class="o">=</span> <span class="n">eth</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ip6h</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;</span> <span class="n">data_end</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">XDP_ABORT</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ip6h</span><span class="o">-&gt;</span><span class="n">nexthdr</span> <span class="o">!=</span> <span class="n">IPPROTO_ICMPV6</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">XDP_DROP</span><span class="p">;</span>
+
+    <span class="k">struct</span> <span class="n">icmp6hdr</span> <span class="o">*</span><span class="n">icmp_hdr</span> <span class="o">=</span> <span class="n">ip6h</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">bpf_ntohs</span><span class="p">(</span><span class="n">icmp_hdr</span><span class="o">-&gt;</span><span class="n">icmp6_sequence</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">XDP_DROP</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="n">XDP_PASS</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>解析网络包第一步，包含定义 packet header 的各种头文件：</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="40%" />
+<col width="60%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Struct</th>
+<th class="head">Header file</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>struct ethhdr</td>
+<td>&lt;linux/if_ether.h&gt;</td>
+</tr>
+<tr class="row-odd"><td>struct ipv6hdr</td>
+<td>&lt;linux/ipv6.h&gt;</td>
+</tr>
+<tr class="row-even"><td>struct iphdr</td>
+<td>&lt;linux/ip.h&gt;</td>
+</tr>
+<tr class="row-odd"><td>struct icmp6hdr</td>
+<td>&lt;linux/icmpv6.h&gt;</td>
+</tr>
+<tr class="row-even"><td>struct icmphdr</td>
+<td>&lt;linux/icmp.h&gt;</td>
+</tr>
+</tbody>
+</table>
+<p>第二步，bounds checking，在读取 *hdr 结构体中的字段时，首先需要检查 *hdr 结构体是否在 [data, data_end) 之间，如果不检查，程序后续加载的时候 bpf verifier 会报错。也就是上面代码中的 <code class="docutils literal"><span class="pre">if</span> <span class="pre">(eth</span> <span class="pre">+</span> <span class="pre">1</span> <span class="pre">&gt;</span> <span class="pre">data_end)</span> <span class="pre">...</span></code> 这样的判断，It’s necessary。</p>
+<p>最后，网络包的数据是直接从网卡读到的数据，所以引用字段时要注意字节序，不要混用网络序和主机序的数据，必要时使用 bpf_htons/bpf_ntohs 之类的函数互相转换。</p>
+<ul class="simple">
+<li><a class="reference external" href="https://en.wikipedia.org/wiki/Ethernet_frame">https://en.wikipedia.org/wiki/Ethernet_frame</a></li>
+<li><a class="reference external" href="https://en.wikipedia.org/wiki/IPv6_packet">https://en.wikipedia.org/wiki/IPv6_packet</a></li>
+<li><a class="reference external" href="https://code.woboq.org/linux/linux/tools/testing/selftests/bpf/bpf_endian.h.html">https://code.woboq.org/linux/linux/tools/testing/selftests/bpf/bpf_endian.h.html</a></li>
+</ul>
+<hr class="docutils" />
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="nb">NULL</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">printf</span><span class="p">(</span><span class="s">&quot;%p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="nb">NULL</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>上面的代码运行的结果是：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mh">0x1</span>
+<span class="mh">0x4</span>
+</pre></div>
+</div>
+<p>指针加 1 的时候，如果是 <code class="docutils literal"><span class="pre">void*</span></code> 指针，指针是往后移一个字节，如果指针有类型，那么则是往后移 <code class="docutils literal"><span class="pre">sizeof(类型）</span></code> 个字节。所以上面所有 hdr 类型的 bounds checking 的时候都是使用相同的指针加 1 操作。</p>
+</div>
+<div class="section" id="wang-luo-bao-rewrite">
+<h2>网络包 Rewrite<a class="headerlink" href="#wang-luo-bao-rewrite" title="Permalink to this headline">¶</a></h2>
+<p>xdp 程序可以直接修改 [ctx-&gt;data, ctx-&gt;data_end] 之间的数据，并且可以通过 <code class="docutils literal"><span class="pre">bpf_xdp_adjust_head</span></code> 函数来扩大/缩小网络数据包的 buffer 的大小。</p>
+<dl class="function">
+<dt id="c.bpf_xdp_adjust_head">
+long <code class="descname">bpf_xdp_adjust_head</code><span class="sig-paren">(</span>struct xdp_buff<em>&nbsp;*xdp_md</em>, int<em>&nbsp;delta</em><span class="sig-paren">)</span><a class="headerlink" href="#c.bpf_xdp_adjust_head" title="Permalink to this definition">¶</a></dt>
+<dd><p>将 <code class="docutils literal"><span class="pre">xdp_md-&gt;data</span></code> 指针移动 <code class="docutils literal"><span class="pre">delta</span></code> 个字节，delta 为正的时候是缩小网络包的 buffer（可以用在解包场景下），如果为负，相当于在 buffer 的前面新申请了一段 buffer 空间（可以用来封包），返回 0 成功或者一个负的错误码。</p>
+</dd></dl>
+
+</div>
+<div class="section" id="wang-luo-tuo-pu-yao-qiu">
+<h2>网络拓扑要求<a class="headerlink" href="#wang-luo-tuo-pu-yao-qiu" title="Permalink to this headline">¶</a></h2>
+<p>unimog 的转发用的是 xdp 的 tx action，所以其对网络拓扑有和 katran 一样的要求，即 “从客户端到 l4lb” 和 “从 l4lb 到 l7lb” 走的是同一个网络接口。如下图所示：</p>
+<img alt="../_images/l4lb-network-topology.png" src="../_images/l4lb-network-topology.png" />
+<p><a class="reference external" href="https://github.com/facebookincubator/katran#environment-requirements-for-katran-to-run">https://github.com/facebookincubator/katran#environment-requirements-for-katran-to-run</a></p>
+<p>当然 xdp 还有一个 redirect action，可以允许从不同接口将包发出去。</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Day 6: xdp</a><ul>
+<li><a class="reference internal" href="#pinning-maps">Pinning Maps</a></li>
+<li><a class="reference internal" href="#han-shu-nei-lian-xun-huan-zhan-kai">函数内联、循环展开</a></li>
+<li><a class="reference internal" href="#wang-luo-bao-jie-xi">网络包解析</a></li>
+<li><a class="reference internal" href="#wang-luo-bao-rewrite">网络包 Rewrite</a></li>
+<li><a class="reference internal" href="#wang-luo-tuo-pu-yao-qiu">网络拓扑要求</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/1130.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/1130.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

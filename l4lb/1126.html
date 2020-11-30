@@ -150,7 +150,7 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <span class="n">lock_xadd</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">rec</span><span class="o">-&gt;</span><span class="n">rx_packets</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
 </pre></div>
 </div>
-<p>在用户态的程序中操作 map 需要先通过 map 名获取 map 的 fd，然后再通过 map fd 操作：</p>
+<p id="bpf-map">在用户态的程序中操作 map 需要先通过 map 名获取 map 的 fd，然后再通过 map fd 操作：</p>
 <div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">map</span> <span class="o">=</span>  <span class="n">bpf_object__find_map_by_name</span> <span class="p">(</span><span class="n">bpf_obj</span><span class="p">,</span> <span class="s">&quot;xdp_stats_map&quot;</span><span class="p">);</span>
 <span class="n">map_fd</span> <span class="o">=</span> <span class="n">bpf_map__fd</span> <span class="p">(</span><span class="n">map</span><span class="p">);</span>
 <span class="n">map_get_value_array</span> <span class="p">(</span><span class="n">map_fd</span> <span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">value</span><span class="p">)</span>
