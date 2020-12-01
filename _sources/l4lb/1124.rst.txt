@@ -78,3 +78,10 @@ cf 在数据中心内部启用了 jumbo frames (交换机 / 路由 / 服务器�
 
 https://linuxconfig.org/how-to-enable-jumbo-frames-in-linux
 
+----
+
+unimog 的转发用的是 xdp 的 tx action，所以其对网络拓扑有和 katran 一样的要求，即 “从客户端到 l4lb” 和 “从 l4lb 到 l7lb” 走的是同一个网络接口。如下图所示：
+
+.. image:: images/l4lb-network-topology.png
+
+https://github.com/facebookincubator/katran#environment-requirements-for-katran-to-run

@@ -101,6 +101,10 @@
 <p>&gt; An issue that can arise with encapsulation is hitting limits on the maximum packet size, because the encapsulation process makes packets larger. The de-facto maximum packet size on the Internet is 1500 bytes, and not coincidentally this is also the maximum packet size on ethernet networks. For Unimog, encapsulating a 1500-byte packet results in a 1536-byte packet. To allow for these enlarged encapsulated packets, we have enabled jumbo frames on the networks inside our data centers, so that the 1500-byte limit only applies to packets headed out to the Internet.</p>
 <p>cf 在数据中心内部启用了 jumbo frames (交换机 / 路由 / 服务器都得配置)，允许超过 1500 的包，1500-byte 的限制只限制发出到公网的包。</p>
 <p><a class="reference external" href="https://linuxconfig.org/how-to-enable-jumbo-frames-in-linux">https://linuxconfig.org/how-to-enable-jumbo-frames-in-linux</a></p>
+<hr class="docutils" />
+<p>unimog 的转发用的是 xdp 的 tx action，所以其对网络拓扑有和 katran 一样的要求，即 “从客户端到 l4lb” 和 “从 l4lb 到 l7lb” 走的是同一个网络接口。如下图所示：</p>
+<img alt="../_images/l4lb-network-topology.png" src="../_images/l4lb-network-topology.png" />
+<p><a class="reference external" href="https://github.com/facebookincubator/katran#environment-requirements-for-katran-to-run">https://github.com/facebookincubator/katran#environment-requirements-for-katran-to-run</a></p>
 </div>
 </div>
 

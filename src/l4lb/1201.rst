@@ -6,7 +6,11 @@ Day 4-7: xdp 开发基础
 搭建开发环境
 ---------------
 
-主要的依赖就是 libbpf、llvm，clang、libelf。llvm+clang 将 xdp c 程序编译为 bpf，存储在 ELF obj 文件中。libbpf 用来 load bpf 程序入内核并将 bpf 程序 attach 到内核的各种 hook 中去。
+使用 vagrant+centos8（centos8 内核版本 >=4.18.0-80，可以符合 xdp 程序开发的最低内核版本要求）。
+
+https://en.wikipedia.org/wiki/CentOS#CentOS_version_8
+
+主要的依赖有 libbpf、llvm，clang、libelf。llvm+clang 将 xdp c 程序编译为 bpf，存储在 ELF obj 文件中。libbpf 用来 load bpf 程序入内核并将 bpf 程序 attach 到内核的各种 hook 中去。
 
 .. code-block:: console
 
@@ -34,6 +38,7 @@ data plane 的程序大致如下：
 
     #define SEC(NAME) __attribute__((section(NAME), used))
 
+    SEC("xdp")
     int  xdp_prog_simple (struct xdp_md *ctx)
     {
         return XDP_PASS;
@@ -226,7 +231,7 @@ bpf 对函数和循环的支持有限，所以 bpf 程序中
         struct icmp6hdr *icmp_hdr = ip6h + 1;
         if (bpf_ntohs(icmp_hdr->icmp6_sequence) % 2 != 0)
             return XDP_DROP;
-        
+
         return XDP_PASS;
     }
 
@@ -277,17 +282,6 @@ xdp 程序可以直接修改 [ctx->data, ctx->data_end] 之间的数据，并且
 改包的内容后，比如修改了 IPv4 包的 header 之后，要更新其 checksum 字段。这个可以使用 ``bpf_csum_diff`` 来增量计算 checksum，而不是重新计算。
 
 https://en.wikipedia.org/wiki/IPv4_header_checksum
-
-网络拓扑要求
---------------
-
-unimog 的转发用的是 xdp 的 tx action，所以其对网络拓扑有和 katran 一样的要求，即 “从客户端到 l4lb” 和 “从 l4lb 到 l7lb” 走的是同一个网络接口。如下图所示：
-
-.. image:: images/l4lb-network-topology.png
-
-https://github.com/facebookincubator/katran#environment-requirements-for-katran-to-run
-
-当然 xdp 还有一个 redirect action，可以允许从不同接口将包发出去。
 
 使用 bpf_csum_diff 更新 checksum
 --------------------------------------
