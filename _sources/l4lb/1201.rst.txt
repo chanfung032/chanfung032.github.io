@@ -1,0 +1,361 @@
+Day 4-7: xdp 开发基础
+=====================
+
+.. Day 4
+
+搭建开发环境
+---------------
+
+主要的依赖就是 libbpf、llvm，clang、libelf。llvm+clang 将 xdp c 程序编译为 bpf，存储在 ELF obj 文件中。libbpf 用来 load bpf 程序入内核并将 bpf 程序 attach 到内核的各种 hook 中去。
+
+.. code-block:: console
+
+    $ yum install clang llvm elfutils-libelf-devel libbpf bpftool
+
+详细可以参见（centos 的参见其中的 fedora 部分即可）：
+https://github.com/xdp-project/xdp-tutorial/blob/master/setup_dependencies.org#dependencies
+
+第一个 xdp 程序
+------------------
+
+一个 xdp 程序一般包含两个部分：
+
+1. control plane 一个用户空间程序，一般以 _user.c 结尾，用来将 xdp bpf 程序加载从 elf 文件中加载入内核并且后续可以通过 bpf map 和其交互。
+2. data plane 加载入内核的 bpf 程序，这个一般以 _kern.c 结尾，使用 clang 和 llvm 编译为 bpf。
+
+以 https://github.com/xdp-project/xdp-tutorial/tree/master/basic01-xdp-pass 为例（就是一个啥也不干，直接将包交给内核去处理的程序）。
+
+data plane 的程序大致如下：
+
+.. code-block:: console
+
+    $ cat xdp_pass_kern.c
+    #include <linux/bpf.h>
+
+    #define SEC(NAME) __attribute__((section(NAME), used))
+
+    int  xdp_prog_simple (struct xdp_md *ctx)
+    {
+        return XDP_PASS;
+    }
+
+将其编译为 obj 文件：
+
+.. code-block:: console
+
+    $ clang -O2 -target bpf -c xdp_pass_kern.c -o xdp_pass_kern.o
+
+control plane xdp_pass_user.c 的代码比较长，但核心代码如下：
+
+.. code-block:: c
+
+    int prog_fd = -1;
+    struct bpf_object *obj;
+    bpf_prog_load ("xdp_pass_kern.o", BPF_PROG_TYPE_XDP, &obj, &prog_fd);
+    bpf_set_link_xdp_fd (ifindex, prog_fd, xdp_flags);
+
+其中，ifindex 是要加载的网络接口的 index，这段代码主要就是调用 bpf_prog_load 加载 obj 文件中的 bpf 代码进内核，然后调用 bpf_set_link_xdp_fd 将这段代码挂载到网络接口的 hook 中去。
+
+编译：
+
+.. code-block:: console
+
+    $ gcc -Wall -I../libbpf/src//build/usr/include/-g -I../headers/-L../libbpf/src/-o xdp_pass_user ../common//common_params.o \
+    xdp_pass_user.c -l:libbpf.a -lelf
+
+执行：
+
+.. code-block:: console
+
+    $ ./xdp_pass_user -d eth1  --skb-mode
+    Success: Loading XDP prog name:xdp_prog_simple (id:24) on device:eth1 (ifindex:3)
+
+查看：
+
+.. code-block:: console
+
+    $ ip link list dev eth1
+    3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 xdpgeneric qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+        link/ether 08:00:27:82:92:cd brd ff:ff:ff:ff:ff:ff
+        prog/xdp id 24 tag 3b185187f1855c4c jited
+
+最后一行可以看到 xdp 程序被加载入网络接口的 hook 中了。
+
+使用 ip 命令加载 xdp 程序
+--------------------------
+
+简单的 xdp 程序也可以使用 ip 命令直接加载，不用自己写加载程序。
+
+加载：
+
+.. code-block:: console
+
+    $ ip link set dev eth1 xdp obj xdp_pass_kern.o sec xdp
+
+卸载：
+
+.. code-block:: console
+
+    $ ip link set dev eth1 xdp off
+
+xdp 代码加载模式
+-----------------
+
+xdp 代码有好几种加载的模式：skb/driver/hardware，性能上 skb < driver < hardware，但 driver 和 hardware 需要驱动和硬件的支持。
+
+https://stackoverflow.com/questions/57171394/with-attach-xdp-does-flags-control-the-mode/57173029#57173029
+
+查看网络接口的 driver
+
+.. code-block:: console
+
+    # ethtool -i eth1
+    driver: e1000
+    version: 7.3.21-k8-NAPI
+    firmware-version:
+    expansion-rom-version:
+    bus-info: 0000:00:08.0
+    supports-statistics: yes
+    supports-test: yes
+    supports-eeprom-access: yes
+    supports-register-dump: yes
+    supports-priv-flags: no
+
+目前支持 xdp driver 的 driver list：
+
+https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md#xdp
+
+Map
+----------
+
+这个应该可以用来存储 forwading table。
+
+定义（在 _kernel.c 中定义一个全局变量）：
+
+.. code-block:: c
+
+    struct bpf_map_def SEC ("maps") xdp_stats_map = {
+        .type        = BPF_MAP_TYPE_ARRAY,
+        .key_size    = sizeof (__u32),
+        .value_size  = sizeof (struct datarec),
+        .max_entries = XDP_ACTION_MAX,
+    };
+
+在 bpf 程序中，直接调用 bpf 接口就可以操作 map 了：
+
+.. code-block:: c
+
+    rec = bpf_map_lookup_elem (&xdp_stats_map, &key);
+    lock_xadd (&rec->rx_packets, 1);
+
+.. _bpf-map:
+
+在用户态的程序中操作 map 需要先通过 map 名获取 map 的 fd，然后再通过 map fd 操作：
+
+.. code-block:: c
+
+    map =  bpf_object__find_map_by_name (bpf_obj, "xdp_stats_map");
+    map_fd = bpf_map__fd (map);
+    map_get_value_array (map_fd , key, &value)
+
+bpf map 有很多种类型：https://prototype-kernel.readthedocs.io/en/latest/bpf/ebpf_maps_types.html
+
+.. Day 6
+
+Pinning Map
+--------------------
+
+前述 :ref:`bpf map 操作 <bpf-map>` 中，bpf map 的操作需要 bpf 程序的 bpf_object 对象，通过其获取 bpf map 的 fd。bpf map 可以通过 pinning 操作将 map 和一个文件路径绑定在一起，这样要读取 map 直接从该文件路径获取 map 的 fd 就可以了。
+
+Mount BPF 文件系统：
+
+.. code-block:: console
+
+    $ mount -t bpf bpf /sys/fs/bpf/
+
+在 loader 程序中 pinning map：
+
+.. code-block:: c
+
+    // 清理
+    bpf_object__unpin_maps(bpf_obj, "/sys/fs/bpf/eth1");
+    bpf_object__pin_maps(bpf_obj, "/sys/fs/bpf/eth1/xdp_stats_map");
+
+其它程序如果要操作 map，直接通过路径获取 map 的 fd 即可：
+
+.. code-block:: c
+
+    int stats_map_fd;
+    struct bpf_map_info info = { 0 };
+    stats_map_fd = open_bpf_map_file("/sys/fs/bpf/eth1/", "xdp_stats_map", &info);
+
+函数内联、循环展开
+-----------------------
+
+bpf 对函数和循环的支持有限，所以 bpf 程序中
+
+- 如果使用子函数，需要在函数前面加上 ``__always_inline``，让函数始终内联。
+- 如果有循环，需要在循环语句前加上 ``#pragma unroll``，让循环展开。
+
+而不是让编译器自己去做决定。
+
+网络包解析
+----------------
+
+下面是一个简单的 IPv6 版本的 ICMP 处理程序示例，功能是丢掉 sequence number 为偶数的 icmp 包。
+
+.. code-block:: c
+
+    int  xdp_parser_func(struct xdp_md *ctx) {
+        // [data, data_end) 为网络包数据
+        void *data     = (void *)(long)ctx->data;
+        void *data_end = (void *)(long)ctx->data_end;
+
+        struct ethhdr *eth = data;
+        if (eth + 1 > data_end)
+            return XDP_ABORT;
+        if (eth->h_proto != bpf_htons(ETH_P_IPV6))
+            return XDP_DROP;
+
+        struct ipv6hdr *ip6h = eth + 1;
+        if (ip6h + 1 > data_end)
+            return XDP_ABORT;
+        if (ip6h->nexthdr != IPPROTO_ICMPV6)
+            return XDP_DROP;
+
+        struct icmp6hdr *icmp_hdr = ip6h + 1;
+        if (bpf_ntohs(icmp_hdr->icmp6_sequence) % 2 != 0)
+            return XDP_DROP;
+        
+        return XDP_PASS;
+    }
+
+
+解析网络包第一步，包含定义 packet header 的各种头文件：
+
+================= =========================
+Struct            Header file
+================= =========================
+struct ethhdr	  <linux/if_ether.h>
+struct ipv6hdr	  <linux/ipv6.h>
+struct iphdr	  <linux/ip.h>
+struct icmp6hdr	  <linux/icmpv6.h>
+struct icmphdr	  <linux/icmp.h>
+================= =========================
+
+第二步，bounds checking，在读取 \*hdr 结构体中的字段时，首先需要检查 \*hdr 结构体是否在 [data, data_end) 之间，如果不检查，程序后续加载的时候 bpf verifier 会报错。也就是上面代码中的 ``if (eth + 1 > data_end) ...`` 这样的判断，It's necessary。
+
+最后，网络包的数据是直接从网卡读到的数据，所以引用字段时要注意字节序，不要混用网络序和主机序的数据，必要时使用 bpf_htons/bpf_ntohs 之类的函数互相转换。
+
+- https://en.wikipedia.org/wiki/Ethernet_frame
+- https://en.wikipedia.org/wiki/IPv6_packet
+- https://code.woboq.org/linux/linux/tools/testing/selftests/bpf/bpf_endian.h.html
+
+----
+
+.. code-block:: c
+
+	printf("%p\n", (void*)NULL + 1);
+	printf("%p\n", (int*)NULL + 1);
+
+上面的代码运行的结果是： ::
+
+    0x1
+    0x4
+
+指针加 1 的时候，如果是 ``void*`` 指针，指针是往后移一个字节，如果指针有类型，那么则是往后移 ``sizeof(类型）`` 个字节。所以上面所有 hdr 类型的 bounds checking 的时候都是使用相同的指针加 1 操作。
+
+网络包 Rewrite
+----------------------
+
+xdp 程序可以直接修改 [ctx->data, ctx->data_end] 之间的数据，并且可以通过 ``bpf_xdp_adjust_head`` 函数来扩大/缩小网络数据包的 buffer 的大小。
+
+.. c:function:: long bpf_xdp_adjust_head(struct xdp_buff *xdp_md, int delta)
+
+   将 ``xdp_md->data`` 指针移动 ``delta`` 个字节，delta 为正的时候是缩小网络包的 buffer（可以用在解包场景下），如果为负，相当于在 buffer 的前面新申请了一段 buffer 空间（可以用来封包），返回 0 成功或者一个负的错误码。
+
+改包的内容后，比如修改了 IPv4 包的 header 之后，要更新其 checksum 字段。这个可以使用 ``bpf_csum_diff`` 来增量计算 checksum，而不是重新计算。
+
+https://en.wikipedia.org/wiki/IPv4_header_checksum
+
+网络拓扑要求
+--------------
+
+unimog 的转发用的是 xdp 的 tx action，所以其对网络拓扑有和 katran 一样的要求，即 “从客户端到 l4lb” 和 “从 l4lb 到 l7lb” 走的是同一个网络接口。如下图所示：
+
+.. image:: images/l4lb-network-topology.png
+
+https://github.com/facebookincubator/katran#environment-requirements-for-katran-to-run
+
+当然 xdp 还有一个 redirect action，可以允许从不同接口将包发出去。
+
+使用 bpf_csum_diff 更新 checksum
+--------------------------------------
+
+以更新 icmp 包的 checksum 为例：
+
+.. code-block:: c
+
+    struct icmphdr_common *icmphdr;
+    struct icmphdr_common icmphdr_old;
+    // 保存当前的 checksum
+    __u16 old_csum = icmphdr->cksum;
+    // 将 checksum 字段清零
+    icmphdr->cksum = 0;
+    // 保存当前的 icmphdr
+    icmphdr_old = *icmphdr;
+    // 修改 icmphdr 中的字段，修改之后 checksum 就需要更新
+    icmphdr->type = ICMP_ECHOREPLY;
+    icmphdr->cksum = icmp_checksum_diff(~old_csum, icmphdr, &icmphdr_old);
+
+    // 计算新的 checksum
+    __u32 size = sizeof(struct icmphdr_common);
+    __u32 csum = bpf_csum_diff((__be32 *)&icmphdr_old, size, (__be32 *)icmphdr, size, ~old_csum);
+    // 将 checksum 从 __u32 转成 __u16
+    icmphdr->cksum = csum_fold_helper(csum);
+
+    static __always_inline __u16 csum_fold_helper(__u32 csum) {
+        __u32 sum;
+        sum = (csum >> 16) + (csum & 0xffff);
+        sum += (sum >> 16);
+        return ~sum;
+    }
+
+网络包 Redirect
+-------------------
+
+.. c:function:: long bpf_redirect(u32 ifindex, u64 flags)
+
+直接在处理函数的最后调用 ``return bpf_redirect(ifindex, 0)`` redirect 网络包。
+
+.. c:function:: long bpf_redirect_map(struct bpf_map *map, u32 key, u64 flags)
+
+bpf_redirect_map 的使用稍微复杂一点，首先在 _kern.c 程序中：
+
+.. code-block:: c
+
+    // 定义一个 map 用于存储 key->ifindex 这个映射关系
+    struct {
+        __uint(type, BPF_MAP_TYPE_DEVMAP);
+        __uint(key_size, sizeof(int));
+        __uint(value_size, sizeof(int));
+        __uint(max_entries, 1);
+    } tx_port SEC(".maps");
+
+    // 然后在 xdp 程序中，引用该 map 和 key 来 redirect。
+    return bpf_redirect_map(&tx_port, 0, 0);
+
+在 _user.c 程序中，设置转发的 ifindex。
+
+.. code-block:: c
+
+    int map_fd = bpf_obj_get(pinned_file);
+    int map_key = 0;
+    bpf_map_update_elem(map_fd, &map_key, &ifindex, 0);
+
+linux 5.6 之前 bpf_redirect 的性能不如 bpf_redirect_map，https://github.com/xdp-project/xdp-tutorial/issues/104#issuecomment-591302134，另外 hard code 没法更新等问题，一般不要直接使用 bpf_redirect 。
+
+Python BPF 操作库
+----------------------
+
+iovisor/bcc 封装了一个 python BPF 操作库 https://github.com/iovisor/bcc
