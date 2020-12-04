@@ -39,4 +39,4 @@ https://www.haproxy.com/blog/layer-4-load-balancing-direct-server-return-mode/
 
 - cloudflare 和 cilium 一起开发的一个 go ebf 库：https://github.com/cilium/ebpf
 - https://github.com/xdp-project/xdp-tutorial
-- 使用 xdp 需要内核版本 >= 4.8，如果需要使用 AF_XDP socket family 的话需要 >= 4.18（unimog 可能不需要使用这个？）。
+- 使用 xdp 需要内核版本 >= 4.8，如果需要使用 AF_XDP socket family 的话需要 >= 4.18（unimog 可能不需要使用这个？）。 https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md#xdp
