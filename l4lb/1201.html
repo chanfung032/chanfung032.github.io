@@ -349,6 +349,14 @@ long <code class="descname">bpf_redirect_map</code><span class="sig-paren">(</sp
 <h2>Python BPF 操作库<a class="headerlink" href="#python-bpf-cao-zuo-ku" title="Permalink to this headline">¶</a></h2>
 <p>iovisor/bcc 封装了一个 python BPF 操作库 <a class="reference external" href="https://github.com/iovisor/bcc">https://github.com/iovisor/bcc</a></p>
 </div>
+<div class="section" id="tiao-shi-ri-zhi">
+<h2>调试日志<a class="headerlink" href="#tiao-shi-ri-zhi" title="Permalink to this headline">¶</a></h2>
+<p>bpf_printk 跟 printf 一个样</p>
+<p>日志查看方式：</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> cat  /sys/kernel/debug/tracing/trace_pipe
+</pre></div>
+</div>
+</div>
 </div>
 
 
@@ -373,6 +381,7 @@ long <code class="descname">bpf_redirect_map</code><span class="sig-paren">(</sp
 <li><a class="reference internal" href="#shi-yong-bpf-csum-diff-geng-xin-checksum">使用 bpf_csum_diff 更新 checksum</a></li>
 <li><a class="reference internal" href="#wang-luo-bao-redirect">网络包 Redirect</a></li>
 <li><a class="reference internal" href="#python-bpf-cao-zuo-ku">Python BPF 操作库</a></li>
+<li><a class="reference internal" href="#tiao-shi-ri-zhi">调试日志</a></li>
 </ul>
 </li>
 </ul>

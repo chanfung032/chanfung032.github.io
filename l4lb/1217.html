@@ -1,0 +1,256 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Day 10: 开发 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="day-10-kai-fa">
+<h1>Day 10: 开发<a class="headerlink" href="#day-10-kai-fa" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="rtnetlink-answers-permission-denied">
+<h2>RTNETLINK answers: Permission denied<a class="headerlink" href="#rtnetlink-answers-permission-denied" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> ip addr add dev veth0 fc00:dead:cafe:1::1/64
+<span class="go">RTNETLINK answers: Permission denied</span>
+</pre></div>
+</div>
+<p>修改 <code class="docutils literal"><span class="pre">/etc/sysctl.conf</span></code> 中的 <code class="docutils literal"><span class="pre">net.ipv6.conf.all.disable_ipv6</span></code> 为 0。然后执行 <code class="docutils literal"><span class="pre">sysctl</span> <span class="pre">-p</span></code> 生效。</p>
+</div>
+<div class="section" id="ipv6-di-zhi-biao-shi-fa">
+<h2>IPv6 地址表示法<a class="headerlink" href="#ipv6-di-zhi-biao-shi-fa" title="Permalink to this headline">¶</a></h2>
+<p>IPv6 地址一共 128 位，一般分成 8 组，每组 16 位，每组使用 16 进制表示，组与组之间使用冒号隔开，例如： 2001:0db8:0000:0000:0000:ff00:0042:8329 。</p>
+<p>地址还可以通过以下两条规则缩略表示：</p>
+<ul class="simple">
+<li>所有前缀零可以省略掉，比如 0042 缩略为 42 。</li>
+<li>像 :0000:0000:0000: 这样连续的零段可以缩略为 :: ，但一个地址只能缩略一次。</li>
+</ul>
+<p>例如：</p>
+<ul class="simple">
+<li>地址 2001:0db8:0000:0000:0000:ff00:0042:8329 可以缩略为 2001:db8::ff00:42:8329 。</li>
+<li>loopback 地址 0000:0000:0000:0000:0000:0000:0000:0001 可以缩略为 ::1 。</li>
+</ul>
+<p>特殊形式 ::ffff:192.0.2.128 表示的是 IPv4 地址 192.0.2.128 。</p>
+</div>
+<div class="section" id="gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo">
+<h2>构建本地开发测试用网络<a class="headerlink" href="#gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo" title="Permalink to this headline">¶</a></h2>
+<p>使用 linux netns 创建一个如下的开发测试用网络：</p>
+<img alt="../_images/testenv-topology.png" src="../_images/testenv-topology.png" />
+<p>（图中黑体为 netns 名，斜体为网络接口名 iface）</p>
+<p>root ns 开启转发功能，在网络中相当于的路由器角色。</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span><span class="nb">echo</span> <span class="m">1</span> &gt;/proc/sys/net/ipv4/ip_forward
+<span class="nb">echo</span> <span class="m">1</span> &gt;/proc/sys/net/ipv6/conf/all/forwarding
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://www.youtube.com/watch?v=CiX30_JVyYQ">How to Connect two Networks using a router</a></li>
+<li><a class="reference external" href="https://unix.stackexchange.com/questions/14056/what-is-kernel-ip-forwarding">https://unix.stackexchange.com/questions/14056/what-is-kernel-ip-forwarding</a></li>
+</ul>
+</div>
+<div class="section" id="lvs-rs-shang-ru-he-pei-zhi-vip">
+<h2>LVS RS 上如何配置 VIP<a class="headerlink" href="#lvs-rs-shang-ru-he-pei-zhi-vip" title="Permalink to this headline">¶</a></h2>
+<p>比如我们给开发测试的 22 环境加上 VIP 172.17.3.3：</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span><span class="nb">echo</span> <span class="m">1</span>  &gt; /proc/sys/net/ipv4/conf/eth0/arp_ignore
+<span class="nb">echo</span> <span class="m">2</span>  &gt; /proc/sys/net/ipv4/conf/eth0/arp_announce
+<span class="nb">echo</span> <span class="m">1</span>  &gt; /proc/sys/net/ipv4/conf/all/arp_ignore
+<span class="nb">echo</span> <span class="m">2</span>  &gt; /proc/sys/net/ipv4/conf/all/arp_announce
+ip addr add dev lo <span class="m">172</span>.17.3.3/32
+</pre></div>
+</div>
+<p>我们来解释下上面的配置都起什么作用：</p>
+<p>首先，arp_ignore，这个参数默认为 0，也就是网口收到任何本机 IP 地址的 ARP 查询都得响应，我们需要修改其为 1，也就是网口只响应本网口上绑定的 IP 地址的 ARP 查询，这样 eth0 网口上收到 VIP 地址的 ARP 查询就不会响应。</p>
+<p>第二，设置 lo 上的 VIP 地址的子网掩码为 255.255.255.255。我们假设一个发出的包 IP 源地址为 VIP，目标地址为 172.17.3.1，因为 172.17.3.1 &amp; 255.255.255.255 != 172.17.3.3 &amp; 255.255.255.255，所以这个包就不会走 lo 口发出去，而是需要根据路由表找从哪个口出去，结果就是包从 eth0 口发出了。</p>
+<p>最后，就是 arp_announce 起作用的地方了，我们假设上面给 172.17.3.1 发包的时候不知道这个地址的 Mac 地址，那么这个时候就需要进行 ARP 查询，ARP 包中会带上自己的 IP 地址（默认为要发的 IP 包的 IP，也就是 VIP）和 Mac 地址，路由器收到这个 ARP 请求会更新自己的 ARP 表，也就是会把源 IP 和源 Mac 放入自己的 ARP 表里面，这样路由器的 ARP 表就乱了，这是我们所不希望的，所以我们修改 arp_announce 为 2，就是让发 ARP 包的时候忽略 IP 包的源 IP，而使用网口的 IP 作为源 IP。</p>
+<ul class="simple">
+<li><a class="reference external" href="https://www.jianshu.com/p/e9a2a5af2ec1">【深入浅出Linux】LVS的DR模式的关键点</a></li>
+<li><a class="reference external" href="https://www.jianshu.com/p/5a0f0bff6f34">【深入浅出Linux】LVS中VIP配置在环回接口上，子网掩码为什么是4个255？</a></li>
+<li><a class="reference external" href="http://kb.linuxvirtualserver.org/wiki/Using_arp_announce/arp_ignore_to_disable_ARP">http://kb.linuxvirtualserver.org/wiki/Using_arp_announce/arp_ignore_to_disable_ARP</a></li>
+<li><a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt</a></li>
+</ul>
+</div>
+<div class="section" id="shi-yong-scapy-gou-zao-fa-song-wang-luo-bao">
+<h2>使用 scapy 构造发送网络包<a class="headerlink" href="#shi-yong-scapy-gou-zao-fa-song-wang-luo-bao" title="Permalink to this headline">¶</a></h2>
+<p>导入 scapy 包：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">scapy.all</span> <span class="kn">import</span> <span class="o">*</span>
+</pre></div>
+</div>
+<p>构造并发送网络包：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pkt</span> <span class="o">=</span> <span class="n">IP</span><span class="p">(</span><span class="n">dst</span><span class="o">=</span><span class="s2">&quot;1.2.3.4&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">TCP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">22</span><span class="p">)</span><span class="o">/</span><span class="s2">&quot;data&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">send</span><span class="p">(</span><span class="n">pkt</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>如果发送后需要查看返回包，可以使用 sr（发送并接受回包）、sr1（发送并接送第一个回包）函数。</p>
+<p>如果需要发送自定义二层协议头的网络包，那么则需要使用 sendp/srp/srp1 函数。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pkt</span> <span class="o">=</span> <span class="n">Ether</span><span class="p">(</span><span class="n">dst</span><span class="o">=</span><span class="s2">&quot;62:99:fb:32:b5:7a&quot;</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;22:7f:ff:10:c1:7f&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sendp</span><span class="p">(</span><span class="n">pkt</span><span class="p">,</span> <span class="n">iface</span><span class="o">=</span><span class="s2">&quot;eth0&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>查看所有的命令函数：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">lsc</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>查看支持的协议、协议的字段名以及默认值：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ls</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ls</span><span class="p">(</span><span class="n">Ether</span><span class="p">)</span>
+<span class="go">dst        : DestMACField                        = (None)</span>
+<span class="go">src        : SourceMACField                      = (None)</span>
+<span class="go">type       : XShortEnumField                     = (36864)</span>
+</pre></div>
+</div>
+<p>其它一些查看包的常用函数：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hexdump</span><span class="p">(</span><span class="n">pkt</span><span class="p">)</span>
+<span class="go">0000  45 00 00 2C 00 01 00 00 40 06 6A B7 0A 00 02 0F  E..,....@.j.....</span>
+<span class="go">0010  01 02 03 04 00 14 00 16 00 00 00 00 00 00 00 00  ................</span>
+<span class="go">0020  50 02 20 00 A6 DD 00 00 64 61 74 61              P. .....data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pkt</span>
+<span class="go">&lt;IP  frag=0 proto=tcp dst=1.2.3.4 |&lt;TCP  dport=ssh |&lt;Raw  load=&#39;data&#39; |&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pkt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="go">###[ IP ]###</span>
+<span class="go">  version   = 4</span>
+<span class="go">  ihl       = None</span>
+<span class="go">  ...</span>
+<span class="go">###[ TCP ]###</span>
+<span class="go">     sport     = ftp_data</span>
+<span class="go">     dport     = ssh</span>
+<span class="go">     ...</span>
+<span class="go">###[ Raw ]###</span>
+<span class="go">        load      = &#39;data&#39;</span>
+</pre></div>
+</div>
+<p>一个示例代码，给上面 22 ns 里绑定的 VIP 发一个 ping 并打印出其回复：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">IFACE_22_MAC</span> <span class="o">=</span> <span class="s2">&quot;a6:19:1e:5e:ca:98&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">NS_22_IFACE_ETH0_MAC</span> <span class="o">=</span> <span class="s2">&quot;ce:35:1f:4d:af:a0&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">srp1</span><span class="p">(</span><span class="n">Ether</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="n">IFACE_22_MAC</span><span class="p">,</span> <span class="n">dst</span><span class="o">=</span><span class="n">NS_22_IFACE_ETH0_MAC</span><span class="p">)</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s2">&quot;172.17.3.1&quot;</span><span class="p">,</span> <span class="n">dst</span><span class="o">=</span><span class="s2">&quot;172.17.3.3&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">ICMP</span><span class="p">(),</span> <span class="n">iface</span><span class="o">=</span><span class="s2">&quot;22&quot;</span><span class="p">)</span>
+<span class="go">Begin emission:</span>
+<span class="go">Finished sending 1 packets.</span>
+<span class="go">*</span>
+<span class="go">Received 1 packets, got 1 answers, remaining 0 packets</span>
+<span class="go">&lt;Ether  dst=a6:19:1e:5e:ca:98 src=ce:35:1f:4d:af:a0 type=IPv4 |&lt;IP  version=4 ihl=5 tos=0x0 len=28 id=25877 flags= frag=0 ttl=64 proto=icmp chksum=0xb7a5 src=172.17.3.3 dst=172.17.3.1 |&lt;ICMP  type=echo-reply code=0 chksum=0xffff id=0x0 seq=0x0 |&gt;&gt;&gt;</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://scapy.readthedocs.io/en/latest/usage.html">https://scapy.readthedocs.io/en/latest/usage.html</a></p>
+</div>
+<div class="section" id="attribute-packed">
+<h2>__attribute__((packed))<a class="headerlink" href="#attribute-packed" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://gcc.gnu.org/onlinedocs/gcc-4.0.2/gcc/Type-Attributes.html">https://gcc.gnu.org/onlinedocs/gcc-4.0.2/gcc/Type-Attributes.html</a></p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span>
+<span class="p">{</span>
+    <span class="kt">char</span> <span class="n">c</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">unpacked_struct</span><span class="p">;</span>
+
+<span class="k">typedef</span> <span class="k">struct</span>
+<span class="p">{</span>
+    <span class="kt">char</span> <span class="n">c</span><span class="p">;</span>
+    <span class="kt">int</span>  <span class="n">i</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">__attribute__</span> <span class="p">((</span><span class="n">__packed__</span><span class="p">))</span> <span class="n">packed_struct</span><span class="p">;</span>
+
+<span class="n">printf</span><span class="p">(</span><span class="s">&quot;unpacked: %ld, packed: %ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">unpacked_struct</span><span class="p">),</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">packed_struct</span><span class="p">));</span>
+</pre></div>
+</div>
+<p>运行结果：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">unpacked</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span> <span class="n">packed</span><span class="p">:</span> <span class="mi">5</span>
+</pre></div>
+</div>
+<p>告诉编译器取消编译过程中对结构体的字段进行对齐优化，按照实际占用字节数进行对齐，防止不同机器编译出的结构体内存结构不一样，导致结构体字段访问出问题，一般定义网络包格式的结构体都会使用这个属性标示。</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Day 10: 开发</a><ul>
+<li><a class="reference internal" href="#rtnetlink-answers-permission-denied">RTNETLINK answers: Permission denied</a></li>
+<li><a class="reference internal" href="#ipv6-di-zhi-biao-shi-fa">IPv6 地址表示法</a></li>
+<li><a class="reference internal" href="#gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo">构建本地开发测试用网络</a></li>
+<li><a class="reference internal" href="#lvs-rs-shang-ru-he-pei-zhi-vip">LVS RS 上如何配置 VIP</a></li>
+<li><a class="reference internal" href="#shi-yong-scapy-gou-zao-fa-song-wang-luo-bao">使用 scapy 构造发送网络包</a></li>
+<li><a class="reference internal" href="#attribute-packed">__attribute__((packed))</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/1217.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/1217.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -353,3 +353,14 @@ Python BPF 操作库
 ----------------------
 
 iovisor/bcc 封装了一个 python BPF 操作库 https://github.com/iovisor/bcc
+
+调试日志
+-----------
+
+bpf_printk 跟 printf 一个样
+
+日志查看方式：
+
+.. code-block:: console
+
+    $ cat  /sys/kernel/debug/tracing/trace_pipe
