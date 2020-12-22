@@ -1,0 +1,41 @@
+Day 11: GLB
+=================
+
+转发表生成规则
+---------------------
+
+- 实现的原理 https://github.com/github/glb-director/blob/master/docs/development/glb-hashing.md
+- 转发表怎么配置 https://github.com/github/glb-director/blob/master/docs/setup/forwarding-table-config.md
+- 实现代码 https://github.com/github/glb-director/blob/v1.0.7/src/glb-director/cli/main.c#L465
+
+GLB 转发表的生成和更新算法采用的是 Rendezvous Hashing，也是一种一致性哈希，基本逻辑如下所示：
+
+https://en.wikipedia.org/wiki/Rendezvous_hashing
+
+.. code-block:: python
+
+    for i, entry in enumerated(table_entries):
+        # 以转发表条目编号的哈希为前缀，计算hash(前缀+后端ip)后的值作为后端ip的哈希
+        # 以哈希值作为比较的key，倒序排列所有的后端
+        prefix := siphash(i)
+        for b in backends:
+            b.hash = siphash(prefix + b.ip)
+        backends = sorted(backends, key=lambda x: x.hash, reverse=True)
+
+        # 取排序后的列表的前两个为 primary 和 secondary 的后端。
+        entry.primary, entry.secondary = backends[0], backends[1]
+
+        # 如果 primary 不是健康状态，交换 primary 和 secondary 的后端
+        if not entry.primary.healthy:
+            entry.primay, entry.secondary = entry.secondary, entry.primay
+    }
+
+GLB 只处理 primary 挂的情况，处理的方式是交换 primary 和 secondary。后端的健康状况是每个 GLB director 自己监控，然后自己修改转发表，这样实现的优点是简单，没有中心节点，缺点在于：
+
+1. 不支持权重（有 Rendezvous Hashing with Weight 算法，没实现主要可能考虑是没必要）。
+2. 只能保证一台机器挂掉情况下的高可用，如果有 >= 2 台机器挂掉，那么转发表中 primary 和 secondary 同时为挂掉机器的条目对应的请求会被转发给 primary，从而导致这部分请求服务不可用，官方对于这个问题的说法是这个对于 github 够用，如果不够用，那么除了 primary、secondary 机器可以再添加更多的跳数。参见：https://github.com/github/glb-director/issues/77。
+
+GUE 格式
+-----------
+
+https://github.com/github/glb-director/blob/master/docs/development/gue-header.md

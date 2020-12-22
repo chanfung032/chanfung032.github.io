@@ -1,0 +1,149 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Day 11: GLB &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="AC 自动机" href="../aho-corasick-algo.html" />
+    <link rel="prev" title="Day 10: 开发" href="1217.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="day-11-glb">
+<h1>Day 11: GLB<a class="headerlink" href="#day-11-glb" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="zhuan-fa-biao-sheng-cheng-gui-ze">
+<h2>转发表生成规则<a class="headerlink" href="#zhuan-fa-biao-sheng-cheng-gui-ze" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>实现的原理 <a class="reference external" href="https://github.com/github/glb-director/blob/master/docs/development/glb-hashing.md">https://github.com/github/glb-director/blob/master/docs/development/glb-hashing.md</a></li>
+<li>转发表怎么配置 <a class="reference external" href="https://github.com/github/glb-director/blob/master/docs/setup/forwarding-table-config.md">https://github.com/github/glb-director/blob/master/docs/setup/forwarding-table-config.md</a></li>
+<li>实现代码 <a class="reference external" href="https://github.com/github/glb-director/blob/v1.0.7/src/glb-director/cli/main.c#L465">https://github.com/github/glb-director/blob/v1.0.7/src/glb-director/cli/main.c#L465</a></li>
+</ul>
+<p>GLB 转发表的生成和更新算法采用的是 Rendezvous Hashing，也是一种一致性哈希，基本逻辑如下所示：</p>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Rendezvous_hashing">https://en.wikipedia.org/wiki/Rendezvous_hashing</a></p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">enumerated</span><span class="p">(</span><span class="n">table_entries</span><span class="p">):</span>
+    <span class="c1"># 以转发表条目编号的哈希为前缀，计算hash(前缀+后端ip)后的值作为后端ip的哈希</span>
+    <span class="c1"># 以哈希值作为比较的key，倒序排列所有的后端</span>
+    <span class="n">prefix</span> <span class="p">:</span><span class="o">=</span> <span class="n">siphash</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">backends</span><span class="p">:</span>
+        <span class="n">b</span><span class="o">.</span><span class="n">hash</span> <span class="o">=</span> <span class="n">siphash</span><span class="p">(</span><span class="n">prefix</span> <span class="o">+</span> <span class="n">b</span><span class="o">.</span><span class="n">ip</span><span class="p">)</span>
+    <span class="n">backends</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">backends</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">hash</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># 取排序后的列表的前两个为 primary 和 secondary 的后端。</span>
+    <span class="n">entry</span><span class="o">.</span><span class="n">primary</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">secondary</span> <span class="o">=</span> <span class="n">backends</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">backends</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># 如果 primary 不是健康状态，交换 primary 和 secondary 的后端</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span><span class="o">.</span><span class="n">primary</span><span class="o">.</span><span class="n">healthy</span><span class="p">:</span>
+        <span class="n">entry</span><span class="o">.</span><span class="n">primay</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">secondary</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">secondary</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">primay</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>GLB 只处理 primary 挂的情况，处理的方式是交换 primary 和 secondary。后端的健康状况是每个 GLB director 自己监控，然后自己修改转发表，这样实现的优点是简单，没有中心节点，缺点在于：</p>
+<ol class="arabic simple">
+<li>不支持权重（有 Rendezvous Hashing with Weight 算法，没实现主要可能考虑是没必要）。</li>
+<li>只能保证一台机器挂掉情况下的高可用，如果有 &gt;= 2 台机器挂掉，那么转发表中 primary 和 secondary 同时为挂掉机器的条目对应的请求会被转发给 primary，从而导致这部分请求服务不可用，官方对于这个问题的说法是这个对于 github 够用，如果不够用，那么除了 primary、secondary 机器可以再添加更多的跳数。参见：<a class="reference external" href="https://github.com/github/glb-director/issues/77">https://github.com/github/glb-director/issues/77</a>。</li>
+</ol>
+</div>
+<div class="section" id="gue-ge-shi">
+<h2>GUE 格式<a class="headerlink" href="#gue-ge-shi" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://github.com/github/glb-director/blob/master/docs/development/gue-header.md">https://github.com/github/glb-director/blob/master/docs/development/gue-header.md</a></p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Day 11: GLB</a><ul>
+<li><a class="reference internal" href="#zhuan-fa-biao-sheng-cheng-gui-ze">转发表生成规则</a></li>
+<li><a class="reference internal" href="#gue-ge-shi">GUE 格式</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">基于 xdp 的 L4LB 开发手记</a><ul>
+      <li>Previous: <a href="1217.html" title="previous chapter">Day 10: 开发</a></li>
+      <li>Next: <a href="../aho-corasick-algo.html" title="next chapter">AC 自动机</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/1222.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/1222.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
