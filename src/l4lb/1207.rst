@@ -64,3 +64,7 @@ https://writings.sh/post/consistent-hashing-algorithms-part-4-maglev-consistent-
 Maglev 的一致性哈希在某个后端挂了的情况下，影响的连接除了分发到这个后端的连接之外，还会稍微关联扰动（disruption）一些其它的连接，我们以下图删除一个后端为例，可以看到，:math:`Entry` 中除了为 :math:`B1` 的条目改变了之外，还影响了 :math:`entry \left[6 \right]` 。
 
 .. image:: images/maglev-remove-backend.png
+
+Maglev 一致哈希的均衡性比普通的一致性哈希和 Rendezvous 哈希都要好。
+
+.. image:: images/maglev-hash-efficiency.png

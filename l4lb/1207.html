@@ -24,6 +24,8 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Day 9: tc-bpf" href="1209.html" />
+    <link rel="prev" title="Day 4-7: xdp" href="1201.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -89,6 +91,8 @@
 <p>查找表的长度一般为一个大于 <span class="math">\(100 \times N\)</span> 的质数。</p>
 <p>Maglev 的一致性哈希在某个后端挂了的情况下，影响的连接除了分发到这个后端的连接之外，还会稍微关联扰动（disruption）一些其它的连接，我们以下图删除一个后端为例，可以看到，<span class="math">\(Entry\)</span> 中除了为 <span class="math">\(B1\)</span> 的条目改变了之外，还影响了 <span class="math">\(entry \left[6 \right]\)</span> 。</p>
 <img alt="../_images/maglev-remove-backend.png" src="../_images/maglev-remove-backend.png" />
+<p>Maglev 一致哈希的均衡性比普通的一致性哈希和 Rendezvous 哈希都要好。</p>
+<img alt="../_images/maglev-hash-efficiency.png" src="../_images/maglev-hash-efficiency.png" />
 </div>
 </div>
 
@@ -111,6 +115,10 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">基于 xdp 的 L4LB 开发手记</a><ul>
+      <li>Previous: <a href="1201.html" title="previous chapter">Day 4-7: xdp</a></li>
+      <li>Next: <a href="1209.html" title="next chapter">Day 9: tc-bpf</a></li>
+  </ul></li>
   </ul></li>
 </ul>
 </div>
