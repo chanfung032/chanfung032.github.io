@@ -1,4 +1,4 @@
-Day 10: 开发
+#1217 开发
 ====================
 
 RTNETLINK answers: Permission denied
@@ -39,7 +39,7 @@ IPv6 地址一共 128 位，一般分成 8 组，每组 16 位，每组使用 16
 
 root ns 开启转发功能，在网络中相当于的路由器角色。
 
-.. code-block:: sh 
+.. code-block:: sh
 
     echo 1 >/proc/sys/net/ipv4/ip_forward
     echo 1 >/proc/sys/net/ipv6/conf/all/forwarding
@@ -52,7 +52,7 @@ LVS RS 上如何配置 VIP
 
 比如我们给开发测试的 22 环境加上 VIP 172.17.3.3：
 
-.. code-block:: sh 
+.. code-block:: sh
 
     echo 1  > /proc/sys/net/ipv4/conf/eth0/arp_ignore
     echo 2  > /proc/sys/net/ipv4/conf/eth0/arp_announce

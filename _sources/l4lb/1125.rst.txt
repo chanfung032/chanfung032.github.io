@@ -1,4 +1,4 @@
-Day 3: Stateless Datacenter Load-balancing with Beamer
+#1125 Stateless Datacenter Load-balancing with Beamer
 ============================================================
 
 cf 的 unimog 不少思路来自 Stateless Datacenter Load-balancing with Beamer https://www.usenix.org/system/files/conference/nsdi18/nsdi18-olteanu.pdf 这篇论文。

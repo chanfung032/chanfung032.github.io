@@ -1,4 +1,4 @@
-Day 9: tc-bpf
+#1209 tc-bpf
 ========================
 
 第一个 tc-bpf 程序
@@ -12,7 +12,7 @@ Day 9: tc-bpf
 
     #define SEC(x)  __attribute__((section(x), used))
 
-    SEC("mycls") 
+    SEC("mycls")
     int cls_main(struct __sk_buff *skb)
     {
         return 2; // TC_ACT_SHOT

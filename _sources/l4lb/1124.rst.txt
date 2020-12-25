@@ -1,4 +1,4 @@
-Day 2: cloudflare 的四层代理转发逻辑
+#1124 cloudflare 的四层代理转发逻辑
 ========================================
 
 基本的转发逻辑
@@ -49,7 +49,7 @@ redirector 的实现
 
 https://man7.org/linux/man-pages/man8/tc-bpf.8.html
 
-第二版的逻辑 blog 里说是贡献了在： https://github.com/torvalds/linux/blob/c4ba153b6501fa7ccfdc7e57946fb1d6011e36e8/tools/testing/selftests/bpf/progs/test_cls_redirect.c 
+第二版的逻辑 blog 里说是贡献了在： https://github.com/torvalds/linux/blob/c4ba153b6501fa7ccfdc7e57946fb1d6011e36e8/tools/testing/selftests/bpf/progs/test_cls_redirect.c
 
 整体架构概括
 ------------
