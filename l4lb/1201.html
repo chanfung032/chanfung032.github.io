@@ -113,6 +113,10 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> ip link <span class="nb">set</span> dev eth1 xdp obj xdp_pass_kern.o sec xdp
 </pre></div>
 </div>
+<p>如果已加载了 xdp 程序，可以使用下面命令强制替换现有 xdp 程序。</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> ip -force link <span class="nb">set</span> dev eth1 xdp obj xdp_pass_kern.o sec xdp
+</pre></div>
+</div>
 <p>卸载：</p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> ip link <span class="nb">set</span> dev eth1 xdp off
 </pre></div>

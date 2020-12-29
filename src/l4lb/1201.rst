@@ -97,6 +97,12 @@ control plane xdp_pass_user.c 的代码比较长，但核心代码如下：
 
     $ ip link set dev eth1 xdp obj xdp_pass_kern.o sec xdp
 
+如果已加载了 xdp 程序，可以使用下面命令强制替换现有 xdp 程序。
+
+.. code-block:: console
+
+    $ ip -force link set dev eth1 xdp obj xdp_pass_kern.o sec xdp
+
 卸载：
 
 .. code-block:: console
