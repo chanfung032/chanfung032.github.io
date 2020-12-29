@@ -17,10 +17,11 @@ ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 
 .PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest coverage gettext
 
-clean:
-	cd .. && rm -rf $(shell ls -p ../|grep -v 'src/')
-
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(shell pwd)/../
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
+
+clean:
+	cd .. && rm -rf $(shell ls -p ../|grep -v 'src/')
+
