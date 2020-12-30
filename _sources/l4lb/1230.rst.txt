@@ -1,0 +1,174 @@
+#1230 调试
+===================
+
+如何调试问题
+-----------------
+
+xdp/bpf 程序不支持 gdb 之类的工具，所以调试只能诉诸于 tcpdump + 日志。转发过程中网络包依次经过了 ``t22`` -> ``t33`` -> ``t33 里的 eth0`` -> ``t33 里的 lo`` 这些网口，这个过程中我们可以从前到后 tcpdump 这些接口并验证数据是否和我们预期的一致，不一致解决问题，一点一点往前推进。
+
+常用 tcpdump 命令：
+
+.. code-block:: bash
+
+    # -n、-nn 不转换地址为主机名、不翻译端口为协议名
+    # -vvv Even more verbose output
+    # -x 打印出原始 IP 包
+    tcpdump -n -nn -vvv -x -i <iface>
+    # -xx 打印出包括 ethernet header 的整个网络包
+    tcpdump -n -nn -vvv -xx -i <iface>
+
+veth & xdp
+---------------------
+
+如果在 t22 网口上 tcpdump 只有进的包，没有转发出来的包，可能的原因有两个：
+
+第一个，t22 网口上没有加载 xdp 程序。
+
+    Note that in order to the transmit and/or redirect functionality to work, all involved devices should have an attached XDP program, including both veth peers. We have to do this because veth devices won’t deliver redirected/retransmitted XDP frames unless there is an XDP program attached to the receiving side of the target veth interface. Physical hardware will likely behave the same. XDP maintainers are currently working on fixing this behaviour upstream. See the `Veth XDP: XDP for containers <https://www.netdevconf.org/0x13/session.html?talk-veth-xdp>`_  talk which describes the reasons behind this problem. (The xdpgeneric mode may be used without this limitation.)
+
+    https://github.com/xdp-project/xdp-tutorial/tree/master/packet03-redirecting#sending-packets-back-to-the-interface-they-came-from
+
+这个问题解决的方法就是在所有提到的网口上都挂载一个空 xdp 程序，这个程序只干一件事，就是返回 XDP_PASS。
+
+另外一个原因可能是 22 ns 里挂载的 xdp director 程序根本没有返回 XDP_TX，比如 xdp 程序中的错误处理可能会返回 XDP_DROP，导致包被直接 drop。这个一般通过加日志就能找到问题。说这个当然是掉在这个坑里过，开发封包程序调用 bpf_xdp_adjust_head 申请空间的时候，delta 参数传成了正的（为负才是增加空间），导致空间反而缩小了，后续写 GUE header 前做 bounds checking 的时候发现空间不够（要写的地方在 data_end 之后了），返回 XDP_DROP，导致包被 drop 了 🤦‍♂️。
+
+可以 ping 通但是 curl 报 No route to host
+------------------------------------------------
+
+在 22 ns 里直接 curl 33，报 No route to host。
+
+.. code-block:: console
+
+    $ ip netns exec t22 curl 172.17.3.3
+    curl: (7) Failed to connect to 172.17.3.3 port 80: No route to host
+
+tcpdump t22 网口，可以看到以下错误信息： ::
+
+    172.17.2.2.49138 > 172.17.3.3.80: Flags [S], cksum 0x5d56 (incorrect -> 0x26e6), seq 1545991743, win 64240, options [mss 1460,sackOK,TS val 2712278192 ecr 0,nop,wscale 6], length 0
+    08:04:59.957166 IP (tos 0xc0, ttl 64, id 54935, offset 0, flags [none], proto ICMP (1), length 88)
+    172.17.2.1 > 172.17.2.2: ICMP host 172.17.3.3 unreachable - admin prohibited filter, length 68
+
+这个 ``unreachable - admin prohibited filter`` 跟 firewalld 有关系，直接关闭 firewalld 就 ok。
+
+.. code-block:: console
+
+    $ systemctl disable --now firewalld
+
+https://unix.stackexchange.com/questions/552857/why-are-my-network-connections-being-rejected
+
+14 bytes missing!
+-----------------------
+
+前面一切顺利，到 33 ns 后解包并 redirect 给 lo 后，tcpdump lo 报下面的错误：
+
+::
+
+    08:18:20.780688 IP truncated-ip - 14 bytes missing! (tos 0x0, ttl 64, id 30246, offset 0, flags [DF], proto TCP (6), length 60)
+        172.17.2.1.36312 > 172.17.2.2.80: Flags [S], seq 481216774, win 64240, options [mss 1460,sackOK,[|tcp]>
+        0x0000:  4500 003c 7626 4000 4006 6870 ac11 0201
+        0x0010:  ac11 0202 8dd8 0050 1cae c906 0000 0000
+        0x0020:  a002 faf0 0d84 0000 0204 05b4 0402
+
+这个问题是封包的 iphdr 中的 tot_len （IP 包的总长度）不对导致的，检查是不是哪多减了 14 个字节。
+
+
+bpf_redirect 到其它网口要修改 dst mac 地址
+-------------------------------------------------
+
+这个问题是所有问题里最难解决的一个，因为所有的流程看上去都正确了，封包、转发、解包、redirect，网络包成功到达了我们绑定 172.17.2.2 的 lo 网口，tcpdump 出来的网络包显示包的内容和原始内容 **一模一样**，但是内核将这个包丢掉了，WTF！
+
+最开始我们尝试使用一些工具来看看内核在哪把包丢了（后面单独小节说明方法），定位到 `ip_rcv_core <https://github.com/torvalds/linux/blob/v5.10/net/ipv4/ip_input.c#L435>`_ 这个函数，但是还是不知道具体的原因。
+
+没办法只好回归最原始的方法，使用 scapy 从没问题开始构造一个最小的复现问题的代码，一步一步推理。
+
+首先，直接在 33 ns 中直接给 lo 发一个包， ok 没问题。
+
+.. code-block:: python
+
+    pkt = Ether(dst=NS_33_LO_MAC, src=SRC_MAC)/IP(dst="172.17.2.2", src="172.17.2.1")/TCP()
+    print(repr(srp1(pkt, iface="lo")))
+
+然后，通过 t33 网口发送包，bpf_redirect 给 lo 后被丢了，使用内核工具检查 drop 的位置一样。
+
+.. code-block:: python
+
+    pkt = Ether(dst=NS_33_ETH0_MAC, src=SRC_MAC)/IP(dst="172.17.2.2", src="172.17.2.1")/TCP()
+    print(repr(srp1(pkt, iface="t33")))
+
+那么经过 eth0 redirect 到 lo 的包和直接发给 lo 的包有什么不一样，额。。。还真有，它们的 dst mac 地址不一样，那么是不是这个原因导致的？我们修改上面的程序，修改 dst mac 地址为一个乱七八糟的地址，然后和最开始一样，在 33 ns 中给 lo 直接发一个包，yes！丢了。问题找到。
+
+所以使用 bpf_redirect 将包 redirect 给其它网口前需要先修改 dst mac。
+
+算 iphdr 的 checksum 时先将 checksum 设置为 0
+-------------------------------------------------
+
+最后，curl 基本可以运行了，但不是 100% 成功，间或有超时或者 IP 包重传导致的响应慢，tcpdump 发现正常和不正常的唯一区别是不正常的时候有些转发包的 tcpdump 信息显示 checksum incorrect，检查发现 xdp director 封包的时候计算 checksum 的时候没有首先将 checksum 置零。修改再运行，100% 成功。
+
+至此，第一个小目标，完成。
+
+找出内核在哪丢包的几个方法
+-----------------------------
+
+https://jvns.ca/blog/2017/09/05/finding-out-where-packets-are-being-dropped/
+
+简单方法，查看内核的一些指标数据，检查测试前后指标数据的变化（error 相关的指标），是不是可以推导出问题。
+
+.. code-block:: console
+
+    # netstat -i
+    Kernel Interface table
+    Iface             MTU    RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg
+    eth0             1500   403544      0      0 0        232905      0      0      0 BMRU
+    lo              65536      848      0      0 0           848      0      0      0 LRU
+    t22              1500     1017      0      0 0           856      0      0      0 BMRU
+    t33              1500      704      0      0 0           829      0      0      0 BMRU
+    # ethtool -S eth0
+    NIC statistics:
+        rx_packets: 403612
+        tx_packets: 232875
+        rx_bytes: 206386735
+        tx_bytes: 22216963
+        ...
+        rx_errors: 0
+        tx_errors: 0
+        tx_dropped: 0
+        ...
+        rx_length_errors: 0
+        rx_over_errors: 0
+        rx_crc_errors: 0
+        rx_frame_errors: 0
+        rx_no_buffer_count: 0
+        rx_missed_errors: 0
+        tx_aborted_errors: 0
+        tx_carrier_errors: 0
+        tx_fifo_errors: 0
+        tx_heartbeat_errors: 0
+        tx_window_errors: 0
+        ...
+
+方法二：使用 ``perf`` 监控。
+
+.. code-block:: console
+
+    # perf record -g -a -e skb:kfree_skb
+    # perf script -f
+    ffffffffa195b695 kfree_skb+0x85 ([kernel.kallsyms])
+    ffffffffa195b695 kfree_skb+0x85 ([kernel.kallsyms])
+    ffffffffa1a00d10 ip_rcv_core+0x200 ([kernel.kallsyms])
+    ffffffffa1a013bf ip_rcv+0x1f ([kernel.kallsyms])
+    ffffffffa1975c77 __netif_receive_skb_one_core+0x67 ([kernel.kallsyms])
+    ...
+
+方法三：使用 ``dropwatch`` 工具，https://github.com/pavel-odintsov/drop_watch，不过这个项目似乎很久没有维护了。
+
+.. code-block:: console
+
+    # yum install -y dropwatch
+    # dropwatch -l kas
+    Initalizing kallsyms db
+    dropwatch> start
+    Enabling monitoring...
+    Kernel monitoring activated.
+    Issue Ctrl-C to stop monitoring
+
+    2 drops at ip_rcv_core+200 (0xffffffffa1a00d10)

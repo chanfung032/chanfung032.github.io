@@ -43,6 +43,21 @@
             
   <div class="section" id="kai-fa">
 <h1>#1217 开发<a class="headerlink" href="#kai-fa" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo">
+<h2>构建本地开发测试用网络<a class="headerlink" href="#gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo" title="Permalink to this headline">¶</a></h2>
+<p>使用 linux netns 创建一个如下的开发测试用网络：</p>
+<img alt="../_images/testenv-topology.png" src="../_images/testenv-topology.png" />
+<p>（图中黑体为 netns 名，斜体为网络接口名 iface）</p>
+<p>root ns 开启转发功能，在网络中相当于的路由器角色。</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span><span class="nb">echo</span> <span class="m">1</span> &gt;/proc/sys/net/ipv4/ip_forward
+<span class="nb">echo</span> <span class="m">1</span> &gt;/proc/sys/net/ipv6/conf/all/forwarding
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://www.youtube.com/watch?v=CiX30_JVyYQ">How to Connect two Networks using a router</a></li>
+<li><a class="reference external" href="https://unix.stackexchange.com/questions/14056/what-is-kernel-ip-forwarding">https://unix.stackexchange.com/questions/14056/what-is-kernel-ip-forwarding</a></li>
+</ul>
+</div>
 <div class="section" id="rtnetlink-answers-permission-denied">
 <h2>RTNETLINK answers: Permission denied<a class="headerlink" href="#rtnetlink-answers-permission-denied" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> ip addr add dev veth0 fc00:dead:cafe:1::1/64
@@ -66,21 +81,6 @@
 </ul>
 <p>特殊形式 ::ffff:192.0.2.128 表示的是 IPv4 地址 192.0.2.128 。</p>
 </div>
-<div class="section" id="gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo">
-<h2>构建本地开发测试用网络<a class="headerlink" href="#gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo" title="Permalink to this headline">¶</a></h2>
-<p>使用 linux netns 创建一个如下的开发测试用网络：</p>
-<img alt="../_images/testenv-topology.png" src="../_images/testenv-topology.png" />
-<p>（图中黑体为 netns 名，斜体为网络接口名 iface）</p>
-<p>root ns 开启转发功能，在网络中相当于的路由器角色。</p>
-<div class="highlight-sh"><div class="highlight"><pre><span></span><span class="nb">echo</span> <span class="m">1</span> &gt;/proc/sys/net/ipv4/ip_forward
-<span class="nb">echo</span> <span class="m">1</span> &gt;/proc/sys/net/ipv6/conf/all/forwarding
-</pre></div>
-</div>
-<ul class="simple">
-<li><a class="reference external" href="https://www.youtube.com/watch?v=CiX30_JVyYQ">How to Connect two Networks using a router</a></li>
-<li><a class="reference external" href="https://unix.stackexchange.com/questions/14056/what-is-kernel-ip-forwarding">https://unix.stackexchange.com/questions/14056/what-is-kernel-ip-forwarding</a></li>
-</ul>
-</div>
 <div class="section" id="lvs-rs-shang-ru-he-pei-zhi-vip">
 <h2>LVS RS 上如何配置 VIP<a class="headerlink" href="#lvs-rs-shang-ru-he-pei-zhi-vip" title="Permalink to this headline">¶</a></h2>
 <p>比如我们给开发测试的 t33 环境加上 VIP 172.17.2.2：</p>
@@ -101,6 +101,11 @@ ip addr add dev lo <span class="m">172</span>.17.2.2/32
 <li><a class="reference external" href="http://kb.linuxvirtualserver.org/wiki/Using_arp_announce/arp_ignore_to_disable_ARP">http://kb.linuxvirtualserver.org/wiki/Using_arp_announce/arp_ignore_to_disable_ARP</a></li>
 <li><a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt</a></li>
 </ul>
+</div>
+<div class="section" id="yi-ge-xiao-mu-biao">
+<h2>一个小目标<a class="headerlink" href="#yi-ge-xiao-mu-biao" title="Permalink to this headline">¶</a></h2>
+<p>实现 IPv4 包的封包、转发、解包逻辑。完成的结果就是在 root ns 里 curl 172.17.2.2，网络包经过 22 ns 里的 director 转发给 33 ns 里的 HTTP 服务器，服务器再直接给 curl 回复。整个过程如下图所示：</p>
+<img alt="../_images/milestone1.png" src="../_images/milestone1.png" />
 </div>
 <div class="section" id="shi-yong-scapy-gou-zao-fa-song-wang-luo-bao">
 <h2>使用 scapy 构造发送网络包<a class="headerlink" href="#shi-yong-scapy-gou-zao-fa-song-wang-luo-bao" title="Permalink to this headline">¶</a></h2>
@@ -188,6 +193,14 @@ ip addr add dev lo <span class="m">172</span>.17.2.2/32
 </div>
 <p>告诉编译器取消编译过程中对结构体的字段进行对齐优化，按照实际占用字节数进行对齐，防止不同机器编译出的结构体内存结构不一样，导致结构体字段访问出问题，一般定义网络包格式的结构体都会使用这个属性标示。</p>
 </div>
+<div class="section" id="gnu-stubs-32-h-file-not-found">
+<h2>‘gnu/stubs-32.h’ file not found<a class="headerlink" href="#gnu-stubs-32-h-file-not-found" title="Permalink to this headline">¶</a></h2>
+<p>编译的时候报 <code class="docutils literal"><span class="pre">'gnu/stubs-32.h'</span> <span class="pre">file</span> <span class="pre">not</span> <span class="pre">found</span></code> 这个问题暂时可以通过安装 32-bit glibc 的方法解决：</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> yum install glibc-devel.i686
+</pre></div>
+</div>
+<p>后续应该参考 <a class="reference external" href="https://github.com/cilium/cilium/issues/368">https://github.com/cilium/cilium/issues/368</a> 里提到的提交一样修改代码不使用 <code class="docutils literal"><span class="pre">stdint.h</span></code> 中的类型？</p>
+</div>
 </div>
 
 
@@ -200,12 +213,14 @@ ip addr add dev lo <span class="m">172</span>.17.2.2/32
   <h3><a href="../index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">#1217 开发</a><ul>
+<li><a class="reference internal" href="#gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo">构建本地开发测试用网络</a></li>
 <li><a class="reference internal" href="#rtnetlink-answers-permission-denied">RTNETLINK answers: Permission denied</a></li>
 <li><a class="reference internal" href="#ipv6-di-zhi-biao-shi-fa">IPv6 地址表示法</a></li>
-<li><a class="reference internal" href="#gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo">构建本地开发测试用网络</a></li>
 <li><a class="reference internal" href="#lvs-rs-shang-ru-he-pei-zhi-vip">LVS RS 上如何配置 VIP</a></li>
+<li><a class="reference internal" href="#yi-ge-xiao-mu-biao">一个小目标</a></li>
 <li><a class="reference internal" href="#shi-yong-scapy-gou-zao-fa-song-wang-luo-bao">使用 scapy 构造发送网络包</a></li>
 <li><a class="reference internal" href="#attribute-packed">__attribute__((packed))</a></li>
+<li><a class="reference internal" href="#gnu-stubs-32-h-file-not-found">‘gnu/stubs-32.h’ file not found</a></li>
 </ul>
 </li>
 </ul>

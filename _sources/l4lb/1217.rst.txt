@@ -1,6 +1,25 @@
 #1217 开发
 ====================
 
+构建本地开发测试用网络
+--------------------------
+
+使用 linux netns 创建一个如下的开发测试用网络：
+
+.. image:: images/testenv-topology.png
+
+（图中黑体为 netns 名，斜体为网络接口名 iface）
+
+root ns 开启转发功能，在网络中相当于的路由器角色。
+
+.. code-block:: sh
+
+    echo 1 >/proc/sys/net/ipv4/ip_forward
+    echo 1 >/proc/sys/net/ipv6/conf/all/forwarding
+
+- `How to Connect two Networks using a router <https://www.youtube.com/watch?v=CiX30_JVyYQ>`_
+- https://unix.stackexchange.com/questions/14056/what-is-kernel-ip-forwarding
+
 RTNETLINK answers: Permission denied
 ---------------------------------------
 
@@ -28,25 +47,6 @@ IPv6 地址一共 128 位，一般分成 8 组，每组 16 位，每组使用 16
 
 特殊形式 ::ffff:192.0.2.128 表示的是 IPv4 地址 192.0.2.128 。
 
-构建本地开发测试用网络
---------------------------
-
-使用 linux netns 创建一个如下的开发测试用网络：
-
-.. image:: images/testenv-topology.png
-
-（图中黑体为 netns 名，斜体为网络接口名 iface）
-
-root ns 开启转发功能，在网络中相当于的路由器角色。
-
-.. code-block:: sh
-
-    echo 1 >/proc/sys/net/ipv4/ip_forward
-    echo 1 >/proc/sys/net/ipv6/conf/all/forwarding
-
-- `How to Connect two Networks using a router <https://www.youtube.com/watch?v=CiX30_JVyYQ>`_
-- https://unix.stackexchange.com/questions/14056/what-is-kernel-ip-forwarding
-
 LVS RS 上如何配置 VIP
 ----------------------
 
@@ -72,6 +72,13 @@ LVS RS 上如何配置 VIP
 - `【深入浅出Linux】LVS中VIP配置在环回接口上，子网掩码为什么是4个255？ <https://www.jianshu.com/p/5a0f0bff6f34>`_
 - http://kb.linuxvirtualserver.org/wiki/Using_arp_announce/arp_ignore_to_disable_ARP
 - https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
+
+一个小目标
+--------------
+
+实现 IPv4 包的封包、转发、解包逻辑。完成的结果就是在 root ns 里 curl 172.17.2.2，网络包经过 22 ns 里的 director 转发给 33 ns 里的 HTTP 服务器，服务器再直接给 curl 回复。整个过程如下图所示：
+
+.. image:: images/milestone1.png
 
 使用 scapy 构造发送网络包
 ---------------------------
@@ -163,3 +170,14 @@ https://gcc.gnu.org/onlinedocs/gcc-4.0.2/gcc/Type-Attributes.html
     unpacked: 8, packed: 5
 
 告诉编译器取消编译过程中对结构体的字段进行对齐优化，按照实际占用字节数进行对齐，防止不同机器编译出的结构体内存结构不一样，导致结构体字段访问出问题，一般定义网络包格式的结构体都会使用这个属性标示。
+
+'gnu/stubs-32.h' file not found
+------------------------------------
+
+编译的时候报 ``'gnu/stubs-32.h' file not found`` 这个问题暂时可以通过安装 32-bit glibc 的方法解决：
+
+.. code-block:: console
+
+    $ yum install glibc-devel.i686
+
+后续应该参考 https://github.com/cilium/cilium/issues/368 里提到的提交一样修改代码不使用 ``stdint.h`` 中的类型？ 

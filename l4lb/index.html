@@ -45,6 +45,16 @@
 <h1>基于 xdp 的 L4LB 开发手记<a class="headerlink" href="#ji-yu-xdp-di-l4lb-kai-fa-shou-ji" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="1230.html">#1230 调试</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="1230.html#ru-he-tiao-shi-wen-ti">如何调试问题</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1230.html#veth-xdp">veth &amp; xdp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1230.html#ke-yi-ping-tong-dan-shi-curl-bao-no-route-to-host">可以 ping 通但是 curl 报 No route to host</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1230.html#bytes-missing">14 bytes missing!</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1230.html#bpf-redirect-dao-qi-ta-wang-kou-yao-xiu-gai-dst-mac-di-zhi">bpf_redirect 到其它网口要修改 dst mac 地址</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1230.html#suan-iphdr-di-checksum-shi-xian-jiang-checksum-she-zhi-wei-0">算 iphdr 的 checksum 时先将 checksum 设置为 0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1230.html#zhao-chu-nei-he-zai-na-diu-bao-di-ji-ge-fang-fa">找出内核在哪丢包的几个方法</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="1225.html">#1225 基于静态策略的转发表生成和更新方法</a></li>
 <li class="toctree-l1"><a class="reference internal" href="1222.html">#1222 GLB</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="1222.html#zhuan-fa-biao-sheng-cheng-gui-ze">转发表生成规则</a></li>
@@ -52,12 +62,14 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="1217.html">#1217 开发</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="1217.html#gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo">构建本地开发测试用网络</a></li>
 <li class="toctree-l2"><a class="reference internal" href="1217.html#rtnetlink-answers-permission-denied">RTNETLINK answers: Permission denied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="1217.html#ipv6-di-zhi-biao-shi-fa">IPv6 地址表示法</a></li>
-<li class="toctree-l2"><a class="reference internal" href="1217.html#gou-jian-ben-di-kai-fa-ce-shi-yong-wang-luo">构建本地开发测试用网络</a></li>
 <li class="toctree-l2"><a class="reference internal" href="1217.html#lvs-rs-shang-ru-he-pei-zhi-vip">LVS RS 上如何配置 VIP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1217.html#yi-ge-xiao-mu-biao">一个小目标</a></li>
 <li class="toctree-l2"><a class="reference internal" href="1217.html#shi-yong-scapy-gou-zao-fa-song-wang-luo-bao">使用 scapy 构造发送网络包</a></li>
 <li class="toctree-l2"><a class="reference internal" href="1217.html#attribute-packed">__attribute__((packed))</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1217.html#gnu-stubs-32-h-file-not-found">‘gnu/stubs-32.h’ file not found</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="1209.html">#1209 tc-bpf</a><ul>
