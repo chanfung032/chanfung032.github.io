@@ -78,6 +78,32 @@
 <div class="section" id="gue-ge-shi">
 <h2>GUE 格式<a class="headerlink" href="#gue-ge-shi" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://github.com/github/glb-director/blob/master/docs/development/gue-header.md">https://github.com/github/glb-director/blob/master/docs/development/gue-header.md</a></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mi">0</span>                   <span class="mi">1</span>                   <span class="mi">2</span>                   <span class="mi">3</span>
+<span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mi">3</span> <span class="mi">4</span> <span class="mi">5</span> <span class="mi">6</span> <span class="mi">7</span> <span class="mi">8</span> <span class="mi">9</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mi">3</span> <span class="mi">4</span> <span class="mi">5</span> <span class="mi">6</span> <span class="mi">7</span> <span class="mi">8</span> <span class="mi">9</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mi">3</span> <span class="mi">4</span> <span class="mi">5</span> <span class="mi">6</span> <span class="mi">7</span> <span class="mi">8</span> <span class="mi">9</span> <span class="mi">0</span> <span class="mi">1</span>
+<span class="o">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span>\
+<span class="o">|</span>          <span class="n">Source</span> <span class="n">port</span>          <span class="o">|</span>        <span class="n">Destination</span> <span class="n">port</span>       <span class="o">|</span> <span class="o">|</span>
+<span class="o">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span> <span class="n">UDP</span>
+<span class="o">|</span>             <span class="n">Length</span>            <span class="o">|</span>            <span class="n">Checksum</span>           <span class="o">|</span> <span class="o">|</span>
+<span class="o">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+/</span>
+<span class="o">|</span> <span class="mi">0</span> <span class="o">|</span><span class="n">C</span><span class="o">|</span>   <span class="n">Hlen</span>  <span class="o">|</span>  <span class="n">Proto</span><span class="o">/</span><span class="n">ctype</span>  <span class="o">|</span>             <span class="n">Flags</span>             <span class="o">|</span> <span class="n">GUE</span>
+<span class="o">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span>
+<span class="o">|</span>     <span class="n">Private</span> <span class="n">data</span> <span class="nb">type</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span>     <span class="o">|</span>  <span class="n">Next</span> <span class="n">hop</span> <span class="n">idx</span> <span class="o">|</span>   <span class="n">Hop</span> <span class="n">count</span>   <span class="o">|</span>\
+<span class="o">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span> <span class="o">|</span>
+<span class="o">|</span>                             <span class="n">Hop</span> <span class="mi">0</span>                             <span class="o">|</span> <span class="o">|</span>
+<span class="o">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span> <span class="n">GLB</span>
+<span class="o">|</span>                              <span class="o">...</span>                              <span class="o">|</span> <span class="n">private</span>
+<span class="o">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span> <span class="n">data</span>
+<span class="o">|</span>                             <span class="n">Hop</span> <span class="n">N</span>                             <span class="o">|</span> <span class="o">|</span>
+<span class="o">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+/</span>
+</pre></div>
+</div>
+<p>Hop 为 1 的情况下封装的字节数为： IP(20) + UDP(8) + GUE(8+4) = 40。</p>
+<p>UDP 目的端口固定为 19523，源端口为原始包包头中一些字段的哈希，这个哈希保证同一条 tcp 连接上所有的包都一样（防止网络包乱序），保证不同连接的包在 ECMP 路径和 NIC RX 队列上尽量打散（均衡）。</p>
+<p>为什么要加上 UDP header？</p>
+<blockquote>
+<div><p>By encapsulating packets in UDP, specialized capabilities in networking hardware for efficient handling of UDP packets can be leveraged.</p>
+<p><a class="reference external" href="https://tools.ietf.org/html/draft-ietf-nvo3-gue-05">https://tools.ietf.org/html/draft-ietf-nvo3-gue-05</a></p>
+</div></blockquote>
 </div>
 </div>
 

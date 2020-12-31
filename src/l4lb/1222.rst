@@ -39,3 +39,33 @@ GUE 格式
 -----------
 
 https://github.com/github/glb-director/blob/master/docs/development/gue-header.md
+
+::
+
+    0                   1                   2                   3  
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\
+    |          Source port          |        Destination port       | |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ UDP
+    |             Length            |            Checksum           | |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+/
+    | 0 |C|   Hlen  |  Proto/ctype  |             Flags             | GUE
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |     Private data type (0)     |  Next hop idx |   Hop count   |\
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ |
+    |                             Hop 0                             | |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ GLB
+    |                              ...                              | private
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ data
+    |                             Hop N                             | |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+/
+
+Hop 为 1 的情况下封装的字节数为： IP(20) + UDP(8) + GUE(8+4) = 40。
+
+UDP 目的端口固定为 19523，源端口为原始包包头中一些字段的哈希，这个哈希保证同一条 tcp 连接上所有的包都一样（防止网络包乱序），保证不同连接的包在 ECMP 路径和 NIC RX 队列上尽量打散（均衡）。
+
+为什么要加上 UDP header？
+
+    By encapsulating packets in UDP, specialized capabilities in networking hardware for efficient handling of UDP packets can be leveraged.
+
+    https://tools.ietf.org/html/draft-ietf-nvo3-gue-05
