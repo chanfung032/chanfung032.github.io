@@ -169,7 +169,7 @@ Map
     map_fd = bpf_map__fd (map);
     map_get_value_array (map_fd , key, &value)
 
-bpf map 有很多种类型：https://prototype-kernel.readthedocs.io/en/latest/bpf/ebpf_maps_types.html
+bpf map 有很多种类型：https://github.com/torvalds/linux/blob/master/include/linux/bpf_types.h#:~:text=BPF_MAP_TYPE
 
 .. Day 6
 
