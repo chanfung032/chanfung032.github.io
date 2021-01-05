@@ -365,6 +365,8 @@ iovisor/bcc 封装了一个 python BPF 操作库 https://github.com/iovisor/bcc
 
 bpf_printk 跟 printf 一个样
 
+https://www.kernel.org/doc/html/latest/core-api/printk-formats.html
+
 日志查看方式：
 
 .. code-block:: console
