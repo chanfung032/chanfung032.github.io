@@ -1,0 +1,244 @@
+#0108 xdp 进阶
+=========================
+
+bpf_tail_call 
+-----------------
+
+bpf_tail_call 需要配合 BPF_MAP_TYPE_PROG_ARRAY 类型的 Map 使用。
+
+首先，在数据面程序中：
+
+- 定义一个 BPF_MAP_TYPE_PROG_ARRAY 类型的 Map。
+- 定义要 bpf_tail_call 的子程序。
+- 在入口程序里使用 bpf_tail_call 通过引用 Map 中的索引的方式调用子程序。
+
+.. code-block:: c
+
+    // BPF_MAP_TYPE_PROG_ARRAY 类型的 Map
+    struct {
+        __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
+        __uint(max_entries, 3);
+        __uint(key_size, sizeof(__u32));
+        __uint(value_size, sizeof(__u32));
+    } jmp_table SEC(".maps");
+
+    // bpf_tail_call 要调用的子程序
+    SEC("classifier/0")
+    int bpf_func_0(struct __sk_buff *skb)
+    {
+        bpf_tail_call_static(skb, &jmp_table, 1);
+        return 0;
+    }
+
+    SEC("classifier/1")
+    int bpf_func_1(struct __sk_buff *skb)
+    {
+        bpf_tail_call_static(skb, &jmp_table, 2);
+        return 1;
+    }
+
+    // 入口程序
+    SEC("classifier")
+    int entry(struct __sk_buff *skb)
+    {
+        bpf_tail_call_static(skb, &jmp_table, 0);
+        return 3;
+    }
+
+然后在控制面程序中，加载数据面程序，从其中获取要调用的子程序的 fd 并将其填入 jmp_table 中。
+
+.. code-block:: c
+
+    prog_array = bpf_object__find_map_by_name(obj, "jmp_table");
+    map_fd = bpf_map__fd(prog_array);
+    for (i = 0; i < bpf_map__def(prog_array)->max_entries; i++) {
+        snprintf(prog_name, sizeof(prog_name), "classifier/%i", i);
+        prog = bpf_object__find_program_by_title(obj, prog_name);
+        prog_fd = bpf_program__fd(prog);
+        err = bpf_map_update_elem(map_fd, &i, &prog_fd, BPF_ANY);
+    }
+
+- 数据面程序：https://github.com/torvalds/linux/blob/v5.10/tools/testing/selftests/bpf/progs/tailcall2.c
+- 控制面程序：https://github.com/torvalds/linux/blob/v5.10/tools/testing/selftests/bpf/prog_tests/tailcalls.c#L147
+
+----
+
+**chain call**
+
+使用 bpf_tail_call 可以实现 chain call，方法就是定义一个 prog array，将具体的子程序的 fd 写入这个数组中，定义一个 root xdp 程序，这个程序挂载到网卡接口，这个程序遍历 prog array 并调用遇到的第一个合法程序。
+
+.. code-block:: c 
+
+    struct bpf_map_def SEC("maps") root_array = {
+        .type = BPF_MAP_TYPE_PROG_ARRAY,
+        .key_size = sizeof(__u32),
+        .value_size = sizeof(__u32),
+        .max_entries = ROOT_ARRAY_SIZE,
+    };
+
+    SEC("xdp-root")
+    int xdp_root(struct xdp_md *ctx) {
+        #pragma clang loop unroll(full)
+        for (__u32 i = 0; i < ROOT_ARRAY_SIZE; i++) {
+            bpf_tail_call(ctx, &root_array, i);
+        }
+        return XDP_PASS;
+    }
+
+注意 bpf_tail_call 调用如果成功是不会返回的，所以每个子程序结束的时候仍需通过 bpf_tail_call 手工调用 chain 上的下一个子程序。
+
+- https://github.com/github/glb-director/pull/96#issue-379348950
+- https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/bpf/tailcall.c
+
+这个比较难用，也有改进的方案，但短期内可能还得继续使用这个难用的方法。
+
+- https://github.com/xdp-project/xdp-project/blob/master/conference/LinuxPlumbers2019/xdp-distro-view.org#chain-calling-design-goals
+- https://github.com/torvalds/linux/commit/1b2fd38de9fcc73d6994f8f6c7c23ee3435b6a12
+
+**xdpcap**
+
+bpf_tail_call 还可以实现动态 hook，典型的应用就是 xdpcap。xdpcap 的使用方法如下：
+
+.. code-block:: c
+
+    #include "hook.h"
+
+    struct bpf_map_def xdpcap_hook = XDPCAP_HOOK();
+
+    int xdp_prog(struct xdp_md *ctx) {
+        // ...
+        return xdpcap_exit(ctx, &xdpcap_hook, XDP_PASS);
+    }
+
+控制面程序需要将 xdpcap_hook 这个 map pin 到 bpf fs 中，然后就可以通过这个 pinned map 抓包了。
+
+.. code-block:: console
+
+    $ xdpcap /path/to/pinned/map dump.pcap "tcp and port 80"
+
+从 xdpcap 的 hook.h 我们可以看到 xdpcap_hook 的定义是一个 prog array，xdpcap_exit 是一个调用 bpf_tail_call 的函数。
+
+.. code-block:: c
+
+    // hook.h
+    #define XDPCAP_HOOK() { \
+        .type = BPF_MAP_TYPE_PROG_ARRAY, \
+        .key_size = sizeof(int), \
+        .value_size = sizeof(int), \
+        .max_entries = 5, \
+    }
+
+    static inline enum xdp_action xdpcap_exit(struct xdp_md *ctx, void *hook_map, enum xdp_action action) {
+        bpf_tail_call(ctx, hook_map, action);
+        return action;
+    }
+
+xdpcap 将抓包的程序的 fd 写入到 xdpcap_hook prog array 中即可开始抓包，删除就停止。
+
+使用 go ebpf 库
+----------------------------
+
+主要使用以下两个库：
+
+- 操作 ebpf 程序：https://pkg.go.dev/github.com/cilium/ebpf
+- 提供 ip 命令相关功能的 API 接口：https://pkg.go.dev/github.com/vishvananda/netlink
+
+加载 ebpf 程序：
+
+.. code-block:: go
+
+    package main
+
+    import (
+        log "github.com/sirupsen/logrus"
+        "github.com/cilium/ebpf"
+        "github.com/vishvananda/netlink"
+    )
+
+    func main() {
+        coll, err := ebpf.LoadCollection("xdp-prog.o")
+        if err != nil {
+            log.Fatal(err)
+        }
+        defer coll.Close()
+
+        prog := coll.Programs["xdp-pass"]
+        if prog == nil {
+            log.Fatal("prog not found")
+        }
+
+        link, err := netlink.LinkByName("lo")
+        if err != nil {
+            log.Fatal(err)
+        }
+        // 如果 fd = -1，那么就是卸载 xdp
+        err = netlink.LinkSetXdpFd(link, prog.FD())
+        if err != nil {
+            log.Fatal(err)
+        }
+    }
+
+Map In Map
+---------------
+
+``BPF_MAP_TYPE_ARRAY_OF_MAPS`` 和 ``BPF_MAP_TYPE_HASH_OF_MAPS`` 是两种比较特殊的 Map，这两个 Map 中的值存储的不是不同的普通的数据结构，而是另外一个 Map。
+
+一个例子，glb 中的转发表就是使用 map in map 存储的：
+
+.. code-block:: c
+
+    // VIP 地址 -> 转发表数组索引的映射
+    struct bpf_map_def SEC("maps") glb_binds = {
+        .type = BPF_MAP_TYPE_HASH,
+        .key_size = sizeof(struct glb_bind),
+        .value_size = sizeof(uint32_t),
+        .max_entries = 4096,
+    };
+
+    // 转发表数组，类型为 map in map，所以不用定义 value size，因为 value 为 inner map
+    // 的 fd，大小固定为 32。
+    struct bpf_map_def SEC("maps") glb_tables = {
+        .type = BPF_MAP_TYPE_ARRAY_OF_MAPS,
+        .key_size = sizeof(uint32_t),
+        .max_entries = 4096,
+    };
+
+查找：
+
+.. code-block:: c
+
+    // 根据 VIP 找到转发表的索引
+    uint32_t *table_id_ptr = (uint32_t *)bpf_map_lookup_elem(&glb_binds, &bind);
+    uint32_t table_id = *table_id_ptr;
+    // 根据转发表索引找到转发表的 fd
+    struct bpf_map_def *table = (struct bpf_map_def *)bpf_map_lookup_elem(&glb_tables, &table_id);
+    // 查找转发表
+    uint32_t *tableRow = (uint32_t *)bpf_map_lookup_elem(table, &tableRowIndex);
+
+生成：
+
+.. code-block:: go
+
+    tableSpec := &ebpf.MapSpec{
+        Type:       ebpf.Array,
+        KeySize:    4,
+        ValueSize:  8,
+        MaxEntries: 0x10000,
+    }
+    table, err := ebpf.NewMap(tableSpec)
+    // 填充转发表 ...
+
+    tableIndex := uint32(0)
+    tableFd := table.FD()
+    tableArray := app.Collection.Maps["glb_tables"]
+    if err := tableArray.Put(unsafe.Pointer(&tableIndex), unsafe.Pointer(&tableFd)); err != nil {
+        log.Fatal(err)
+    }
+
+- https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/main.go#L266
+- https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/bpf/glb_encap.c#L78
+
+bpf map dump 工具
+---------------------
+
+https://github.com/cilium/bpf-map

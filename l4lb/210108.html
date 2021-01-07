@@ -1,0 +1,333 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>#0108 xdp 进阶 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="AC 自动机" href="../aho-corasick-algo.html" />
+    <link rel="prev" title="#1230 调试" href="1230.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="xdp-jin-jie">
+<h1>#0108 xdp 进阶<a class="headerlink" href="#xdp-jin-jie" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="bpf-tail-call">
+<h2>bpf_tail_call<a class="headerlink" href="#bpf-tail-call" title="Permalink to this headline">¶</a></h2>
+<p>bpf_tail_call 需要配合 BPF_MAP_TYPE_PROG_ARRAY 类型的 Map 使用。</p>
+<p>首先，在数据面程序中：</p>
+<ul class="simple">
+<li>定义一个 BPF_MAP_TYPE_PROG_ARRAY 类型的 Map。</li>
+<li>定义要 bpf_tail_call 的子程序。</li>
+<li>在入口程序里使用 bpf_tail_call 通过引用 Map 中的索引的方式调用子程序。</li>
+</ul>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="c1">// BPF_MAP_TYPE_PROG_ARRAY 类型的 Map</span>
+<span class="k">struct</span> <span class="p">{</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_PROG_ARRAY</span><span class="p">);</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">key_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">__u32</span><span class="p">));</span>
+    <span class="n">__uint</span><span class="p">(</span><span class="n">value_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">__u32</span><span class="p">));</span>
+<span class="p">}</span> <span class="n">jmp_table</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+
+<span class="c1">// bpf_tail_call 要调用的子程序</span>
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;classifier/0&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">bpf_func_0</span><span class="p">(</span><span class="k">struct</span> <span class="n">__sk_buff</span> <span class="o">*</span><span class="n">skb</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">bpf_tail_call_static</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">jmp_table</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;classifier/1&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">bpf_func_1</span><span class="p">(</span><span class="k">struct</span> <span class="n">__sk_buff</span> <span class="o">*</span><span class="n">skb</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">bpf_tail_call_static</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">jmp_table</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// 入口程序</span>
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;classifier&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">entry</span><span class="p">(</span><span class="k">struct</span> <span class="n">__sk_buff</span> <span class="o">*</span><span class="n">skb</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">bpf_tail_call_static</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">jmp_table</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">3</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>然后在控制面程序中，加载数据面程序，从其中获取要调用的子程序的 fd 并将其填入 jmp_table 中。</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">prog_array</span> <span class="o">=</span> <span class="n">bpf_object__find_map_by_name</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="s">&quot;jmp_table&quot;</span><span class="p">);</span>
+<span class="n">map_fd</span> <span class="o">=</span> <span class="n">bpf_map__fd</span><span class="p">(</span><span class="n">prog_array</span><span class="p">);</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">bpf_map__def</span><span class="p">(</span><span class="n">prog_array</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">max_entries</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">snprintf</span><span class="p">(</span><span class="n">prog_name</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">prog_name</span><span class="p">),</span> <span class="s">&quot;classifier/%i&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+    <span class="n">prog</span> <span class="o">=</span> <span class="n">bpf_object__find_program_by_title</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">prog_name</span><span class="p">);</span>
+    <span class="n">prog_fd</span> <span class="o">=</span> <span class="n">bpf_program__fd</span><span class="p">(</span><span class="n">prog</span><span class="p">);</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">bpf_map_update_elem</span><span class="p">(</span><span class="n">map_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">i</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">prog_fd</span><span class="p">,</span> <span class="n">BPF_ANY</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>数据面程序：<a class="reference external" href="https://github.com/torvalds/linux/blob/v5.10/tools/testing/selftests/bpf/progs/tailcall2.c">https://github.com/torvalds/linux/blob/v5.10/tools/testing/selftests/bpf/progs/tailcall2.c</a></li>
+<li>控制面程序：<a class="reference external" href="https://github.com/torvalds/linux/blob/v5.10/tools/testing/selftests/bpf/prog_tests/tailcalls.c#L147">https://github.com/torvalds/linux/blob/v5.10/tools/testing/selftests/bpf/prog_tests/tailcalls.c#L147</a></li>
+</ul>
+<hr class="docutils" />
+<p><strong>chain call</strong></p>
+<p>使用 bpf_tail_call 可以实现 chain call，方法就是定义一个 prog array，将具体的子程序的 fd 写入这个数组中，定义一个 root xdp 程序，这个程序挂载到网卡接口，这个程序遍历 prog array 并调用遇到的第一个合法程序。</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="n">bpf_map_def</span> <span class="nf">SEC</span><span class="p">(</span><span class="s">&quot;maps&quot;</span><span class="p">)</span> <span class="n">root_array</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">BPF_MAP_TYPE_PROG_ARRAY</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">key_size</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">__u32</span><span class="p">),</span>
+    <span class="p">.</span><span class="n">value_size</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">__u32</span><span class="p">),</span>
+    <span class="p">.</span><span class="n">max_entries</span> <span class="o">=</span> <span class="n">ROOT_ARRAY_SIZE</span><span class="p">,</span>
+<span class="p">};</span>
+
+<span class="n">SEC</span><span class="p">(</span><span class="s">&quot;xdp-root&quot;</span><span class="p">)</span>
+<span class="kt">int</span> <span class="n">xdp_root</span><span class="p">(</span><span class="k">struct</span> <span class="n">xdp_md</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="cp">#pragma clang loop unroll(full)</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">__u32</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">ROOT_ARRAY_SIZE</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">bpf_tail_call</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">root_array</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">XDP_PASS</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>注意 bpf_tail_call 调用如果成功是不会返回的，所以每个子程序结束的时候仍需通过 bpf_tail_call 手工调用 chain 上的下一个子程序。</p>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/github/glb-director/pull/96#issue-379348950">https://github.com/github/glb-director/pull/96#issue-379348950</a></li>
+<li><a class="reference external" href="https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/bpf/tailcall.c">https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/bpf/tailcall.c</a></li>
+</ul>
+<p>这个比较难用，也有改进的方案，但短期内可能还得继续使用这个难用的方法。</p>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/xdp-project/xdp-project/blob/master/conference/LinuxPlumbers2019/xdp-distro-view.org#chain-calling-design-goals">https://github.com/xdp-project/xdp-project/blob/master/conference/LinuxPlumbers2019/xdp-distro-view.org#chain-calling-design-goals</a></li>
+<li><a class="reference external" href="https://github.com/torvalds/linux/commit/1b2fd38de9fcc73d6994f8f6c7c23ee3435b6a12">https://github.com/torvalds/linux/commit/1b2fd38de9fcc73d6994f8f6c7c23ee3435b6a12</a></li>
+</ul>
+<p><strong>xdpcap</strong></p>
+<p>bpf_tail_call 还可以实现动态 hook，典型的应用就是 xdpcap。xdpcap 的使用方法如下：</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;hook.h&quot;</span><span class="cp"></span>
+
+<span class="k">struct</span> <span class="n">bpf_map_def</span> <span class="n">xdpcap_hook</span> <span class="o">=</span> <span class="n">XDPCAP_HOOK</span><span class="p">();</span>
+
+<span class="kt">int</span> <span class="nf">xdp_prog</span><span class="p">(</span><span class="k">struct</span> <span class="n">xdp_md</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="k">return</span> <span class="n">xdpcap_exit</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">xdpcap_hook</span><span class="p">,</span> <span class="n">XDP_PASS</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>控制面程序需要将 xdpcap_hook 这个 map pin 到 bpf fs 中，然后就可以通过这个 pinned map 抓包了。</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> xdpcap /path/to/pinned/map dump.pcap <span class="s2">&quot;tcp and port 80&quot;</span>
+</pre></div>
+</div>
+<p>从 xdpcap 的 hook.h 我们可以看到 xdpcap_hook 的定义是一个 prog array，xdpcap_exit 是一个调用 bpf_tail_call 的函数。</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="c1">// hook.h</span>
+<span class="cp">#define XDPCAP_HOOK() { \</span>
+<span class="cp">    .type = BPF_MAP_TYPE_PROG_ARRAY, \</span>
+<span class="cp">    .key_size = sizeof(int), \</span>
+<span class="cp">    .value_size = sizeof(int), \</span>
+<span class="cp">    .max_entries = 5, \</span>
+<span class="cp">}</span>
+
+<span class="k">static</span> <span class="kr">inline</span> <span class="k">enum</span> <span class="n">xdp_action</span> <span class="nf">xdpcap_exit</span><span class="p">(</span><span class="k">struct</span> <span class="n">xdp_md</span> <span class="o">*</span><span class="n">ctx</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">hook_map</span><span class="p">,</span> <span class="k">enum</span> <span class="n">xdp_action</span> <span class="n">action</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">bpf_tail_call</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">hook_map</span><span class="p">,</span> <span class="n">action</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">action</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>xdpcap 将抓包的程序的 fd 写入到 xdpcap_hook prog array 中即可开始抓包，删除就停止。</p>
+</div>
+<div class="section" id="shi-yong-go-ebpf-ku">
+<h2>使用 go ebpf 库<a class="headerlink" href="#shi-yong-go-ebpf-ku" title="Permalink to this headline">¶</a></h2>
+<p>主要使用以下两个库：</p>
+<ul class="simple">
+<li>操作 ebpf 程序：<a class="reference external" href="https://pkg.go.dev/github.com/cilium/ebpf">https://pkg.go.dev/github.com/cilium/ebpf</a></li>
+<li>提供 ip 命令相关功能的 API 接口：<a class="reference external" href="https://pkg.go.dev/github.com/vishvananda/netlink">https://pkg.go.dev/github.com/vishvananda/netlink</a></li>
+</ul>
+<p>加载 ebpf 程序：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="nx">log</span> <span class="s">&quot;github.com/sirupsen/logrus&quot;</span>
+    <span class="s">&quot;github.com/cilium/ebpf&quot;</span>
+    <span class="s">&quot;github.com/vishvananda/netlink&quot;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ebpf</span><span class="p">.</span><span class="nx">LoadCollection</span><span class="p">(</span><span class="s">&quot;xdp-prog.o&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+
+    <span class="nx">prog</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nx">Programs</span><span class="p">[</span><span class="s">&quot;xdp-pass&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nx">prog</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="s">&quot;prog not found&quot;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="nx">link</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">netlink</span><span class="p">.</span><span class="nx">LinkByName</span><span class="p">(</span><span class="s">&quot;lo&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="c1">// 如果 fd = -1，那么就是卸载 xdp</span>
+    <span class="nx">err</span> <span class="p">=</span> <span class="nx">netlink</span><span class="p">.</span><span class="nx">LinkSetXdpFd</span><span class="p">(</span><span class="nx">link</span><span class="p">,</span> <span class="nx">prog</span><span class="p">.</span><span class="nx">FD</span><span class="p">())</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="map-in-map">
+<h2>Map In Map<a class="headerlink" href="#map-in-map" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal"><span class="pre">BPF_MAP_TYPE_ARRAY_OF_MAPS</span></code> 和 <code class="docutils literal"><span class="pre">BPF_MAP_TYPE_HASH_OF_MAPS</span></code> 是两种比较特殊的 Map，这两个 Map 中的值存储的不是不同的普通的数据结构，而是另外一个 Map。</p>
+<p>一个例子，glb 中的转发表就是使用 map in map 存储的：</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="c1">// VIP 地址 -&gt; 转发表数组索引的映射</span>
+<span class="k">struct</span> <span class="n">bpf_map_def</span> <span class="nf">SEC</span><span class="p">(</span><span class="s">&quot;maps&quot;</span><span class="p">)</span> <span class="n">glb_binds</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">BPF_MAP_TYPE_HASH</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">key_size</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">glb_bind</span><span class="p">),</span>
+    <span class="p">.</span><span class="n">value_size</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">uint32_t</span><span class="p">),</span>
+    <span class="p">.</span><span class="n">max_entries</span> <span class="o">=</span> <span class="mi">4096</span><span class="p">,</span>
+<span class="p">};</span>
+
+<span class="c1">// 转发表数组，类型为 map in map，所以不用定义 value size，因为 value 为 inner map</span>
+<span class="c1">// 的 fd，大小固定为 32。</span>
+<span class="k">struct</span> <span class="n">bpf_map_def</span> <span class="nf">SEC</span><span class="p">(</span><span class="s">&quot;maps&quot;</span><span class="p">)</span> <span class="n">glb_tables</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">BPF_MAP_TYPE_ARRAY_OF_MAPS</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">key_size</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">uint32_t</span><span class="p">),</span>
+    <span class="p">.</span><span class="n">max_entries</span> <span class="o">=</span> <span class="mi">4096</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>查找：</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="c1">// 根据 VIP 找到转发表的索引</span>
+<span class="kt">uint32_t</span> <span class="o">*</span><span class="n">table_id_ptr</span> <span class="o">=</span> <span class="p">(</span><span class="kt">uint32_t</span> <span class="o">*</span><span class="p">)</span><span class="n">bpf_map_lookup_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">glb_binds</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">bind</span><span class="p">);</span>
+<span class="kt">uint32_t</span> <span class="n">table_id</span> <span class="o">=</span> <span class="o">*</span><span class="n">table_id_ptr</span><span class="p">;</span>
+<span class="c1">// 根据转发表索引找到转发表的 fd</span>
+<span class="k">struct</span> <span class="n">bpf_map_def</span> <span class="o">*</span><span class="n">table</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="n">bpf_map_def</span> <span class="o">*</span><span class="p">)</span><span class="n">bpf_map_lookup_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">glb_tables</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">table_id</span><span class="p">);</span>
+<span class="c1">// 查找转发表</span>
+<span class="kt">uint32_t</span> <span class="o">*</span><span class="n">tableRow</span> <span class="o">=</span> <span class="p">(</span><span class="kt">uint32_t</span> <span class="o">*</span><span class="p">)</span><span class="n">bpf_map_lookup_elem</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tableRowIndex</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>生成：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">tableSpec</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">ebpf</span><span class="p">.</span><span class="nx">MapSpec</span><span class="p">{</span>
+    <span class="nx">Type</span><span class="p">:</span>       <span class="nx">ebpf</span><span class="p">.</span><span class="nx">Array</span><span class="p">,</span>
+    <span class="nx">KeySize</span><span class="p">:</span>    <span class="mi">4</span><span class="p">,</span>
+    <span class="nx">ValueSize</span><span class="p">:</span>  <span class="mi">8</span><span class="p">,</span>
+    <span class="nx">MaxEntries</span><span class="p">:</span> <span class="mh">0x10000</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="nx">table</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ebpf</span><span class="p">.</span><span class="nx">NewMap</span><span class="p">(</span><span class="nx">tableSpec</span><span class="p">)</span>
+<span class="c1">// 填充转发表 ...</span>
+
+<span class="nx">tableIndex</span> <span class="o">:=</span> <span class="nb">uint32</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="nx">tableFd</span> <span class="o">:=</span> <span class="nx">table</span><span class="p">.</span><span class="nx">FD</span><span class="p">()</span>
+<span class="nx">tableArray</span> <span class="o">:=</span> <span class="nx">app</span><span class="p">.</span><span class="nx">Collection</span><span class="p">.</span><span class="nx">Maps</span><span class="p">[</span><span class="s">&quot;glb_tables&quot;</span><span class="p">]</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">tableArray</span><span class="p">.</span><span class="nx">Put</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tableIndex</span><span class="p">),</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tableFd</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/main.go#L266">https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/main.go#L266</a></li>
+<li><a class="reference external" href="https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/bpf/glb_encap.c#L78">https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/bpf/glb_encap.c#L78</a></li>
+</ul>
+</div>
+<div class="section" id="bpf-map-dump-gong-ju">
+<h2>bpf map dump 工具<a class="headerlink" href="#bpf-map-dump-gong-ju" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://github.com/cilium/bpf-map">https://github.com/cilium/bpf-map</a></p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#0108 xdp 进阶</a><ul>
+<li><a class="reference internal" href="#bpf-tail-call">bpf_tail_call</a></li>
+<li><a class="reference internal" href="#shi-yong-go-ebpf-ku">使用 go ebpf 库</a></li>
+<li><a class="reference internal" href="#map-in-map">Map In Map</a></li>
+<li><a class="reference internal" href="#bpf-map-dump-gong-ju">bpf map dump 工具</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">基于 xdp 的 L4LB 开发手记</a><ul>
+      <li>Previous: <a href="1230.html" title="previous chapter">#1230 调试</a></li>
+      <li>Next: <a href="../aho-corasick-algo.html" title="next chapter">AC 自动机</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/210108.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/210108.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
