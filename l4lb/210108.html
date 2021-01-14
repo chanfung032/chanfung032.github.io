@@ -254,14 +254,23 @@
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>外层 map 中记录的实际是内层 map 的 id。</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> bpftool map
+<span class="go">1122: array_of_maps  name glb_tables  flags 0x0</span>
+<span class="go">    key 4B  value 4B  max_entries 4096  memlock 36864B</span>
+<span class="go">1123: hash  name glb_binds  flags 0x0</span>
+<span class="go">    key 24B  value 4B  max_entries 4096  memlock 397312B</span>
+<span class="go">1125: array  flags 0x0</span>
+<span class="go">    key 4B  value 8B  max_entries 65536  memlock 528384B</span>
+<span class="gp">$</span> bpftool map dump id <span class="m">1122</span>
+<span class="go">key: 00 00 00 00  value: 65 04 00 00</span>
+</pre></div>
+</div>
+<p>如上， dump 出的 value 0x0465 = 1125，即是 inner map 的 id。</p>
 <ul class="simple">
 <li><a class="reference external" href="https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/main.go#L266">https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/main.go#L266</a></li>
 <li><a class="reference external" href="https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/bpf/glb_encap.c#L78">https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/bpf/glb_encap.c#L78</a></li>
 </ul>
-</div>
-<div class="section" id="bpf-map-dump-gong-ju">
-<h2>bpf map dump 工具<a class="headerlink" href="#bpf-map-dump-gong-ju" title="Permalink to this headline">¶</a></h2>
-<p><a class="reference external" href="https://github.com/cilium/bpf-map">https://github.com/cilium/bpf-map</a></p>
 </div>
 </div>
 
@@ -278,7 +287,6 @@
 <li><a class="reference internal" href="#bpf-tail-call">bpf_tail_call</a></li>
 <li><a class="reference internal" href="#shi-yong-go-ebpf-ku">使用 go ebpf 库</a></li>
 <li><a class="reference internal" href="#map-in-map">Map In Map</a></li>
-<li><a class="reference internal" href="#bpf-map-dump-gong-ju">bpf map dump 工具</a></li>
 </ul>
 </li>
 </ul>

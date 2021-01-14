@@ -1,7 +1,7 @@
 #0108 xdp 进阶
 =========================
 
-bpf_tail_call 
+bpf_tail_call
 -----------------
 
 bpf_tail_call 需要配合 BPF_MAP_TYPE_PROG_ARRAY 类型的 Map 使用。
@@ -67,7 +67,7 @@ bpf_tail_call 需要配合 BPF_MAP_TYPE_PROG_ARRAY 类型的 Map 使用。
 
 使用 bpf_tail_call 可以实现 chain call，方法就是定义一个 prog array，将具体的子程序的 fd 写入这个数组中，定义一个 root xdp 程序，这个程序挂载到网卡接口，这个程序遍历 prog array 并调用遇到的第一个合法程序。
 
-.. code-block:: c 
+.. code-block:: c
 
     struct bpf_map_def SEC("maps") root_array = {
         .type = BPF_MAP_TYPE_PROG_ARRAY,
@@ -235,10 +235,22 @@ Map In Map
         log.Fatal(err)
     }
 
+外层 map 中记录的实际是内层 map 的 id。
+
+.. code-block:: console
+
+    # bpftool map
+    1122: array_of_maps  name glb_tables  flags 0x0
+        key 4B  value 4B  max_entries 4096  memlock 36864B
+    1123: hash  name glb_binds  flags 0x0
+        key 24B  value 4B  max_entries 4096  memlock 397312B
+    1125: array  flags 0x0
+        key 4B  value 8B  max_entries 65536  memlock 528384B
+    $ bpftool map dump id 1122
+    key: 00 00 00 00  value: 65 04 00 00
+
+如上， dump 出的 value 0x0465 = 1125，即是 inner map 的 id。
+
 - https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/main.go#L266
 - https://github.com/github/glb-director/blob/v1.0.7/src/glb-director-xdp/bpf/glb_encap.c#L78
 
-bpf map dump 工具
----------------------
-
-https://github.com/cilium/bpf-map
