@@ -1,0 +1,224 @@
+#0122 xdp & go
+=================
+
+cgo
+--------
+
+__uint128_t/__int128_t 类型
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+C 中的 __uint128_t/__int128_t 这两个类型在 go 中对应 ``[16]byte`` 。
+
+.. code-block:: go
+
+    import "fmt"
+
+    /*
+    __uint128_t u128;
+    */
+    import "C"
+
+    func main() {
+        C.u128 = [16]byte{15: 255}
+        fmt.Println(C.u128)
+    }
+
+- https://golang.org/cmd/cgo/
+- https://blog.csdn.net/weixin_39672296/article/details/111976843
+
+packed struct
+^^^^^^^^^^^^^^^
+
+cgo 不支持 __packed__，以下代码在编译的时候会报 ``unknown field`` 错误。
+
+.. code-block:: go
+
+    package main
+
+    import "fmt"
+
+    /*
+    #include <stdint.h>
+
+    typedef struct {
+        uint32_t ipv4;
+        __uint128_t ipv6;
+        uint16_t proto;
+        uint16_t port;
+    } __attribute__((__packed__)) packed;
+    */
+    import "C"
+
+    func main() {
+        fmt.Println(C.packed{ipv6: [16]byte{}})
+        // fmt.Printf("%#v\n", C.packed{})
+    }
+
+报错信息如下： ::
+
+    ./t.go:20:23: unknown field 'ipv6' in struct literal of type _Ctype_struct___0
+
+注释掉引用 ipv6 字段的行，换成下面一行打印 struct 内容，可以看到结构体中缺少了 ipv6 这个字段。 ::
+
+    main._Ctype_struct___0{ipv4:0x0, _:[16]uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}, proto:0x0, port:0x0}
+
+https://github.com/golang/go/wiki/cgo#struct-alignment-issues
+
+这个按官方文档的建议是将 struct 当成一个 ``[]byte`` 来处理，具体可以参考：https://medium.com/@liamkelly17/working-with-packed-c-structs-in-cgo-224a0a3b708b
+
+另外一个 dirty hack 就是似乎最后一个字段和前面字段有 padding 的话，就没问题了？，如下将结构体改成这样就没问题了。
+
+.. code-block:: c
+
+    typedef struct {
+        uint16_t proto;
+        uint16_t port;
+        uint32_t ipv4;
+        __uint128_t ipv6;
+    } __attribute__((__packed__)) packed;
+
+如何获取 slice 底层数组的地址
+------------------------------
+
+.. code-block:: go
+
+    s := []byte{0, 1, 2}
+    // 获取地址
+    fmt.Printf("%v\n", &s[0])
+    // 打印出 slice 结构体的内容
+    fmt.Printf("%#v\n", (*reflect.SliceHeader)(unsafe.Pointer(&s)))
+
+运行结果：
+
+.. code-block:: shell
+
+    &reflect.SliceHeader{Data:0xc00002c008, Len:3, Cap:3}
+    0xc00002c008
+
+likeyly/unlikeyly 宏
+------------------------
+
+.. code-block:: c
+
+    #define likely(x)       __builtin_expect(!!(x), 1)
+    #define unlikely(x)     __builtin_expect(!!(x), 0)
+
+likely, unlikely 这两个宏给编译器提供分支预测信息，告诉编译器哪个分支更容易执行到，让编译器在遇到分支的时候将 likely 中的代码安排在不需要 jump 的路径上，不 jump 就不会 flush processor pipeline，性能更优。
+
+比如下面的代码：
+
+.. code-block:: c
+
+    if (unlikely (a == 2))
+        a++;
+    else
+        a--;
+
+在编译为汇编后，编译器会如下安排指令：
+
+.. code-block:: asm
+
+    80483ca:       83 f8 02                cmp    $0x2,%eax
+    80483cd:       74 12                   je     80483e1 <main+0x31>
+    // likely 的代码直接放在 jump 指令之后
+    80483cf:       48                      dec    %eax
+
+https://kernelnewbies.org/FAQ/LikelyUnlikely
+
+cilium/ebpf map 接口中的 interface{} 参数
+-------------------------------------------
+
+cilium/ebpf 库中不少 map 操作接口接收一个 ``interface{}`` 参数，这一类参数默认是使用 binary.Read/Write 按照主机字节序来将数据编码成 ``[]byte``，如果需要自定义编码方法，可以使用自定义类型并实现 encoding.BinaryMarshaler 和 encoding.BinaryUnmarshaler 这两个接口。
+
+https://godoc.org/github.com/cilium/ebpf#Map
+
+当然也可以使用 ``unsafe.Pointer`` 绕过编码过程。
+
+.. code-block:: go
+
+    key := [5]byte{'h', 'e', 'l', 'l', 'o'}
+    value := uint32(23)
+    map.Put(unsafe.Pointer(&key), unsafe.Pointer(&value))
+
+https://godoc.org/github.com/cilium/ebpf#example-Map--ZeroCopy
+
+使用 go 加载 tc bpf
+---------------------
+
+.. code-block:: go
+
+    link, err := netlink.LinkByName("eth0")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // tc qdisc add dev eth0 clsact
+    attrs := netlink.QdiscAttrs{
+        LinkIndex: link.Attrs().Index,
+        Handle:    netlink.MakeHandle(0xffff, 0),
+        Parent:    netlink.HANDLE_CLSACT,
+    }
+    qdisc := &netlink.GenericQdisc{
+        QdiscAttrs: attrs,
+        QdiscType:  "clsact",
+    }
+    if err = netlink.QdiscReplace(qdisc); err != nil {
+        log.Fatal("Replacing qdisc failed:", err)
+    }
+
+    // tc filter add dev eth0 ingress bpf da obj foo.o sec mycls
+    filterattrs := netlink.FilterAttrs{
+        LinkIndex: link.Attrs().Index,
+        Parent:    netlink.HANDLE_MIN_INGRESS,
+        Handle:    netlink.MakeHandle(0, 1),
+        Protocol:  unix.ETH_P_ALL,
+        Priority:  1,
+    }
+    filter := netlink.BpfFilter{
+        FilterAttrs:  filterattrs,
+        Fd:           prog.FD(),
+        Name:         "mycls",
+        DirectAction: true,
+    }
+    if err := netlink.FilterReplace(&filter); err != nil {
+        log.Fatal("tc bpf filter create or replace failed: ", err)
+    }
+
+- https://github.com/vishvananda/netlink/blob/v1.1.0/filter_test.go#L823
+- https://github.com/cilium/cilium/blob/master/pkg/datapath/loader/netlink.go#L42
+
+xdpcap 使用方法
+-----------------
+
+代码集成参见 :ref:`这里 <xdpcap>` 。
+
+.. code-block:: bash
+
+    # xdpcap 命令安装
+    go get -u github.com/cloudflare/xdpcap/cmd/xdpcap
+
+    # 使用方法示例
+    xdpcap /path/to/pinned/map file.pcap
+    xdpcap /path/to/pinned/map - | tcpdump -r -
+    xdpcap /path/to/pinned/map - "tcp and port 80" | tcpdump -r -
+
+内核配置需求
+---------------
+
+https://github.com/iovisor/bcc/blob/master/INSTALL.md#kernel-configuration
+
+bpf verifier 提权漏洞
+-------------------------
+
+bpf 默认普通用户可用，因为 bpf verifier 的 bug，导致某些情况下无法检查出 bpf 指令中的内存越界访问，如：
+
+- https://www.zerodayinitiative.com/blog/2020/4/8/cve-2020-8835-linux-kernel-privilege-escalation-via-improper-ebpf-program-verification
+- https://www.thezdi.com/blog/2021/1/18/zdi-20-1440-an-incorrect-calculation-bug-in-the-linux-kernel-ebpf-verifier
+
+所以线上环境最好使用 sysctl 将普通用户执行 bpf 的权限关闭。  ::
+
+    kernel.unprivileged_bpf_disabled=1
+
+https://lwn.net/Articles/742170/
+
+

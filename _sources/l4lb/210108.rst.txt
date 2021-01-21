@@ -95,6 +95,8 @@ bpf_tail_call 需要配合 BPF_MAP_TYPE_PROG_ARRAY 类型的 Map 使用。
 - https://github.com/xdp-project/xdp-project/blob/master/conference/LinuxPlumbers2019/xdp-distro-view.org#chain-calling-design-goals
 - https://github.com/torvalds/linux/commit/1b2fd38de9fcc73d6994f8f6c7c23ee3435b6a12
 
+.. _xdpcap:
+
 **xdpcap**
 
 bpf_tail_call 还可以实现动态 hook，典型的应用就是 xdpcap。xdpcap 的使用方法如下：

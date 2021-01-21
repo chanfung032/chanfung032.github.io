@@ -1,0 +1,317 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>#0122 xdp &amp; go &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="AC 自动机" href="../aho-corasick-algo.html" />
+    <link rel="prev" title="#0108 xdp 进阶" href="210108.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="xdp-go">
+<h1>#0122 xdp &amp; go<a class="headerlink" href="#xdp-go" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="cgo">
+<h2>cgo<a class="headerlink" href="#cgo" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="uint128-t-int128-t-lei-xing">
+<h3>__uint128_t/__int128_t 类型<a class="headerlink" href="#uint128-t-int128-t-lei-xing" title="Permalink to this headline">¶</a></h3>
+<p>C 中的 __uint128_t/__int128_t 这两个类型在 go 中对应 <code class="docutils literal"><span class="pre">[16]byte</span></code> 。</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="s">&quot;fmt&quot;</span>
+
+<span class="cm">/*</span>
+<span class="cm">__uint128_t u128;</span>
+<span class="cm">*/</span>
+<span class="kn">import</span> <span class="s">&quot;C&quot;</span>
+
+<span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">C</span><span class="p">.</span><span class="nx">u128</span> <span class="p">=</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span><span class="p">{</span><span class="mi">15</span><span class="p">:</span> <span class="mi">255</span><span class="p">}</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">C</span><span class="p">.</span><span class="nx">u128</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://golang.org/cmd/cgo/">https://golang.org/cmd/cgo/</a></li>
+<li><a class="reference external" href="https://blog.csdn.net/weixin_39672296/article/details/111976843">https://blog.csdn.net/weixin_39672296/article/details/111976843</a></li>
+</ul>
+</div>
+<div class="section" id="packed-struct">
+<h3>packed struct<a class="headerlink" href="#packed-struct" title="Permalink to this headline">¶</a></h3>
+<p>cgo 不支持 __packed__，以下代码在编译的时候会报 <code class="docutils literal"><span class="pre">unknown</span> <span class="pre">field</span></code> 错误。</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&quot;fmt&quot;</span>
+
+<span class="cm">/*</span>
+<span class="cm">#include &lt;stdint.h&gt;</span>
+
+<span class="cm">typedef struct {</span>
+<span class="cm">    uint32_t ipv4;</span>
+<span class="cm">    __uint128_t ipv6;</span>
+<span class="cm">    uint16_t proto;</span>
+<span class="cm">    uint16_t port;</span>
+<span class="cm">} __attribute__((__packed__)) packed;</span>
+<span class="cm">*/</span>
+<span class="kn">import</span> <span class="s">&quot;C&quot;</span>
+
+<span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">C</span><span class="p">.</span><span class="nx">packed</span><span class="p">{</span><span class="nx">ipv6</span><span class="p">:</span> <span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="kt">byte</span><span class="p">{}})</span>
+    <span class="c1">// fmt.Printf(&quot;%#v\n&quot;, C.packed{})</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>报错信息如下：</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">./</span><span class="n">t</span><span class="o">.</span><span class="n">go</span><span class="p">:</span><span class="mi">20</span><span class="p">:</span><span class="mi">23</span><span class="p">:</span> <span class="n">unknown</span> <span class="n">field</span> <span class="s1">&#39;ipv6&#39;</span> <span class="ow">in</span> <span class="n">struct</span> <span class="n">literal</span> <span class="n">of</span> <span class="nb">type</span> <span class="n">_Ctype_struct___0</span>
+</pre></div>
+</div>
+<p>注释掉引用 ipv6 字段的行，换成下面一行打印 struct 内容，可以看到结构体中缺少了 ipv6 这个字段。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">main</span><span class="o">.</span><span class="n">_Ctype_struct___0</span><span class="p">{</span><span class="n">ipv4</span><span class="p">:</span><span class="mh">0x0</span><span class="p">,</span> <span class="n">_</span><span class="p">:[</span><span class="mi">16</span><span class="p">]</span><span class="n">uint8</span><span class="p">{</span><span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">},</span> <span class="n">proto</span><span class="p">:</span><span class="mh">0x0</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span><span class="mh">0x0</span><span class="p">}</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://github.com/golang/go/wiki/cgo#struct-alignment-issues">https://github.com/golang/go/wiki/cgo#struct-alignment-issues</a></p>
+<p>这个按官方文档的建议是将 struct 当成一个 <code class="docutils literal"><span class="pre">[]byte</span></code> 来处理，具体可以参考：<a class="reference external" href="https://medium.com/&#64;liamkelly17/working-with-packed-c-structs-in-cgo-224a0a3b708b">https://medium.com/&#64;liamkelly17/working-with-packed-c-structs-in-cgo-224a0a3b708b</a></p>
+<p>另外一个 dirty hack 就是似乎最后一个字段和前面字段有 padding 的话，就没问题了？，如下将结构体改成这样就没问题了。</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+    <span class="kt">uint16_t</span> <span class="n">proto</span><span class="p">;</span>
+    <span class="kt">uint16_t</span> <span class="n">port</span><span class="p">;</span>
+    <span class="kt">uint32_t</span> <span class="n">ipv4</span><span class="p">;</span>
+    <span class="n">__uint128_t</span> <span class="n">ipv6</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">__packed__</span><span class="p">))</span> <span class="n">packed</span><span class="p">;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="ru-he-huo-qu-slice-di-ceng-shu-zu-di-di-zhi">
+<h2>如何获取 slice 底层数组的地址<a class="headerlink" href="#ru-he-huo-qu-slice-di-ceng-shu-zu-di-di-zhi" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">s</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">}</span>
+<span class="c1">// 获取地址</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%v\n&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">s</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="c1">// 打印出 slice 结构体的内容</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%#v\n&quot;</span><span class="p">,</span> <span class="p">(</span><span class="o">*</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">SliceHeader</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">s</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>运行结果：</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span><span class="p">&amp;</span>reflect.SliceHeader<span class="o">{</span>Data:0xc00002c008, Len:3, Cap:3<span class="o">}</span>
+0xc00002c008
+</pre></div>
+</div>
+</div>
+<div class="section" id="likeyly-unlikeyly-hong">
+<h2>likeyly/unlikeyly 宏<a class="headerlink" href="#likeyly-unlikeyly-hong" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="cp">#define likely(x)       __builtin_expect(!!(x), 1)</span>
+<span class="cp">#define unlikely(x)     __builtin_expect(!!(x), 0)</span>
+</pre></div>
+</div>
+<p>likely, unlikely 这两个宏给编译器提供分支预测信息，告诉编译器哪个分支更容易执行到，让编译器在遇到分支的时候将 likely 中的代码安排在不需要 jump 的路径上，不 jump 就不会 flush processor pipeline，性能更优。</p>
+<p>比如下面的代码：</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="p">(</span><span class="n">unlikely</span> <span class="p">(</span><span class="n">a</span> <span class="o">==</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">a</span><span class="o">++</span><span class="p">;</span>
+<span class="k">else</span>
+    <span class="n">a</span><span class="o">--</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>在编译为汇编后，编译器会如下安排指令：</p>
+<div class="highlight-asm"><div class="highlight"><pre><span></span>80483ca:       83 f8 02                cmp    $0x2,%eax
+80483cd:       74 12                   je     80483e1 &lt;main+0x31&gt;
+// likely 的代码直接放在 jump 指令之后
+80483cf:       48                      dec    %eax
+</pre></div>
+</div>
+<p><a class="reference external" href="https://kernelnewbies.org/FAQ/LikelyUnlikely">https://kernelnewbies.org/FAQ/LikelyUnlikely</a></p>
+</div>
+<div class="section" id="cilium-ebpf-map-jie-kou-zhong-di-interface-can-shu">
+<h2>cilium/ebpf map 接口中的 interface{} 参数<a class="headerlink" href="#cilium-ebpf-map-jie-kou-zhong-di-interface-can-shu" title="Permalink to this headline">¶</a></h2>
+<p>cilium/ebpf 库中不少 map 操作接口接收一个 <code class="docutils literal"><span class="pre">interface{}</span></code> 参数，这一类参数默认是使用 binary.Read/Write 按照主机字节序来将数据编码成 <code class="docutils literal"><span class="pre">[]byte</span></code>，如果需要自定义编码方法，可以使用自定义类型并实现 encoding.BinaryMarshaler 和 encoding.BinaryUnmarshaler 这两个接口。</p>
+<p><a class="reference external" href="https://godoc.org/github.com/cilium/ebpf#Map">https://godoc.org/github.com/cilium/ebpf#Map</a></p>
+<p>当然也可以使用 <code class="docutils literal"><span class="pre">unsafe.Pointer</span></code> 绕过编码过程。</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">key</span> <span class="o">:=</span> <span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="kt">byte</span><span class="p">{</span><span class="sc">&#39;h&#39;</span><span class="p">,</span> <span class="sc">&#39;e&#39;</span><span class="p">,</span> <span class="sc">&#39;l&#39;</span><span class="p">,</span> <span class="sc">&#39;l&#39;</span><span class="p">,</span> <span class="sc">&#39;o&#39;</span><span class="p">}</span>
+<span class="nx">value</span> <span class="o">:=</span> <span class="nb">uint32</span><span class="p">(</span><span class="mi">23</span><span class="p">)</span>
+<span class="kd">map</span><span class="p">.</span><span class="nx">Put</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">key</span><span class="p">),</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">value</span><span class="p">))</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://godoc.org/github.com/cilium/ebpf#example-Map--ZeroCopy">https://godoc.org/github.com/cilium/ebpf#example-Map–ZeroCopy</a></p>
+</div>
+<div class="section" id="shi-yong-go-jia-zai-tc-bpf">
+<h2>使用 go 加载 tc bpf<a class="headerlink" href="#shi-yong-go-jia-zai-tc-bpf" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">link</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">netlink</span><span class="p">.</span><span class="nx">LinkByName</span><span class="p">(</span><span class="s">&quot;eth0&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// tc qdisc add dev eth0 clsact</span>
+<span class="nx">attrs</span> <span class="o">:=</span> <span class="nx">netlink</span><span class="p">.</span><span class="nx">QdiscAttrs</span><span class="p">{</span>
+    <span class="nx">LinkIndex</span><span class="p">:</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Attrs</span><span class="p">().</span><span class="nx">Index</span><span class="p">,</span>
+    <span class="nx">Handle</span><span class="p">:</span>    <span class="nx">netlink</span><span class="p">.</span><span class="nx">MakeHandle</span><span class="p">(</span><span class="mh">0xffff</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+    <span class="nx">Parent</span><span class="p">:</span>    <span class="nx">netlink</span><span class="p">.</span><span class="nx">HANDLE_CLSACT</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="nx">qdisc</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">netlink</span><span class="p">.</span><span class="nx">GenericQdisc</span><span class="p">{</span>
+    <span class="nx">QdiscAttrs</span><span class="p">:</span> <span class="nx">attrs</span><span class="p">,</span>
+    <span class="nx">QdiscType</span><span class="p">:</span>  <span class="s">&quot;clsact&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">netlink</span><span class="p">.</span><span class="nx">QdiscReplace</span><span class="p">(</span><span class="nx">qdisc</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="s">&quot;Replacing qdisc failed:&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// tc filter add dev eth0 ingress bpf da obj foo.o sec mycls</span>
+<span class="nx">filterattrs</span> <span class="o">:=</span> <span class="nx">netlink</span><span class="p">.</span><span class="nx">FilterAttrs</span><span class="p">{</span>
+    <span class="nx">LinkIndex</span><span class="p">:</span> <span class="nx">link</span><span class="p">.</span><span class="nx">Attrs</span><span class="p">().</span><span class="nx">Index</span><span class="p">,</span>
+    <span class="nx">Parent</span><span class="p">:</span>    <span class="nx">netlink</span><span class="p">.</span><span class="nx">HANDLE_MIN_INGRESS</span><span class="p">,</span>
+    <span class="nx">Handle</span><span class="p">:</span>    <span class="nx">netlink</span><span class="p">.</span><span class="nx">MakeHandle</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="nx">Protocol</span><span class="p">:</span>  <span class="nx">unix</span><span class="p">.</span><span class="nx">ETH_P_ALL</span><span class="p">,</span>
+    <span class="nx">Priority</span><span class="p">:</span>  <span class="mi">1</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="nx">filter</span> <span class="o">:=</span> <span class="nx">netlink</span><span class="p">.</span><span class="nx">BpfFilter</span><span class="p">{</span>
+    <span class="nx">FilterAttrs</span><span class="p">:</span>  <span class="nx">filterattrs</span><span class="p">,</span>
+    <span class="nx">Fd</span><span class="p">:</span>           <span class="nx">prog</span><span class="p">.</span><span class="nx">FD</span><span class="p">(),</span>
+    <span class="nx">Name</span><span class="p">:</span>         <span class="s">&quot;mycls&quot;</span><span class="p">,</span>
+    <span class="nx">DirectAction</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">netlink</span><span class="p">.</span><span class="nx">FilterReplace</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">filter</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="s">&quot;tc bpf filter create or replace failed: &quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/vishvananda/netlink/blob/v1.1.0/filter_test.go#L823">https://github.com/vishvananda/netlink/blob/v1.1.0/filter_test.go#L823</a></li>
+<li><a class="reference external" href="https://github.com/cilium/cilium/blob/master/pkg/datapath/loader/netlink.go#L42">https://github.com/cilium/cilium/blob/master/pkg/datapath/loader/netlink.go#L42</a></li>
+</ul>
+</div>
+<div class="section" id="xdpcap-shi-yong-fang-fa">
+<h2>xdpcap 使用方法<a class="headerlink" href="#xdpcap-shi-yong-fang-fa" title="Permalink to this headline">¶</a></h2>
+<p>代码集成参见 <a class="reference internal" href="210108.html#xdpcap"><span class="std std-ref">这里</span></a> 。</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># xdpcap 命令安装</span>
+go get -u github.com/cloudflare/xdpcap/cmd/xdpcap
+
+<span class="c1"># 使用方法示例</span>
+xdpcap /path/to/pinned/map file.pcap
+xdpcap /path/to/pinned/map - <span class="p">|</span> tcpdump -r -
+xdpcap /path/to/pinned/map - <span class="s2">&quot;tcp and port 80&quot;</span> <span class="p">|</span> tcpdump -r -
+</pre></div>
+</div>
+</div>
+<div class="section" id="nei-he-pei-zhi-xu-qiu">
+<h2>内核配置需求<a class="headerlink" href="#nei-he-pei-zhi-xu-qiu" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://github.com/iovisor/bcc/blob/master/INSTALL.md#kernel-configuration">https://github.com/iovisor/bcc/blob/master/INSTALL.md#kernel-configuration</a></p>
+</div>
+<div class="section" id="bpf-verifier-ti-quan-lou-dong">
+<h2>bpf verifier 提权漏洞<a class="headerlink" href="#bpf-verifier-ti-quan-lou-dong" title="Permalink to this headline">¶</a></h2>
+<p>bpf 默认普通用户可用，因为 bpf verifier 的 bug，导致某些情况下无法检查出 bpf 指令中的内存越界访问，如：</p>
+<ul class="simple">
+<li><a class="reference external" href="https://www.zerodayinitiative.com/blog/2020/4/8/cve-2020-8835-linux-kernel-privilege-escalation-via-improper-ebpf-program-verification">https://www.zerodayinitiative.com/blog/2020/4/8/cve-2020-8835-linux-kernel-privilege-escalation-via-improper-ebpf-program-verification</a></li>
+<li><a class="reference external" href="https://www.thezdi.com/blog/2021/1/18/zdi-20-1440-an-incorrect-calculation-bug-in-the-linux-kernel-ebpf-verifier">https://www.thezdi.com/blog/2021/1/18/zdi-20-1440-an-incorrect-calculation-bug-in-the-linux-kernel-ebpf-verifier</a></li>
+</ul>
+<p>所以线上环境最好使用 sysctl 将普通用户执行 bpf 的权限关闭。</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">kernel</span><span class="o">.</span><span class="n">unprivileged_bpf_disabled</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://lwn.net/Articles/742170/">https://lwn.net/Articles/742170/</a></p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#0122 xdp &amp; go</a><ul>
+<li><a class="reference internal" href="#cgo">cgo</a><ul>
+<li><a class="reference internal" href="#uint128-t-int128-t-lei-xing">__uint128_t/__int128_t 类型</a></li>
+<li><a class="reference internal" href="#packed-struct">packed struct</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ru-he-huo-qu-slice-di-ceng-shu-zu-di-di-zhi">如何获取 slice 底层数组的地址</a></li>
+<li><a class="reference internal" href="#likeyly-unlikeyly-hong">likeyly/unlikeyly 宏</a></li>
+<li><a class="reference internal" href="#cilium-ebpf-map-jie-kou-zhong-di-interface-can-shu">cilium/ebpf map 接口中的 interface{} 参数</a></li>
+<li><a class="reference internal" href="#shi-yong-go-jia-zai-tc-bpf">使用 go 加载 tc bpf</a></li>
+<li><a class="reference internal" href="#xdpcap-shi-yong-fang-fa">xdpcap 使用方法</a></li>
+<li><a class="reference internal" href="#nei-he-pei-zhi-xu-qiu">内核配置需求</a></li>
+<li><a class="reference internal" href="#bpf-verifier-ti-quan-lou-dong">bpf verifier 提权漏洞</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">基于 xdp 的 L4LB 开发手记</a><ul>
+      <li>Previous: <a href="210108.html" title="previous chapter">#0108 xdp 进阶</a></li>
+      <li>Next: <a href="../aho-corasick-algo.html" title="next chapter">AC 自动机</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/210122.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/210122.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
