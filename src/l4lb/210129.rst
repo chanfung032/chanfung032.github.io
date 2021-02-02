@@ -1,0 +1,196 @@
+#0129 性能
+=================
+
+测试环境
+-----------
+
+本周的任务主要是将 xdp 负载均衡程序上线到物理测试环境并测试其性能。
+
+测试环境：
+
+- 系统：CentOS 7。
+- 内核：4.14.69-sn1.el7.centos.x86_64。
+- 网卡：Intel 82599ES 万兆（driver：ixgbe）、双口，4 网卡做 bond，出入口带宽 40GB/s。
+
+性能方面主要测试的是 director 模块。
+
+其它方面考虑到后面线上环境内核升级会比较慢，所以后续 redirector 模块短期内会复用 glb-redirect。
+
+线上编译？从尝试到放弃
+------------------------
+
+线上系统的内核版本低，各种工具链的版本也比较低，编译 bpf 需要依赖高版本的 clang/llvm，尝试升级会发现一连串的依赖都需要升级，cmake、gcc，……，太复杂，果断选择在高版本系统上编译，然后将可执行文件拖到线上环境直接跑。
+
+另外 `ebpf.RewriteConstants <https://pkg.go.dev/github.com/cilium/ebpf#CollectionSpec.RewriteConstants>`_ 在低版本系统上不可使用，配置传递还得使用 Map。
+
+bond 网口和 xdp
+----------------------
+
+在 4.14 内核上，xdp 程序挂载到 bond 网口不起作用，需要挂载到其下所有的物理网口上。
+
+错配的路由导致入包被丢
+---------------------------
+
+调试 director 和 glb-redirect 内核模块的时候遇到个奇怪的问题，tcpdump 看到转发的包到目标机器目标网卡了，格式也正确，但是包在到达 glb-redirect 模块之前被丢了，iptables 中除了 glb-redirect 规则外没有其它规则。
+
+给 iptables glb-redirect 规则前的 `表/链 <https://upload.wikimedia.org/wikipedia/commons/3/37/Netfilter-packet-flow.svg>`_ 加上 LOG，可以看到在 PREROUTING 阶段能够看到包，但之后就没见了。
+
+.. code-block:: bash
+
+    iptables -t raw  -A PREROUTING -p udp --dport 19523 -j LOG
+    # iptables -t raw -vL 通过前面的 pkts 计数也可以定位包是在哪个阶段丢的
+    # ...
+
+检查路由规则发现，路由表中有以下路由规则（误配的）： ::
+
+    172.18.208.71   0.0.0.0         255.255.255.255 UH    0      0        0 lo
+
+转发过来的包的源 IP 也是 172.18.208.71，虽然包是在入口被丢不是在出口被丢，但是这个很可疑，先删除，再试，没问题了！看来，确实是这条错误的规则导致包被丢了。
+
+搜索后发现，Linux 有这么一个配置：
+
+https://superuser.com/questions/426682/linux-drops-packet-when-trying-to-route-it-why
+
+.. code-block:: console
+
+    $ sysctl net.ipv4.conf.bond0.rp_filter
+    1
+
+当被设置为 1 的时候，内核会检查入包源地址的出口路由对应的网口，如果和入包的网口不一致则丢弃包。
+
+    rp_filter - INTEGER
+
+	1 - Strict mode as defined in RFC3704 Strict Reverse Path
+	    Each incoming packet is tested against the `FIB <https://en.wikipedia.org/wiki/Forwarding_information_base>`_ and if the interface
+	    is not the best reverse path the packet check will fail.
+	    By default failed packets are discarded.
+
+    https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
+
+使用 wireshark 命令行工具 dump 网络包
+----------------------------------------
+
+调试的时候如果需要解析网络包的情况，使用 wireshark 比 tcpdump 会是个更好的工具。
+
+安装：
+
+.. code-block:: console
+
+    # yum install -y wireshark
+
+常用命令：
+
+.. code-block:: bash
+
+    # 同时捕获多网卡
+    tshark -i eth0 -i eth1
+    # dump 出详细的网络包字段信息
+    tshark -i eth0 -V
+
+影响 xdp 性能的两个点
+--------------------------
+
+第一，确保 xdp 程序加载使用的是 driver 模式，如下，第二列显示的就是加载模式。
+
+.. code-block:: console
+
+    $ bpftool net
+    xdp:
+    p2p1(4) driver id 101
+    p2p2(5) driver id 101
+    p1p1(6) driver id 101
+    p1p2(7) driver id 101
+    bond0(8) generic id 20
+
+    tc:
+
+    flow_dissector:
+
+第二，确保 xdp 程序加载的时候开启了 jit，开和不开 jit 的性能差别非常大，几十倍，不开 jit 的 xdp 跟个弱鸡似的。
+
+.. code-block:: console
+
+    $ bpftool prog
+    8: xdp  tag 8c806e4dbe1cf688
+        xlated 21856B  not jited  memlock 24576B
+    20: xdp  tag e663805a60a750bc
+        xlated 14960B  not jited  memlock 16384B
+    101: xdp  tag 760afb84c3168504
+        xlated 9456B  not jited  memlock 12288B
+
+如果系统没有开启 jit，可以通过下面的命令开启：
+
+.. code-block:: console
+
+    $ echo 1 > /proc/sys/net/core/bpf_jit_enable
+
+开启后需要重新加载下 xdp 程序。
+
+----
+
+如果考虑牺牲一点安全的话，也可以修改哈希算法为更简单 "but much faster" 的 jhash 或者 half siphash。详细可参见：
+
+- https://lwn.net/Articles/711167/
+- https://github.com/torvalds/linux/blob/master/Documentation/security/siphash.rst
+- https://github.com/torvalds/linux/blob/v5.10/lib/siphash.c
+
+xdp 在内核网络栈中执行的位置
+-------------------------------
+
+4.14 内核： ::
+
+    -> net_rx_action()
+    -> napi_poll()
+    -> ixgbe_poll()
+        -> ixgbe_clean_rx_irq()
+            -> ixgbe_run_xdp()
+                -> bpf_prog_run_xdp ⬅ driver 模式
+        ...
+        创建 skb 结构体
+        ...
+        -> ixgbe_rx_skb
+            -> napi_gro_receive
+            -> dev_gro_receive
+            -> napi_skb_finish
+                -> netif_receive_skb_internal
+                -> do_xdp_generic
+                    -> netif_receive_generic_xdp
+                    -> bpf_prog_run_xdp ⬅ generic 模式
+
+内核协议栈详细的执行过程可以参见：https://blog.packagecloud.io/eng/2016/06/22/monitoring-tuning-linux-networking-stack-receiving-data/
+
+如何修改 xdp 程序的加载模式
+-------------------------------
+
+使用 `netlink.LinkSetXdpFdWithFlags <https://godoc.org/github.com/vishvananda/netlink#LinkSetXdpFdWithFlags>`_ 接口，通过最后一个参数 flags 控制。
+
+.. code-block:: c
+
+    #define XDP_FLAGS_UPDATE_IF_NOEXIST	(1U << 0)
+    #define XDP_FLAGS_SKB_MODE		(1U << 1)
+    #define XDP_FLAGS_DRV_MODE		(1U << 2)
+    #define XDP_FLAGS_HW_MODE		(1U << 3)
+    // https://elixir.bootlin.com/linux/v4.14/source/include/uapi/linux/if_link.h#L892
+
+内核中对应的处理函数：https://elixir.bootlin.com/linux/v4.14/source/net/core/dev.c#L7038
+
+压测工具
+-------------
+
+wrk
+
+- https://github.com/wg/wrk
+
+pktgen
+
+- 文档：https://www.kernel.org/doc/Documentation/networking/pktgen.txt
+- 示例：https://github.com/torvalds/linux/tree/master/samples/pktgen
+
+性能指标
+----------------------
+
+.. code-block:: console
+
+    $ dstat --bits -cnm --net-packets
+
+xdp 程序是在 ksoftirqd 中执行的，因此查看软中断的 CPU 消耗即是 xdp 程序的 CPU 消耗（即 dstat 中的 siq 列）。

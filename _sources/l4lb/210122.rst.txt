@@ -205,7 +205,37 @@ xdpcap 使用方法
 内核配置需求
 ---------------
 
+内核需要打开了以下特性开关： ::
+
+    CONFIG_BPF=y
+    CONFIG_BPF_SYSCALL=y
+    # [optional, for tc filters]
+    CONFIG_NET_CLS_BPF=m
+    # [optional, for tc actions]
+    CONFIG_NET_ACT_BPF=m
+    CONFIG_BPF_JIT=y
+    # [for Linux kernel versions 4.1 through 4.6]
+    CONFIG_HAVE_BPF_JIT=y
+    # [for Linux kernel versions 4.7 and later]
+    CONFIG_HAVE_EBPF_JIT=y
+    # [optional, for kprobes]
+    CONFIG_BPF_EVENTS=y
+
 https://github.com/iovisor/bcc/blob/master/INSTALL.md#kernel-configuration
+
+另外 bpf 解包和第二跳转发程序需要以下提交中的新接口：
+
+- `Merge branch 'bpf_tcp_check_syncookie' <https://github.com/torvalds/linux/commit/2569473816a9ade34c2ba051118337b2d69007df>`_
+- `bpf: add bpf_skb_adjust_room flag BPF_F_ADJ_ROOM_FIXED_GSO <https://github.com/torvalds/linux/commit/2278f6cc151a8bef6ba0b3fe3009d14dc3c51c4a>`_
+- `bpf: add bpf_skb_adjust_room mode BPF_ADJ_ROOM_MAC <https://github.com/torvalds/linux/commit/14aa31929b724b70fb63a9b0e7877da325b25cfe>`_
+
+>= 5.2-rc1
+
+- `bpf: Add csum_level helper for fixing up csum levels <https://github.com/torvalds/linux/commit/f371c923505010b28c8a76f7d7973c014a1d0f5c>`_
+
+>= v5.8-rc1
+
+所以如果解包程序完全使用 bpf，需要内核版本 >= 5.8，目前符合这个需求的 Longterm release kernel 只有 5.10。
 
 bpf verifier 提权漏洞
 -------------------------
