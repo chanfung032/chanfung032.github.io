@@ -364,6 +364,35 @@ long <code class="descname">bpf_redirect_map</code><span class="sig-paren">(</sp
 </pre></div>
 </div>
 </div>
+<div class="section" id="ru-he-jie-jue-bpf-verifier-bao-cuo">
+<h2>如何解决 BPF Verifier 报错<a class="headerlink" href="#ru-he-jie-jue-bpf-verifier-bao-cuo" title="Permalink to this headline">¶</a></h2>
+<p>编译 bpf 的时候带上 <code class="docutils literal"><span class="pre">-g</span></code> 选项。</p>
+<p>使用下面的命令可以 dump 出带源码注释的 BPF 字节码，结合错误信息可以大致定位错误的位置。</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> llvm-objdump -S -no-show-raw-insn program.o
+<span class="go">program.o: file format ELF64-BPF</span>
+
+<span class="go">Disassembly of section program_handle_egress:</span>
+<span class="go">program_handle_egress:</span>
+<span class="go">; {</span>
+<span class="go">    0:       r7 = r1</span>
+<span class="go">; {</span>
+<span class="go">    1:       r6 = 0</span>
+<span class="go">; void *data_end = (void *)(long)skb-&gt;data_end;</span>
+<span class="go">    2:       r2 = *(u32 *)(r7 + 80)</span>
+<span class="go">; void *data = (void *)(long)skb-&gt;data;</span>
+<span class="go">    3:       r1 = *(u32 *)(r7 + 76)</span>
+<span class="go">; if (data + sizeof(*eth) &gt; data_end)</span>
+<span class="go">    4:       r3 = r1</span>
+<span class="go">    5:       r3 += 14</span>
+<span class="go">    6:       if r3 &gt; r2 goto 570</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://blogs.oracle.com/linux/notes-on-bpf-5">BPF In Depth: The BPF Bytecode and the BPF Verifier</a></li>
+<li><a class="reference external" href="https://www.kernel.org/doc/html/latest/networking/filter.html#bpf-kernel-internals">https://www.kernel.org/doc/html/latest/networking/filter.html#bpf-kernel-internals</a></li>
+<li><a class="reference external" href="https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c">https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c</a></li>
+</ul>
+</div>
 </div>
 
 
@@ -389,6 +418,7 @@ long <code class="descname">bpf_redirect_map</code><span class="sig-paren">(</sp
 <li><a class="reference internal" href="#wang-luo-bao-redirect">网络包 Redirect</a></li>
 <li><a class="reference internal" href="#python-bpf-cao-zuo-ku">Python BPF 操作库</a></li>
 <li><a class="reference internal" href="#tiao-shi-ri-zhi">调试日志</a></li>
+<li><a class="reference internal" href="#ru-he-jie-jue-bpf-verifier-bao-cuo">如何解决 BPF Verifier 报错</a></li>
 </ul>
 </li>
 </ul>

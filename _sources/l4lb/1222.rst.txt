@@ -69,3 +69,12 @@ UDP 目的端口固定为 19523，源端口为原始包包头中一些字段的�
     By encapsulating packets in UDP, specialized capabilities in networking hardware for efficient handling of UDP packets can be leveraged.
 
     https://tools.ietf.org/html/draft-ietf-nvo3-gue-05
+
+GUE Tunnel 健康检查
+----------------------
+
+通过 GUE Tunnel 封装并发送一个 ICMP echo 请求包（也就是 ping 包），检测是否有 reply 来判断是否健康。
+
+https://github.com/github/glb-director/blob/v1.0.7/src/glb-healthcheck/TunnelHealthChecker.go#L197
+
+GLB 分别判断 http 健康 和 GUE Tunnel 隧道是否健康来推断 GUE + http 是否健康，直接 GUE + http 实现起来比较麻烦。

@@ -24,6 +24,8 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#1225 基于静态策略的转发表生成和更新方法" href="1225.html" />
+    <link rel="prev" title="#1217 开发" href="1217.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -105,6 +107,12 @@
 <p><a class="reference external" href="https://tools.ietf.org/html/draft-ietf-nvo3-gue-05">https://tools.ietf.org/html/draft-ietf-nvo3-gue-05</a></p>
 </div></blockquote>
 </div>
+<div class="section" id="gue-tunnel-jian-kang-jian-cha">
+<h2>GUE Tunnel 健康检查<a class="headerlink" href="#gue-tunnel-jian-kang-jian-cha" title="Permalink to this headline">¶</a></h2>
+<p>通过 GUE Tunnel 封装并发送一个 ICMP echo 请求包（也就是 ping 包），检测是否有 reply 来判断是否健康。</p>
+<p><a class="reference external" href="https://github.com/github/glb-director/blob/v1.0.7/src/glb-healthcheck/TunnelHealthChecker.go#L197">https://github.com/github/glb-director/blob/v1.0.7/src/glb-healthcheck/TunnelHealthChecker.go#L197</a></p>
+<p>GLB 分别判断 http 健康 和 GUE Tunnel 隧道是否健康来推断 GUE + http 是否健康，直接 GUE + http 实现起来比较麻烦。</p>
+</div>
 </div>
 
 
@@ -119,6 +127,7 @@
 <li><a class="reference internal" href="#">#1222 GLB</a><ul>
 <li><a class="reference internal" href="#zhuan-fa-biao-sheng-cheng-gui-ze">转发表生成规则</a></li>
 <li><a class="reference internal" href="#gue-ge-shi">GUE 格式</a></li>
+<li><a class="reference internal" href="#gue-tunnel-jian-kang-jian-cha">GUE Tunnel 健康检查</a></li>
 </ul>
 </li>
 </ul>
@@ -126,6 +135,10 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">基于 xdp 的 L4LB 开发手记</a><ul>
+      <li>Previous: <a href="1217.html" title="previous chapter">#1217 开发</a></li>
+      <li>Next: <a href="1225.html" title="next chapter">#1225 基于静态策略的转发表生成和更新方法</a></li>
+  </ul></li>
   </ul></li>
 </ul>
 </div>

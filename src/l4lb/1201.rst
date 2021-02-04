@@ -372,3 +372,34 @@ https://www.kernel.org/doc/html/latest/core-api/printk-formats.html
 .. code-block:: console
 
     $ cat  /sys/kernel/debug/tracing/trace_pipe
+
+如何解决 BPF Verifier 报错
+--------------------------------
+
+编译 bpf 的时候带上 ``-g`` 选项。
+
+使用下面的命令可以 dump 出带源码注释的 BPF 字节码，结合错误信息可以大致定位错误的位置。
+
+.. code-block:: console
+
+    # llvm-objdump -S -no-show-raw-insn program.o
+    program.o: file format ELF64-BPF
+
+    Disassembly of section program_handle_egress:
+    program_handle_egress:
+    ; {
+        0:       r7 = r1
+    ; {
+        1:       r6 = 0
+    ; void *data_end = (void *)(long)skb->data_end;
+        2:       r2 = *(u32 *)(r7 + 80)
+    ; void *data = (void *)(long)skb->data;
+        3:       r1 = *(u32 *)(r7 + 76)
+    ; if (data + sizeof(*eth) > data_end)
+        4:       r3 = r1
+        5:       r3 += 14
+        6:       if r3 > r2 goto 570
+
+- `BPF In Depth: The BPF Bytecode and the BPF Verifier <https://blogs.oracle.com/linux/notes-on-bpf-5>`_
+- https://www.kernel.org/doc/html/latest/networking/filter.html#bpf-kernel-internals
+- https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c
