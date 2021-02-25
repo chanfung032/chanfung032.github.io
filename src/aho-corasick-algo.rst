@@ -2,7 +2,7 @@ AC 自动机
 ===================================
 
 - 论文：https://dl.acm.org/doi/10.1145/360825.360855
-- 实现：https://github.com/chanfung032/labs/blob/master/Aho-Corasick/ac.go
+- 实现：https://github.com/chanfung032/labs/blob/master/ac/ac.go
 
 概述
 -------
