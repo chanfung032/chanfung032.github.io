@@ -1,0 +1,187 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>#0226 性能 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="AC 自动机" href="../aho-corasick-algo.html" />
+    <link rel="prev" title="#0220 性能" href="210220.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="xing-neng">
+<h1>#0226 性能<a class="headerlink" href="#xing-neng" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="ru-he-huo-qu-wang-qia-di-xing-hao">
+<h2>如何获取网卡的型号<a class="headerlink" href="#ru-he-huo-qu-wang-qia-di-xing-hao" title="Permalink to this headline">¶</a></h2>
+<p>基本信息：</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> lspci<span class="p">|</span>grep -i ethernet
+<span class="go">...</span>
+<span class="go">04:00.0 Ethernet controller: Intel Corporation 82599ES 10-Gigabit SFI/SFP+ Network Connection (rev 01)</span>
+<span class="go">04:00.1 Ethernet controller: Intel Corporation 82599ES 10-Gigabit SFI/SFP+ Network Connection (rev 01)</span>
+<span class="go">05:00.0 Ethernet controller: Intel Corporation 82599ES 10-Gigabit SFI/SFP+ Network Connection (rev 01)</span>
+<span class="go">05:00.1 Ethernet controller: Intel Corporation 82599ES 10-Gigabit SFI/SFP+ Network Connection (rev 01)</span>
+</pre></div>
+</div>
+<p>更详细的信息：</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> lspci -v<span class="p">|</span>grep -i ethernet -A20
+<span class="go">...</span>
+<span class="go">05:00.1 Ethernet controller: Intel Corporation 82599ES 10-Gigabit SFI/SFP+ Network Connection (rev 01)</span>
+<span class="go">    Subsystem: Inspur Electronic Information Industry Co., Ltd. 10G SFP+ DP EP102Fi4 Adapter</span>
+<span class="go">    Flags: bus master, fast devsel, latency 0, IRQ 112</span>
+<span class="go">    Memory at dc800000 (64-bit, non-prefetchable) [size=8M]</span>
+<span class="go">    I/O ports at dce0 [size=32]</span>
+<span class="go">    Memory at dbffc000 (64-bit, non-prefetchable) [size=16K]</span>
+<span class="go">    Expansion ROM at d0400000 [disabled] [size=4M]</span>
+<span class="go">    Capabilities: [40] Power Management version 3</span>
+<span class="go">    Capabilities: [50] MSI: Enable- Count=1/1 Maskable+ 64bit+</span>
+<span class="go">    Capabilities: [70] MSI-X: Enable+ Count=64 Masked-</span>
+<span class="go">    Capabilities: [a0] Express Endpoint, MSI 00</span>
+<span class="go">    Capabilities: [e0] Vital Product Data</span>
+<span class="go">    Capabilities: [100] Advanced Error Reporting</span>
+<span class="go">    Capabilities: [140] Device Serial Number 6c-92-bf-ff-ff-48-61-b9</span>
+<span class="go">    Capabilities: [150] Alternative Routing-ID Interpretation (ARI)</span>
+<span class="go">    Capabilities: [160] Single Root I/O Virtualization (SR-IOV)</span>
+<span class="go">    Kernel driver in use: ixgbe</span>
+<span class="go">    Kernel modules: ixgbe</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="intel-82599-wang-qia-ru-he-shi-xian-rss">
+<h2>Intel 82599 网卡如何实现 RSS<a class="headerlink" href="#intel-82599-wang-qia-ru-he-shi-xian-rss" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://www.intel.com/content/www/us/en/embedded/products/networking/82599-10-gbe-controller-datasheet.html?asset=2377">Intel 82599 datasheet.pdf/7.1.2.8 小节 Receive-Side Scaling(RSS)</a></p>
+<img alt="../_images/rss.png" src="../_images/rss.png" />
+<ol class="arabic simple">
+<li>对于 IPv4 协议的 TCP/UDP 包， 计算 <code class="docutils literal"><span class="pre">RSS</span> <span class="pre">Hash</span> <span class="pre">=</span> <span class="pre">Hash(src</span> <span class="pre">ip,</span> <span class="pre">src</span> <span class="pre">port,</span> <span class="pre">dst</span> <span class="pre">ip,</span> <span class="pre">dst</span> <span class="pre">port)</span></code> 。</li>
+<li>取哈希低位的 7 bit，将其映射到一个 Redirection Table 中，这个表一共 128 个槽位，每个槽位 4 bit。</li>
+<li>输出槽位的值（4 bit）作为 RSS Index。</li>
+</ol>
+<p>获取 RSS 配置信息：</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> ethtool -x p1p1
+<span class="go">RX flow hash indirection table for p1p1 with 24 RX ring(s):</span>
+<span class="go">0:       0     1     2     3     4     5     6     7</span>
+<span class="go">8:       8     9    10    11    12    13    14    15</span>
+<span class="go">16:      0     1     2     3     4     5     6     7</span>
+<span class="go">24:      8     9    10    11    12    13    14    15</span>
+<span class="go">32:      0     1     2     3     4     5     6     7</span>
+<span class="go">40:      8     9    10    11    12    13    14    15</span>
+<span class="go">48:      0     1     2     3     4     5     6     7</span>
+<span class="go">56:      8     9    10    11    12    13    14    15</span>
+<span class="go">64:      0     1     2     3     4     5     6     7</span>
+<span class="go">72:      8     9    10    11    12    13    14    15</span>
+<span class="go">80:      0     1     2     3     4     5     6     7</span>
+<span class="go">88:      8     9    10    11    12    13    14    15</span>
+<span class="go">96:      0     1     2     3     4     5     6     7</span>
+<span class="go">104:     8     9    10    11    12    13    14    15</span>
+<span class="go">112:     0     1     2     3     4     5     6     7</span>
+<span class="go">120:     8     9    10    11    12    13    14    15</span>
+<span class="go">RSS hash key:</span>
+<span class="go">1f:e1:8d:4c:b2:14:83:40:97:19:64:9b:d9:ee:19:b2:3d:31:6a:da:85:f2:f2:3f:39:b0:f1:eb:d8:53:8f:d1:92:70:be:90:92:2b:81:47</span>
+<span class="go">RSS hash function:</span>
+<span class="go">    toeplitz: on</span>
+<span class="go">    xor: off</span>
+<span class="go">    crc32: off</span>
+</pre></div>
+</div>
+<p>输出的 RSS Index 最多为 4 bit，所以 RSS 最多支持 16 个队列。因此当机器的 CPU 数目大于 16，如果绑定网卡和 CPU，那么有一部分 CPU 会空闲不处理任何流量。</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#0226 性能</a><ul>
+<li><a class="reference internal" href="#ru-he-huo-qu-wang-qia-di-xing-hao">如何获取网卡的型号</a></li>
+<li><a class="reference internal" href="#intel-82599-wang-qia-ru-he-shi-xian-rss">Intel 82599 网卡如何实现 RSS</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">基于 xdp 的 L4LB 开发手记</a><ul>
+      <li>Previous: <a href="210220.html" title="previous chapter">#0220 性能</a></li>
+      <li>Next: <a href="../aho-corasick-algo.html" title="next chapter">AC 自动机</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/210226.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/210226.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
