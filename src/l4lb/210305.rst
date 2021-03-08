@@ -1,0 +1,104 @@
+#0305 大包模式（Jumbo Frame）
+===============================
+
+Unimog/GLB 文档中对于大包模式的说明
+---------------------------------------------
+
+    we have enabled jumbo frames on the networks inside our data centers, so that the 1500-byte limit only applies to packets headed out to the Internet
+
+    -- unimog
+
+
+    The datacenter internal MTU is expected to be large enough to encapsulate any user packet inside a GUE header. We use jumbo frames (9000+ MTU) within the datacenter with a transit/internet MTU of 1500. GLB Director will not fragment packets if they are too large.
+
+    If GLB is used within a datacenter, proxy servers should know the correct maximum MSS they can use. We tell haproxy to clamp MSS to a small enough value that it can always be encapsulated.
+
+    Because of the above 2 points, GLB Director doesn't send ICMP fragmentation required messages when it cannot forward packets.
+
+    GLB Director will, however, forward ICMP fragmentation required packets from outside to the correct proxy server.
+
+    -- GLB https://github.com/github/glb-director/blob/master/docs/README.md
+
+
+MTU 和 MSS 
+--------------
+
+MTU(Maximum Transmission Unit)，是一个以太网包/IP 包能够传输的最大数据长度。MSS(TCP Maximum Segment Size)，是一个 TCP 包能够传输的最大数据长度。它们的关系如下图所示：
+
+.. image:: images/mtu-mss.png
+
+默认以太网包的 MTU 为 1500，查看网卡当前的 MTU：
+
+.. code-block:: console
+
+    # ip link
+    1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+        link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    2: eth0@if6: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+        link/ether 72:56:ce:c7:43:0c brd ff:ff:ff:ff:ff:ff link-netnsid 0
+
+MSS 主要是用来避免 TCP 包太大导致 IP 包在传输的链路上被分片（Fragmentation），在 TCP 握手阶段，客户端和服务器分别将各自的 MSS 放在 SYN 包的 TCP Options 中带给对端，双方在封 TCP 包的时候以较小的 MSS 来自我约束包大小，从而避免 IP 包分片的问题。
+
+.. image:: images/tcp-mss.png
+
+- https://en.wikipedia.org/wiki/Jumbo_frame
+- https://packetlife.net/blog/2008/nov/5/mtu-manipulation/
+- `Resolve IPv4 Fragmentation, MTU, MSS, and PMTUD Issues with GRE and IPsec <https://www.cisco.com/c/en/us/support/docs/ip/generic-routing-encapsulation-gre/25885-pmtud-ipfrag.html#anc3>`_
+
+tcpdump 出的包的大小为什么大于 MTU？
+-----------------------------------------
+
+默认网卡的 MTU 为 1500，curl 百度并抓包，可以看到 HTTP 响应包长度 2781，大于 MTU 1500。
+
+.. code-block:: console
+
+    # tcpdump -n -nn -i eth0 src port 80
+    ...
+    06:48:09.353543 IP 220.181.38.150.80 > 10.0.2.15.56756: Flags [P.], seq 1:2782, ack 78, win 65535, length 2781: HTTP: HTTP/1.1 200 OK
+    ...
+
+这个是因为内核开启了 TSO（TCP Segmentation Offload）、GSO（Generic Segmentation Offload）、GRO（Generic Receive Offload）这些特性的缘故，这几个特性分别指的是将原本在内核协议栈完成的 TCP 分段、IP 分片、重组等操作向下转移到网卡硬件中去进行，从而降低系统的 CPU 消耗，提升处理性能。
+
+.. code-block:: console
+
+    # ethtool -k eth0 |grep offload
+    tcp-segmentation-offload: on
+    generic-segmentation-offload: on
+    generic-receive-offload: on
+    ...
+
+将这些特性关闭，tcpdump 就正常了，当然这样系统的性能会变差。
+
+.. code-block:: bash
+
+    ethtool -K eth0 gro off
+    ethtool -K eth0 tso off
+    ethtool -K eth0 gso off
+    # 打开特性
+    #ethtool -K eth0 gro on
+    #ethtool -K eth0 tso on
+    #ethtool -K eth0 gso on
+
+利用路由规则分别配置数据中心内外流量的 MTU
+-------------------------------------------------
+
+
+数据中心配置大包模式（Jumbo Frame）需要配置成数据中心内部 MTU 9000，但是出数据中心的包仍然需要是 MTU 1500。
+
+服务器部分配置方法如下：
+
+1. 使用 ``ip link set <iface> mtu 9000`` 提高服务器的 MTU 硬限制。
+2. 使用 ``ip route add default via <gateway> mtu 1500`` 修改默认路由的 MTU 为 1500，再添加路由修改东西向流量的 MTU 为 9000 ``ip route add <cidr> via <gateway> mtu 9000`` 。
+
+数据中心的交换机/路由器也需要相应的配置。
+
+- https://wiki.archlinux.org/index.php/jumbo_frames
+- https://tldp.org/HOWTO/Adv-Routing-HOWTO/lartc.cookbook.mtu-discovery.html
+
+东西向/南北向流量是什么意思？
+------------------------------
+
+术语。网络中东西向指的是数据中心服务器之间的流量，南北向指的是客户端和数据中心之间的流量。
+
+.. image:: images/sn-ew-traffic.png
+   :width: 400px

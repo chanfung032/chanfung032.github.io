@@ -1,0 +1,197 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>#0305 大包模式（Jumbo Frame） &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="AC 自动机" href="../aho-corasick-algo.html" />
+    <link rel="prev" title="#0226 性能" href="210226.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="da-bao-mo-shi-jumbo-frame">
+<h1>#0305 大包模式（Jumbo Frame）<a class="headerlink" href="#da-bao-mo-shi-jumbo-frame" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="unimog-glb-wen-dang-zhong-dui-yu-da-bao-mo-shi-di-shuo-ming">
+<h2>Unimog/GLB 文档中对于大包模式的说明<a class="headerlink" href="#unimog-glb-wen-dang-zhong-dui-yu-da-bao-mo-shi-di-shuo-ming" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>we have enabled jumbo frames on the networks inside our data centers, so that the 1500-byte limit only applies to packets headed out to the Internet</p>
+<p class="attribution">&mdash;unimog</p>
+</div></blockquote>
+<blockquote>
+<div><p>The datacenter internal MTU is expected to be large enough to encapsulate any user packet inside a GUE header. We use jumbo frames (9000+ MTU) within the datacenter with a transit/internet MTU of 1500. GLB Director will not fragment packets if they are too large.</p>
+<p>If GLB is used within a datacenter, proxy servers should know the correct maximum MSS they can use. We tell haproxy to clamp MSS to a small enough value that it can always be encapsulated.</p>
+<p>Because of the above 2 points, GLB Director doesn’t send ICMP fragmentation required messages when it cannot forward packets.</p>
+<p>GLB Director will, however, forward ICMP fragmentation required packets from outside to the correct proxy server.</p>
+<p class="attribution">&mdash;GLB <a class="reference external" href="https://github.com/github/glb-director/blob/master/docs/README.md">https://github.com/github/glb-director/blob/master/docs/README.md</a></p>
+</div></blockquote>
+</div>
+<div class="section" id="mtu-he-mss">
+<h2>MTU 和 MSS<a class="headerlink" href="#mtu-he-mss" title="Permalink to this headline">¶</a></h2>
+<p>MTU(Maximum Transmission Unit)，是一个以太网包/IP 包能够传输的最大数据长度。MSS(TCP Maximum Segment Size)，是一个 TCP 包能够传输的最大数据长度。它们的关系如下图所示：</p>
+<img alt="../_images/mtu-mss.png" src="../_images/mtu-mss.png" />
+<p>默认以太网包的 MTU 为 1500，查看网卡当前的 MTU：</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> ip link
+<span class="go">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000</span>
+<span class="go">    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00</span>
+<span class="go">2: eth0@if6: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000</span>
+<span class="go">    link/ether 72:56:ce:c7:43:0c brd ff:ff:ff:ff:ff:ff link-netnsid 0</span>
+</pre></div>
+</div>
+<p>MSS 主要是用来避免 TCP 包太大导致 IP 包在传输的链路上被分片（Fragmentation），在 TCP 握手阶段，客户端和服务器分别将各自的 MSS 放在 SYN 包的 TCP Options 中带给对端，双方在封 TCP 包的时候以较小的 MSS 来自我约束包大小，从而避免 IP 包分片的问题。</p>
+<img alt="../_images/tcp-mss.png" src="../_images/tcp-mss.png" />
+<ul class="simple">
+<li><a class="reference external" href="https://en.wikipedia.org/wiki/Jumbo_frame">https://en.wikipedia.org/wiki/Jumbo_frame</a></li>
+<li><a class="reference external" href="https://packetlife.net/blog/2008/nov/5/mtu-manipulation/">https://packetlife.net/blog/2008/nov/5/mtu-manipulation/</a></li>
+<li><a class="reference external" href="https://www.cisco.com/c/en/us/support/docs/ip/generic-routing-encapsulation-gre/25885-pmtud-ipfrag.html#anc3">Resolve IPv4 Fragmentation, MTU, MSS, and PMTUD Issues with GRE and IPsec</a></li>
+</ul>
+</div>
+<div class="section" id="tcpdump-chu-di-bao-di-da-xiao-wei-shen-mo-da-yu-mtu">
+<h2>tcpdump 出的包的大小为什么大于 MTU？<a class="headerlink" href="#tcpdump-chu-di-bao-di-da-xiao-wei-shen-mo-da-yu-mtu" title="Permalink to this headline">¶</a></h2>
+<p>默认网卡的 MTU 为 1500，curl 百度并抓包，可以看到 HTTP 响应包长度 2781，大于 MTU 1500。</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> tcpdump -n -nn -i eth0 src port <span class="m">80</span>
+<span class="go">...</span>
+<span class="go">06:48:09.353543 IP 220.181.38.150.80 &gt; 10.0.2.15.56756: Flags [P.], seq 1:2782, ack 78, win 65535, length 2781: HTTP: HTTP/1.1 200 OK</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+<p>这个是因为内核开启了 TSO（TCP Segmentation Offload）、GSO（Generic Segmentation Offload）、GRO（Generic Receive Offload）这些特性的缘故，这几个特性分别指的是将原本在内核协议栈完成的 TCP 分段、IP 分片、重组等操作向下转移到网卡硬件中去进行，从而降低系统的 CPU 消耗，提升处理性能。</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> ethtool -k eth0 <span class="p">|</span>grep offload
+<span class="go">tcp-segmentation-offload: on</span>
+<span class="go">generic-segmentation-offload: on</span>
+<span class="go">generic-receive-offload: on</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+<p>将这些特性关闭，tcpdump 就正常了，当然这样系统的性能会变差。</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>ethtool -K eth0 gro off
+ethtool -K eth0 tso off
+ethtool -K eth0 gso off
+<span class="c1"># 打开特性</span>
+<span class="c1">#ethtool -K eth0 gro on</span>
+<span class="c1">#ethtool -K eth0 tso on</span>
+<span class="c1">#ethtool -K eth0 gso on</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="li-yong-lu-you-gui-ze-fen-bie-pei-zhi-shu-ju-zhong-xin-nei-wai-liu-liang-di-mtu">
+<h2>利用路由规则分别配置数据中心内外流量的 MTU<a class="headerlink" href="#li-yong-lu-you-gui-ze-fen-bie-pei-zhi-shu-ju-zhong-xin-nei-wai-liu-liang-di-mtu" title="Permalink to this headline">¶</a></h2>
+<p>数据中心配置大包模式（Jumbo Frame）需要配置成数据中心内部 MTU 9000，但是出数据中心的包仍然需要是 MTU 1500。</p>
+<p>服务器部分配置方法如下：</p>
+<ol class="arabic simple">
+<li>使用 <code class="docutils literal"><span class="pre">ip</span> <span class="pre">link</span> <span class="pre">set</span> <span class="pre">&lt;iface&gt;</span> <span class="pre">mtu</span> <span class="pre">9000</span></code> 提高服务器的 MTU 硬限制。</li>
+<li>使用 <code class="docutils literal"><span class="pre">ip</span> <span class="pre">route</span> <span class="pre">add</span> <span class="pre">default</span> <span class="pre">via</span> <span class="pre">&lt;gateway&gt;</span> <span class="pre">mtu</span> <span class="pre">1500</span></code> 修改默认路由的 MTU 为 1500，再添加路由修改东西向流量的 MTU 为 9000 <code class="docutils literal"><span class="pre">ip</span> <span class="pre">route</span> <span class="pre">add</span> <span class="pre">&lt;cidr&gt;</span> <span class="pre">via</span> <span class="pre">&lt;gateway&gt;</span> <span class="pre">mtu</span> <span class="pre">9000</span></code> 。</li>
+</ol>
+<p>数据中心的交换机/路由器也需要相应的配置。</p>
+<ul class="simple">
+<li><a class="reference external" href="https://wiki.archlinux.org/index.php/jumbo_frames">https://wiki.archlinux.org/index.php/jumbo_frames</a></li>
+<li><a class="reference external" href="https://tldp.org/HOWTO/Adv-Routing-HOWTO/lartc.cookbook.mtu-discovery.html">https://tldp.org/HOWTO/Adv-Routing-HOWTO/lartc.cookbook.mtu-discovery.html</a></li>
+</ul>
+</div>
+<div class="section" id="dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si">
+<h2>东西向/南北向流量是什么意思？<a class="headerlink" href="#dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si" title="Permalink to this headline">¶</a></h2>
+<p>术语。网络中东西向指的是数据中心服务器之间的流量，南北向指的是客户端和数据中心之间的流量。</p>
+<a class="reference internal image-reference" href="../_images/sn-ew-traffic.png"><img alt="../_images/sn-ew-traffic.png" src="../_images/sn-ew-traffic.png" style="width: 400px;" /></a>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#0305 大包模式（Jumbo Frame）</a><ul>
+<li><a class="reference internal" href="#unimog-glb-wen-dang-zhong-dui-yu-da-bao-mo-shi-di-shuo-ming">Unimog/GLB 文档中对于大包模式的说明</a></li>
+<li><a class="reference internal" href="#mtu-he-mss">MTU 和 MSS</a></li>
+<li><a class="reference internal" href="#tcpdump-chu-di-bao-di-da-xiao-wei-shen-mo-da-yu-mtu">tcpdump 出的包的大小为什么大于 MTU？</a></li>
+<li><a class="reference internal" href="#li-yong-lu-you-gui-ze-fen-bie-pei-zhi-shu-ju-zhong-xin-nei-wai-liu-liang-di-mtu">利用路由规则分别配置数据中心内外流量的 MTU</a></li>
+<li><a class="reference internal" href="#dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si">东西向/南北向流量是什么意思？</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">基于 xdp 的 L4LB 开发手记</a><ul>
+      <li>Previous: <a href="210226.html" title="previous chapter">#0226 性能</a></li>
+      <li>Next: <a href="../aho-corasick-algo.html" title="next chapter">AC 自动机</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/210305.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/210305.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
