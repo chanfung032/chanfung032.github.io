@@ -1,0 +1,362 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>#0329 Consul &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="AC 自动机" href="../aho-corasick-algo.html" />
+    <link rel="prev" title="#0305 大包模式（Jumbo Frame）" href="210305.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="consul">
+<h1>#0329 Consul<a class="headerlink" href="#consul" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="he-etcd-di-dui-bi">
+<h2>和 etcd 的对比<a class="headerlink" href="#he-etcd-di-dui-bi" title="Permalink to this headline">¶</a></h2>
+<p>Consul 除了实现了分布式 kv 存储的原语之外，还原生支持了服务发现、健康检查等高级功能。</p>
+<ul class="simple">
+<li><a class="reference external" href="https://etcd.io/docs/current/learning/why/">https://etcd.io/docs/current/learning/why/</a></li>
+<li><a class="reference external" href="https://www.consul.io/docs/intro/vs/zookeeper">https://www.consul.io/docs/intro/vs/zookeeper</a></li>
+</ul>
+</div>
+<div class="section" id="cloudflare-ru-he-bu-shu">
+<h2>cloudflare 如何部署<a class="headerlink" href="#cloudflare-ru-he-bu-shu" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>Cluster Architecture</p>
+<p>As I mentioned, we have around 200 locations where we have servers. And importantly, we want those locations to be separate from each other. We want them to be part of different failure domains. We don’t want a failure in — let’s say — Amsterdam impacting the London location. With that in mind, we deployed a different Consul cluster in each of those locations — so the failure of a Consul cluster or anything else wouldn’t impact other locations.</p>
+<p><a class="reference external" href="https://www.hashicorp.com/resources/how-nomad-and-consul-are-being-used-at-cloudflare">https://www.hashicorp.com/resources/how-nomad-and-consul-are-being-used-at-cloudflare</a></p>
+</div></blockquote>
+<p>一个边缘机房一个独立的 Consul。</p>
+</div>
+<div class="section" id="an-zhuang">
+<h2>安装<a class="headerlink" href="#an-zhuang" title="Permalink to this headline">¶</a></h2>
+<p>方法一：从 <a class="reference external" href="https://www.consul.io/downloads.html">https://www.consul.io/downloads.html</a> 下载预编译好的可执行文件，将下载得到的 consul 可执行文件直接放到 <code class="docutils literal"><span class="pre">PATH</span></code> 目录中。</p>
+<p>方法二：使用包管理系统（CentOS）。</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> yum install -y yum-utils
+<span class="gp">#</span> yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+<span class="gp">#</span> yum -y install consul
+</pre></div>
+</div>
+<p>其它：<a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/get-started-install#install-consul">https://learn.hashicorp.com/tutorials/consul/get-started-install#install-consul</a></p>
+</div>
+<div class="section" id="ji-ben-shi-yong-shi-yong-ming-ling-hang-gong-ju-miao-shu">
+<h2>基本使用（使用命令行工具描述）<a class="headerlink" href="#ji-ben-shi-yong-shi-yong-ming-ling-hang-gong-ju-miao-shu" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://learn.hashicorp.com/collections/consul/getting-started">https://learn.hashicorp.com/collections/consul/getting-started</a></p>
+</div>
+<div class="section" id="qi-dong-kai-fa-ce-shi-yong-agent">
+<h2>启动开发测试用 agent<a class="headerlink" href="#qi-dong-kai-fa-ce-shi-yong-agent" title="Permalink to this headline">¶</a></h2>
+<p>agent 是 consul 的核心服务进程。</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> consul agent -dev
+</pre></div>
+</div>
+<p>更多命令参见：<a class="reference external" href="https://www.consul.io/commands">https://www.consul.io/commands</a></p>
+</div>
+<div class="section" id="kai-fa-ce-shi-yong-ben-di-ji-qun">
+<h2>开发测试用本地集群<a class="headerlink" href="#kai-fa-ce-shi-yong-ben-di-ji-qun" title="Permalink to this headline">¶</a></h2>
+<p>多个 agent 可以组成集群，集群中的 agent 有 server 和 client 两种角色，server 参与 raft 共识算法，client 只转发请求给 server 处理，相当于一层代理。</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>mkdir /tmp/consul
+
+<span class="c1"># 在 root 中启动一个 server 角色的 agent，并配置集群中只需要一个 server 角色的 agent</span>
+<span class="c1"># 主要是图简单，生产环境中需要至少配置 3 个或以上 server</span>
+consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1</span> -node<span class="o">=</span>root -bind <span class="m">172</span>.17.2.1 <span class="se">\</span>
+    -data-dir<span class="o">=</span>/tmp/consul/root -log-file<span class="o">=</span>/tmp/consul/root &gt;/dev/null <span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">&amp;</span>
+
+<span class="c1"># 在 ns 中各自分别启动一个 client 角色的 agent，并加入集群</span>
+<span class="k">for</span> i in <span class="o">{</span><span class="m">2</span>..4<span class="o">}</span><span class="p">;</span> <span class="k">do</span>
+    <span class="nv">NS</span><span class="o">=</span>t<span class="nv">$i$i</span>
+    ip netns <span class="nb">exec</span> <span class="nv">$NS</span> consul agent -node<span class="o">=</span><span class="nv">$NS</span> -bind <span class="m">172</span>.17.<span class="nv">$i</span>.<span class="nv">$i</span> -retry-join <span class="m">172</span>.17.2.1 <span class="se">\</span>
+        -data-dir<span class="o">=</span>/tmp/consul/<span class="nv">$NS</span> -log-file<span class="o">=</span>/tmp/consul/<span class="nv">$NS</span> &gt;/dev/null <span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">&amp;</span>
+<span class="k">done</span>
+</pre></div>
+</div>
+<p>查看集群中的成员：</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> consul members
+<span class="go">Node  Address          Status  Type    Build  Protocol  DC   Segment</span>
+<span class="go">root  172.17.2.1:8301  alive   server  1.9.4  2         dc1  &lt;all&gt;</span>
+<span class="go">t22   172.17.2.2:8301  alive   client  1.9.4  2         dc1  &lt;default&gt;</span>
+<span class="go">t33   172.17.3.3:8301  alive   client  1.9.4  2         dc1  &lt;default&gt;</span>
+<span class="go">t44   172.17.4.4:8301  alive   client  1.9.4  2         dc1  &lt;default&gt;</span>
+</pre></div>
+</div>
+<p>查看集群的 leader：</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> curl localhost:8500/v1/status/leader
+<span class="go">&quot;172.17.2.1:8300&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://www.consul.io/docs/install/bootstrapping">https://www.consul.io/docs/install/bootstrapping</a></li>
+<li><a class="reference external" href="https://www.consul.io/docs/architecture/consensus">https://www.consul.io/docs/architecture/consensus</a></li>
+<li><a class="reference external" href="https://www.consul.io/docs/agent/options">https://www.consul.io/docs/agent/options</a></li>
+</ul>
+</div>
+<div class="section" id="go-api-examples">
+<h2>Go API Examples<a class="headerlink" href="#go-api-examples" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Go API 文档：<a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api">https://pkg.go.dev/github.com/hashicorp/consul/api</a></li>
+<li>不太明白的参数含义可以找 <a class="reference external" href="https://www.consul.io/api-docs">https://www.consul.io/api-docs</a> 中对应 HTTP API 中的说明。</li>
+</ul>
+<div class="section" id="dao-ru-bao">
+<h3>导入包<a class="headerlink" href="#dao-ru-bao" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&quot;log&quot;</span>
+    <span class="s">&quot;time&quot;</span>
+
+    <span class="s">&quot;github.com/hashicorp/consul/api&quot;</span>
+<span class="p">)</span>
+<span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">api</span><span class="p">.</span><span class="nx">NewClient</span><span class="p">(</span><span class="nx">consul</span><span class="p">.</span><span class="nx">DefaultConfig</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="kv-cun-chu">
+<h3>KV 存储<a class="headerlink" href="#kv-cun-chu" title="Permalink to this headline">¶</a></h3>
+<p>读写：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">kv</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nx">KV</span><span class="p">()</span>
+<span class="nx">p</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">api</span><span class="p">.</span><span class="nx">KVPair</span><span class="p">{</span><span class="nx">Key</span><span class="p">:</span> <span class="s">&quot;KEY&quot;</span><span class="p">,</span> <span class="nx">Value</span><span class="p">:</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;1000&quot;</span><span class="p">)}</span>
+<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">kv</span><span class="p">.</span><span class="nx">Put</span><span class="p">(</span><span class="nx">p</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+
+<span class="nx">pair</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">kv</span><span class="p">.</span><span class="nx">Get</span><span class="p">(</span><span class="s">&quot;KEY&quot;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;KV: %v %s\n&quot;</span><span class="p">,</span> <span class="nx">pair</span><span class="p">.</span><span class="nx">Key</span><span class="p">,</span> <span class="nx">pair</span><span class="p">.</span><span class="nx">Value</span><span class="p">)</span>
+<span class="c1">// KEY 不存在的时候 pair 为 nil</span>
+</pre></div>
+</div>
+<p>事务：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">ok</span><span class="p">,</span> <span class="nx">response</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">kv</span><span class="p">.</span><span class="nx">Txn</span><span class="p">(</span><span class="nx">api</span><span class="p">.</span><span class="nx">KVTxnOps</span><span class="p">{</span>
+    <span class="o">&amp;</span><span class="nx">api</span><span class="p">.</span><span class="nx">KVTxnOp</span><span class="p">{</span>
+        <span class="nx">Verb</span><span class="p">:</span> <span class="nx">api</span><span class="p">.</span><span class="nx">KVSet</span><span class="p">,</span>
+        <span class="nx">Key</span><span class="p">:</span> <span class="s">&quot;KEY1&quot;</span><span class="p">,</span>
+        <span class="nx">Value</span><span class="p">:</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;1000&quot;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="o">&amp;</span><span class="nx">api</span><span class="p">.</span><span class="nx">KVTxnOp</span><span class="p">{</span>
+        <span class="nx">Verb</span><span class="p">:</span> <span class="nx">api</span><span class="p">.</span><span class="nx">KVSet</span><span class="p">,</span>
+        <span class="nx">Key</span><span class="p">:</span> <span class="s">&quot;KEY2&quot;</span><span class="p">,</span>
+        <span class="nx">Value</span><span class="p">:</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;2000&quot;</span><span class="p">),</span>
+    <span class="p">},</span>
+<span class="p">},</span> <span class="kc">nil</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>列取某一个前缀的所有 KEY：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">keys</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">kv</span><span class="p">.</span><span class="nx">Keys</span><span class="p">(</span><span class="s">&quot;KEY&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>列取某一个前缀的所有 KEY 和 VALUE：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">kvs</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">kv</span><span class="p">.</span><span class="nx">List</span><span class="p">(</span><span class="s">&quot;KEY&quot;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://www.consul.io/api-docs/kv">https://www.consul.io/api-docs/kv</a></p>
+<hr class="docutils" />
+<p>kv 存储的值最大大小为 512KB。</p>
+<p><a class="reference external" href="https://www.consul.io/docs/troubleshoot/faq#q-what-is-the-per-key-value-size-limitation-for-consul-s-key-value-store">https://www.consul.io/docs/troubleshoot/faq#q-what-is-the-per-key-value-size-limitation-for-consul-s-key-value-store</a></p>
+</div>
+<div class="section" id="fu-wu-zhu-ce-jian-kang-jian-cha">
+<h3>服务注册&amp;健康检查<a class="headerlink" href="#fu-wu-zhu-ce-jian-kang-jian-cha" title="Permalink to this headline">¶</a></h3>
+<p>注册一个服务&amp;健康检查，健康检查类型为 <a class="reference external" href="https://www.consul.io/docs/discovery/checks#ttl">TTL</a>，应用程序自行上报健康信息，如果 TTL 时间内没有上报，就标记服务为 fail：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">ttl</span> <span class="o">:=</span> <span class="mi">10</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span>
+<span class="nx">agent</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nx">Agent</span><span class="p">()</span>
+<span class="nx">serviceDef</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">api</span><span class="p">.</span><span class="nx">AgentServiceRegistration</span><span class="p">{</span>
+    <span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;myservice&quot;</span><span class="p">,</span>
+    <span class="nx">Check</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">api</span><span class="p">.</span><span class="nx">AgentServiceCheck</span><span class="p">{</span>
+        <span class="nx">TTL</span><span class="p">:</span> <span class="nx">ttl</span><span class="p">.</span><span class="nx">String</span><span class="p">(),</span>
+        <span class="c1">// 检查失败后多长时间后从 consul 中自动注销</span>
+        <span class="nx">DeregisterCriticalServiceAfter</span><span class="p">:</span> <span class="s">&quot;1h&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">agent</span><span class="p">.</span><span class="nx">ServiceRegister</span><span class="p">(</span><span class="nx">serviceDef</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;register service failed: &quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="nx">agent</span><span class="p">.</span><span class="nx">UpdateTTL</span><span class="p">(</span><span class="s">&quot;service:myservice&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="s">&quot;pass&quot;</span><span class="p">)</span>
+<span class="c1">// 最后一个参数为服务状态，可以为 pass/warn/fail</span>
+<span class="c1">// 刚注册服务状态为 fail，且需要每间隔一段时间（&lt; TTL）上报一次状态</span>
+
+<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">agent</span><span class="p">.</span><span class="nx">ServiceDeregister</span><span class="p">(</span><span class="s">&quot;myservice&quot;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;deregister service failed: &quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api#Agent">https://pkg.go.dev/github.com/hashicorp/consul/api#Agent</a></li>
+<li><a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api#AgentServiceCheck">https://pkg.go.dev/github.com/hashicorp/consul/api#AgentServiceCheck</a></li>
+</ul>
+<p>获取某一服务&amp;健康检查的信息：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">hs</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nx">Health</span><span class="p">()</span>
+<span class="nx">serviceEntries</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">hs</span><span class="p">.</span><span class="nx">Service</span><span class="p">(</span><span class="s">&quot;myservice&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">e</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">serviceEntries</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">Node</span><span class="p">.</span><span class="nx">Address</span><span class="p">,</span> <span class="nx">e</span><span class="p">.</span><span class="nx">Checks</span><span class="p">.</span><span class="nx">AggregatedStatus</span><span class="p">())</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api#Health">https://pkg.go.dev/github.com/hashicorp/consul/api#Health</a></li>
+<li><a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api#ServiceEntry">https://pkg.go.dev/github.com/hashicorp/consul/api#ServiceEntry</a></li>
+</ul>
+</div>
+<div class="section" id="jian-kong-watch">
+<h3>监控（watch）<a class="headerlink" href="#jian-kong-watch" title="Permalink to this headline">¶</a></h3>
+<p>使用 <a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api#QueryOptions">QueryOptions</a> 中的 <code class="docutils literal"><span class="pre">WaitTime</span></code> 参数可以监控服务注册信息或者 KV 存储值的变化 。大致逻辑如下：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">h</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nx">Health</span><span class="p">()</span>
+<span class="nx">opts</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">api</span><span class="p">.</span><span class="nx">QueryOptions</span><span class="p">{</span><span class="nx">WaitTime</span><span class="p">:</span> <span class="mi">5</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">}</span>
+<span class="k">for</span> <span class="p">{</span>
+    <span class="nx">serviceEntries</span><span class="p">,</span> <span class="nx">meta</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">h</span><span class="p">.</span><span class="nx">Service</span><span class="p">(</span><span class="s">&quot;myservice&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="nx">opts</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+        <span class="k">continue</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">WaitIndex</span> <span class="o">==</span> <span class="nx">meta</span><span class="p">.</span><span class="nx">LastIndex</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Info</span><span class="p">(</span><span class="s">&quot;wait timeout but key got no change&quot;</span><span class="p">)</span>
+        <span class="k">continue</span>
+    <span class="p">}</span>
+    <span class="nx">opts</span><span class="p">.</span><span class="nx">WaitIndex</span> <span class="p">=</span> <span class="nx">meta</span><span class="p">.</span><span class="nx">LastIndex</span>
+
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Info</span><span class="p">(</span><span class="s">&quot;event:&quot;</span><span class="p">,</span> <span class="nx">serviceEntries</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="fen-bu-shi-suo">
+<h3>分布式锁<a class="headerlink" href="#fen-bu-shi-suo" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">lock</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nx">LockKey</span><span class="p">(</span><span class="s">&quot;mylock&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="nx">stopCh</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
+
+<span class="k">for</span> <span class="p">{</span>
+    <span class="nx">lostCh</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">lock</span><span class="p">.</span><span class="nx">Lock</span><span class="p">(</span><span class="nx">stopCh</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;error:&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+        <span class="k">continue</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nx">lostCh</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">lock</span><span class="p">.</span><span class="nx">Unlock</span><span class="p">()</span>
+        <span class="k">break</span>
+    <span class="p">}</span>
+
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;got lock&quot;</span><span class="p">)</span>
+
+    <span class="c1">// go dosomething(lostCh)</span>
+    <span class="c1">// 如果操作 kv 需要先检查 lostCh 看是否丢失了锁，如果是取消操作返回。</span>
+
+    <span class="o">&lt;-</span><span class="nx">lostCh</span>
+    <span class="nx">log</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;lost lock&quot;</span><span class="p">)</span>
+    <span class="nx">lock</span><span class="p">.</span><span class="nx">Unlock</span><span class="p">()</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>默认情况下，持有锁的应用进程如果挂了/网络不通，其它正在等待同一把锁的应用进程需要 15s 后才能获得锁，这个参数由 <a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api#LockOptions">LockOptions</a> 中的 <code class="docutils literal"><span class="pre">LockDelay</span></code> 参数控制，默认为 15s，作用在于：当持有锁的应用进程是因为比如网络抖动等问题导致锁丢失了而不是进程挂了，该应用进程可能正在写持有锁才能操作的 kv，给其一定的时间退出，防止多个应用进程同时写导致状态不一致。详细可以见：<a class="reference external" href="https://www.consul.io/docs/dynamic-app-config/sessions">https://www.consul.io/docs/dynamic-app-config/sessions</a> 。</p>
+<p>锁底层是使用 KV + Session 实现的，详细可见：<a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/application-leader-elections">https://learn.hashicorp.com/tutorials/consul/application-leader-elections</a> 。</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#0329 Consul</a><ul>
+<li><a class="reference internal" href="#he-etcd-di-dui-bi">和 etcd 的对比</a></li>
+<li><a class="reference internal" href="#cloudflare-ru-he-bu-shu">cloudflare 如何部署</a></li>
+<li><a class="reference internal" href="#an-zhuang">安装</a></li>
+<li><a class="reference internal" href="#ji-ben-shi-yong-shi-yong-ming-ling-hang-gong-ju-miao-shu">基本使用（使用命令行工具描述）</a></li>
+<li><a class="reference internal" href="#qi-dong-kai-fa-ce-shi-yong-agent">启动开发测试用 agent</a></li>
+<li><a class="reference internal" href="#kai-fa-ce-shi-yong-ben-di-ji-qun">开发测试用本地集群</a></li>
+<li><a class="reference internal" href="#go-api-examples">Go API Examples</a><ul>
+<li><a class="reference internal" href="#dao-ru-bao">导入包</a></li>
+<li><a class="reference internal" href="#kv-cun-chu">KV 存储</a></li>
+<li><a class="reference internal" href="#fu-wu-zhu-ce-jian-kang-jian-cha">服务注册&amp;健康检查</a></li>
+<li><a class="reference internal" href="#jian-kong-watch">监控（watch）</a></li>
+<li><a class="reference internal" href="#fen-bu-shi-suo">分布式锁</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">基于 xdp 的 L4LB 开发手记</a><ul>
+      <li>Previous: <a href="210305.html" title="previous chapter">#0305 大包模式（Jumbo Frame）</a></li>
+      <li>Next: <a href="../aho-corasick-algo.html" title="next chapter">AC 自动机</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/210329.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/210329.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

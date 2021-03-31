@@ -1,0 +1,273 @@
+#0329 Consul
+=================
+
+和 etcd 的对比
+--------------------
+
+Consul 除了实现了分布式 kv 存储的原语之外，还原生支持了服务发现、健康检查等高级功能。
+
+- https://etcd.io/docs/current/learning/why/
+- https://www.consul.io/docs/intro/vs/zookeeper
+
+cloudflare 如何部署
+---------------------
+
+  Cluster Architecture
+
+  As I mentioned, we have around 200 locations where we have servers. And importantly, we want those locations to be separate from each other. We want them to be part of different failure domains. We don't want a failure in — let's say — Amsterdam impacting the London location. With that in mind, we deployed a different Consul cluster in each of those locations — so the failure of a Consul cluster or anything else wouldn't impact other locations.
+
+  https://www.hashicorp.com/resources/how-nomad-and-consul-are-being-used-at-cloudflare
+
+一个边缘机房一个独立的 Consul。
+
+安装
+---------------------
+
+方法一：从 https://www.consul.io/downloads.html 下载预编译好的可执行文件，将下载得到的 consul 可执行文件直接放到 ``PATH`` 目录中。
+
+方法二：使用包管理系统（CentOS）。
+
+.. code-block:: console
+
+    # yum install -y yum-utils
+    # yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+    # yum -y install consul
+
+其它：https://learn.hashicorp.com/tutorials/consul/get-started-install#install-consul
+
+基本使用（使用命令行工具描述）
+-------------------------------
+
+https://learn.hashicorp.com/collections/consul/getting-started
+
+启动开发测试用 agent
+-----------------------
+
+agent 是 consul 的核心服务进程。
+
+.. code-block:: console
+
+    $ consul agent -dev
+
+更多命令参见：https://www.consul.io/commands
+
+开发测试用本地集群
+----------------------
+
+多个 agent 可以组成集群，集群中的 agent 有 server 和 client 两种角色，server 参与 raft 共识算法，client 只转发请求给 server 处理，相当于一层代理。
+
+.. code-block:: bash
+
+    mkdir /tmp/consul
+
+    # 在 root 中启动一个 server 角色的 agent，并配置集群中只需要一个 server 角色的 agent
+    # 主要是图简单，生产环境中需要至少配置 3 个或以上 server
+    consul agent -server --bootstrap-expect=1 -node=root -bind 172.17.2.1 \
+        -data-dir=/tmp/consul/root -log-file=/tmp/consul/root >/dev/null 2>&1 &
+
+    # 在 ns 中各自分别启动一个 client 角色的 agent，并加入集群
+    for i in {2..4}; do
+        NS=t$i$i
+        ip netns exec $NS consul agent -node=$NS -bind 172.17.$i.$i -retry-join 172.17.2.1 \
+            -data-dir=/tmp/consul/$NS -log-file=/tmp/consul/$NS >/dev/null 2>&1 &
+    done
+
+查看集群中的成员：
+
+.. code-block:: console
+
+    # consul members
+    Node  Address          Status  Type    Build  Protocol  DC   Segment
+    root  172.17.2.1:8301  alive   server  1.9.4  2         dc1  <all>
+    t22   172.17.2.2:8301  alive   client  1.9.4  2         dc1  <default>
+    t33   172.17.3.3:8301  alive   client  1.9.4  2         dc1  <default>
+    t44   172.17.4.4:8301  alive   client  1.9.4  2         dc1  <default>
+
+查看集群的 leader：
+
+.. code-block:: console
+
+    # curl localhost:8500/v1/status/leader
+    "172.17.2.1:8300"
+
+- https://www.consul.io/docs/install/bootstrapping
+- https://www.consul.io/docs/architecture/consensus
+- https://www.consul.io/docs/agent/options
+
+Go API Examples
+----------------------------------
+
+- Go API 文档：https://pkg.go.dev/github.com/hashicorp/consul/api
+- 不太明白的参数含义可以找 https://www.consul.io/api-docs 中对应 HTTP API 中的说明。
+
+导入包
+^^^^^^^^
+
+.. code-block:: go
+
+    import (
+        "log"
+        "time"
+
+        "github.com/hashicorp/consul/api"
+    )
+    client, err := api.NewClient(consul.DefaultConfig())
+
+KV 存储
+^^^^^^^^^^^
+
+读写：
+
+.. code-block:: go
+
+    kv := client.KV()
+    p := &api.KVPair{Key: "KEY", Value: []byte("1000")}
+    _, err = kv.Put(p, nil)
+
+    pair, _, err := kv.Get("KEY", nil)
+    fmt.Printf("KV: %v %s\n", pair.Key, pair.Value)
+    // KEY 不存在的时候 pair 为 nil
+
+事务：
+
+.. code-block:: go
+
+    ok, response, _, err := kv.Txn(api.KVTxnOps{
+        &api.KVTxnOp{
+            Verb: api.KVSet,
+            Key: "KEY1",
+            Value: []byte("1000"),
+        },
+        &api.KVTxnOp{
+            Verb: api.KVSet,
+            Key: "KEY2",
+            Value: []byte("2000"),
+        },
+    }, nil)
+
+列取某一个前缀的所有 KEY：
+
+.. code-block:: go
+
+    keys, _, err := kv.Keys("KEY", "", nil)
+
+列取某一个前缀的所有 KEY 和 VALUE：
+
+.. code-block:: go
+
+    kvs, _, err := kv.List("KEY", nil)
+
+https://www.consul.io/api-docs/kv
+
+----
+
+kv 存储的值最大大小为 512KB。
+
+https://www.consul.io/docs/troubleshoot/faq#q-what-is-the-per-key-value-size-limitation-for-consul-s-key-value-store
+
+服务注册&健康检查
+^^^^^^^^^^^^^^^^^^^
+
+注册一个服务&健康检查，健康检查类型为 `TTL <https://www.consul.io/docs/discovery/checks#ttl>`_，应用程序自行上报健康信息，如果 TTL 时间内没有上报，就标记服务为 fail：
+
+.. code-block:: go
+
+    ttl := 10*time.Second
+    agent := client.Agent()
+    serviceDef := &api.AgentServiceRegistration{
+        Name: "myservice",
+        Check: &api.AgentServiceCheck{
+            TTL: ttl.String(),
+            // 检查失败后多长时间后从 consul 中自动注销
+            DeregisterCriticalServiceAfter: "1h",
+        },
+    }
+    if err := agent.ServiceRegister(serviceDef); err != nil {
+        log.Println("register service failed: ", err)
+    }
+
+    agent.UpdateTTL("service:myservice", "", "pass")
+    // 最后一个参数为服务状态，可以为 pass/warn/fail
+    // 刚注册服务状态为 fail，且需要每间隔一段时间（< TTL）上报一次状态
+
+    if err := agent.ServiceDeregister("myservice"); err != nil {
+        log.Println("deregister service failed: ", err)
+    }
+
+- https://pkg.go.dev/github.com/hashicorp/consul/api#Agent
+- https://pkg.go.dev/github.com/hashicorp/consul/api#AgentServiceCheck
+
+获取某一服务&健康检查的信息：
+
+.. code-block:: go
+
+    hs := client.Health()
+    serviceEntries, _, err := hs.Service("myservice", "", false, nil)
+    for _, e := range serviceEntries {
+        log.Println(e.Node.Address, e.Checks.AggregatedStatus())
+    }
+
+- https://pkg.go.dev/github.com/hashicorp/consul/api#Health
+- https://pkg.go.dev/github.com/hashicorp/consul/api#ServiceEntry
+
+监控（watch）
+^^^^^^^^^^^^^
+
+使用 `QueryOptions <https://pkg.go.dev/github.com/hashicorp/consul/api#QueryOptions>`_ 中的 ``WaitTime`` 参数可以监控服务注册信息或者 KV 存储值的变化 。大致逻辑如下：
+
+.. code-block:: go
+
+    h := client.Health()
+    opts := &api.QueryOptions{WaitTime: 5*time.Second}
+    for {
+        serviceEntries, meta, err := h.Service("myservice", "", false, opts)
+        if err != nil {
+            log.Error(err)
+            continue
+        }
+
+        if opts.WaitIndex == meta.LastIndex {
+            log.Info("wait timeout but key got no change")
+            continue
+        }
+        opts.WaitIndex = meta.LastIndex
+
+        log.Info("event:", serviceEntries)
+    }
+
+分布式锁
+^^^^^^^^^^^^^^
+
+.. code-block:: go
+
+    lock, err := client.LockKey("mylock")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    stopCh := make(chan struct{})
+
+    for {
+        lostCh, err := lock.Lock(stopCh)
+        if err != nil {
+            log.Println("error:", err)
+            continue
+        }
+        if lostCh == nil {
+            lock.Unlock()
+            break
+        }
+
+        log.Println("got lock")
+
+        // go dosomething(lostCh)
+        // 如果操作 kv 需要先检查 lostCh 看是否丢失了锁，如果是取消操作返回。
+
+        <-lostCh
+        log.Println("lost lock")
+        lock.Unlock()
+    }
+
+默认情况下，持有锁的应用进程如果挂了/网络不通，其它正在等待同一把锁的应用进程需要 15s 后才能获得锁，这个参数由 `LockOptions <https://pkg.go.dev/github.com/hashicorp/consul/api#LockOptions>`_ 中的 ``LockDelay`` 参数控制，默认为 15s，作用在于：当持有锁的应用进程是因为比如网络抖动等问题导致锁丢失了而不是进程挂了，该应用进程可能正在写持有锁才能操作的 kv，给其一定的时间退出，防止多个应用进程同时写导致状态不一致。详细可以见：https://www.consul.io/docs/dynamic-app-config/sessions 。
+
+锁底层是使用 KV + Session 实现的，详细可见：https://learn.hashicorp.com/tutorials/consul/application-leader-elections 。
