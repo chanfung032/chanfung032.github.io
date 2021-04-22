@@ -113,6 +113,37 @@
 <p><a class="reference external" href="https://github.com/github/glb-director/blob/v1.0.7/src/glb-healthcheck/TunnelHealthChecker.go#L197">https://github.com/github/glb-director/blob/v1.0.7/src/glb-healthcheck/TunnelHealthChecker.go#L197</a></p>
 <p>GLB 分别判断 http 健康 和 GUE Tunnel 隧道是否健康来推断 GUE + http 是否健康，直接 GUE + http 实现起来比较麻烦。</p>
 </div>
+<div class="section" id="glb-redirect-pei-zhi">
+<h2>glb-redirect 配置<a class="headerlink" href="#glb-redirect-pei-zhi" title="Permalink to this headline">¶</a></h2>
+<p>glb-redirect 配置主要包含两个部分：</p>
+<ul class="simple">
+<li>fou 隧道配置，用来 gue 包的解包。</li>
+<li>iptables 规则，用来将不属于本机的机器转发给下一跳。</li>
+</ul>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># `fou` 模块也支持 gue 编解码</span>
+modprobe fou
+<span class="c1"># 指定 19523 端口的包为 gue 编码的网络包</span>
+ip fou add port <span class="m">19523</span> gue
+
+<span class="c1"># IPv4</span>
+ip link <span class="nb">set</span> up dev tunl0
+ip addr add &lt;ipv4-address&gt;/32 dev tunl0
+
+<span class="c1"># IPv6</span>
+modprobe sit
+ip link <span class="nb">set</span> up dev sit0
+ip addr add &lt;ipv6-address&gt;/128 dev sit0
+</pre></div>
+</div>
+<p>内核会根据被封装的 IP 包的目标 IP 以及路由将包转发给最匹配的网卡，如果没有匹配的网卡，默认 IPv4 转发给 tunl0、IPv6 转发给 sit0 这两个网卡。</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># 关闭 19523 端口的 conntrack</span>
+iptables -t raw -A INPUT -p udp -m udp --dport <span class="m">19523</span> -j CT --notrack
+<span class="c1"># 下面这条规则实现“第二跳”逻辑</span>
+iptables -A INPUT -p udp -m udp --dport <span class="m">19523</span> -j GLBREDIRECT
+</pre></div>
+</div>
+<p><a class="reference external" href="https://github.com/github/glb-director/blob/master/docs/setup/backend-proxy-setup.md#configuring-gue">https://github.com/github/glb-director/blob/master/docs/setup/backend-proxy-setup.md#configuring-gue</a></p>
+</div>
 </div>
 
 
@@ -128,6 +159,7 @@
 <li><a class="reference internal" href="#zhuan-fa-biao-sheng-cheng-gui-ze">转发表生成规则</a></li>
 <li><a class="reference internal" href="#gue-ge-shi">GUE 格式</a></li>
 <li><a class="reference internal" href="#gue-tunnel-jian-kang-jian-cha">GUE Tunnel 健康检查</a></li>
+<li><a class="reference internal" href="#glb-redirect-pei-zhi">glb-redirect 配置</a></li>
 </ul>
 </li>
 </ul>

@@ -42,7 +42,7 @@ https://github.com/github/glb-director/blob/master/docs/development/gue-header.m
 
 ::
 
-    0                   1                   2                   3  
+    0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\
     |          Source port          |        Destination port       | |
@@ -78,3 +78,39 @@ GUE Tunnel 健康检查
 https://github.com/github/glb-director/blob/v1.0.7/src/glb-healthcheck/TunnelHealthChecker.go#L197
 
 GLB 分别判断 http 健康 和 GUE Tunnel 隧道是否健康来推断 GUE + http 是否健康，直接 GUE + http 实现起来比较麻烦。
+
+glb-redirect 配置
+--------------------
+
+glb-redirect 配置主要包含两个部分：
+
+- fou 隧道配置，用来 gue 包的解包。
+- iptables 规则，用来将不属于本机的机器转发给下一跳。
+
+.. code-block:: bash
+
+    # `fou` 模块也支持 gue 编解码
+    modprobe fou
+    # 指定 19523 端口的包为 gue 编码的网络包
+    ip fou add port 19523 gue
+
+    # IPv4
+    ip link set up dev tunl0
+    ip addr add <ipv4-address>/32 dev tunl0
+
+    # IPv6
+    modprobe sit
+    ip link set up dev sit0
+    ip addr add <ipv6-address>/128 dev sit0
+
+内核会根据被封装的 IP 包的目标 IP 以及路由将包转发给最匹配的网卡，如果没有匹配的网卡，默认 IPv4 转发给 tunl0、IPv6 转发给 sit0 这两个网卡。
+
+.. code-block:: bash
+
+    # 关闭 19523 端口的 conntrack
+    iptables -t raw -A INPUT -p udp -m udp --dport 19523 -j CT --notrack
+    # 下面这条规则实现“第二跳”逻辑
+    iptables -A INPUT -p udp -m udp --dport 19523 -j GLBREDIRECT
+
+https://github.com/github/glb-director/blob/master/docs/setup/backend-proxy-setup.md#configuring-gue
+
