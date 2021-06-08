@@ -1,0 +1,140 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>#0607 Serf &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="AC 自动机" href="../aho-corasick-algo.html" />
+    <link rel="prev" title="#0329 Consul" href="210329.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="serf">
+<h1>#0607 Serf<a class="headerlink" href="#serf" title="Permalink to this headline">¶</a></h1>
+<p>Consul 底层使用 <a class="reference external" href="https://www.serf.io/">Serf</a> 来实现成员管理、广播消息（gossip protocol）的功能。Serf 又是基于 <a class="reference external" href="https://www.cs.cornell.edu/projects/Quicksilver/public_pdfs/SWIM.pdf">SWIM: Scalable Weakly-consistent Infection-style Process Group Membership Protocol</a> 实现。</p>
+<p>代码：<a class="reference external" href="https://github.com/hashicorp/serf/tree/master/serf">https://github.com/hashicorp/serf/tree/master/serf</a></p>
+<div class="section" id="swim-xie-yi-gai-shu">
+<h2>SWIM 协议概述<a class="headerlink" href="#swim-xie-yi-gai-shu" title="Permalink to this headline">¶</a></h2>
+<p>SWIM 包含两个组件：</p>
+<ol class="arabic simple">
+<li>故障检测器（Failure Detector），检测集群中某个成员是不是有故障下线了。</li>
+<li>广播组件，用于将检测出来有问题的成员广播给其它的成员。</li>
+</ol>
+<p>首先，故障检测器。以集群中的任意一台机器 <span class="math">\(M_i\)</span> 为例，首先检测每 <span class="math">\(T'\)</span> 周期执行一次，每个周期的开始，<span class="math">\(M_i\)</span> 从集群的成员列表中随机选择一个非自身的其它成员，比如 <span class="math">\(M_j\)</span>，给其发送一个 <em>ping</em> 消息，如果成功收到 <em>ack</em> 消息那 <span class="math">\(M_j\)</span> 正常，如果超时没有收到消息，那么 <span class="math">\(M_i\)</span> 另外随机选择 <span class="math">\(k\)</span> 个其它成员，向他们发送 <em>ping-req(</em> <span class="math">\(M_j\)</span> <em>)</em> 消息，让他们 <em>ping</em> <span class="math">\(M_j\)</span> 并将 <em>ack</em> 转发给 <span class="math">\(M_i\)</span>。整个过程中，只要 <span class="math">\(M_i\)</span> 收到一个 <em>ack</em>，那么就认为 <span class="math">\(M_j\)</span> 正常，否则标识 <span class="math">\(M_j\)</span> 为可疑，连续多次可疑，则认为该机器故障，就使用广播组件将 <span class="math">\(failed(M_j)\)</span> 信息发送给其它成员。</p>
+<img alt="../_images/swim-failure-detection.png" src="../_images/swim-failure-detection.png" />
+<p>广播组件将 <em>failed</em> 信息承载在故障检测使用的 <em>ping</em>、<em>ping-req</em>、<em>ack</em> 消息之上（也就是说不主动发送消息，而是接下来故障组件有消息要发送的时候，将要发送的 <em>failed</em>  信息包含在内发送出去），将消息 gossip 给其它成员。收到消息的成员通过同样的方法再 gossip 给其它成员，如此这般最终收敛所有的成员获取到该消息。</p>
+</div>
+<div class="section" id="serf-he-swim-bu-tong-di-di-fang">
+<h2>Serf 和 SWIM 不同的地方<a class="headerlink" href="#serf-he-swim-bu-tong-di-di-fang" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="https://www.consul.io/docs/architecture/gossip">https://www.consul.io/docs/architecture/gossip</a></li>
+<li><a class="reference external" href="https://www.serf.io/docs/internals/gossip.html#swim-modifications">https://www.serf.io/docs/internals/gossip.html#swim-modifications</a></li>
+</ul>
+<p>Serf 的实现和 SWIM 有些微差别，首先，为了让 gossip 消息的传播收敛速度更快，Serf：</p>
+<ul class="simple">
+<li>每隔一段时间会整个集群所有成员做一次状态的全同步（full state sync）。</li>
+<li>有一个独立的 gossip 协议层，并且同时使用 SWIM 的故障检测相关消息来发送 gossip 消息。</li>
+<li>保留故障成员的信息（<em>failed</em> 信息）一段时间，这样全同步的时候可以将 failed 信息同步给其它成员。</li>
+</ul>
+<p>另外，还有一个 Lifeguard 机制解决因为 CPU 负载高/网络抖动导致的误识别。</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#0607 Serf</a><ul>
+<li><a class="reference internal" href="#swim-xie-yi-gai-shu">SWIM 协议概述</a></li>
+<li><a class="reference internal" href="#serf-he-swim-bu-tong-di-di-fang">Serf 和 SWIM 不同的地方</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">基于 xdp 的 L4LB 开发手记</a><ul>
+      <li>Previous: <a href="210329.html" title="previous chapter">#0329 Consul</a></li>
+      <li>Next: <a href="../aho-corasick-algo.html" title="next chapter">AC 自动机</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/210607.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/210607.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
