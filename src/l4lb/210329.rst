@@ -33,6 +33,20 @@ cloudflare 如何部署
     # yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
     # yum -y install consul
 
+国内服务器可能无法直接通过包管理直接安装 consul，可以手工下载安装。
+
+.. code-block:: bash
+
+    # 在国外服务器上下载 rpm 包。
+    # consul 最新版本号可以在 https://www.consul.io/downloads 页面查看到。
+    wget https://rpm.releases.hashicorp.com/RHEL/7/x86_64/stable/consul-1.9.5-1.x86_64.rpm
+    
+    # 将 consul-1.9.5-1.x86_64.rpm 复制拷贝到国内服务器上
+    # ...
+    
+    # 安装
+    rpm -i consul-1.9.5-1.x86_64.rpm
+
 其它：https://learn.hashicorp.com/tutorials/consul/get-started-install#install-consul
 
 基本使用（使用命令行工具描述）
@@ -72,7 +86,8 @@ agent 是 consul 的核心服务进程。
             -data-dir=/tmp/consul/$NS -log-file=/tmp/consul/$NS >/dev/null 2>&1 &
     done
 
-查看集群中的成员：
+
+查看集群中的节点：
 
 .. code-block:: console
 
@@ -93,6 +108,30 @@ agent 是 consul 的核心服务进程。
 - https://www.consul.io/docs/install/bootstrapping
 - https://www.consul.io/docs/architecture/consensus
 - https://www.consul.io/docs/agent/options
+
+其它常见运维操作
+------------------------
+
+consul 参数也可以通过配置文件配置，见：https://www.consul.io/docs/agent/options#configuration_files
+
+生产环境一般会配置 3 或者 5 个 server 角色的 consul，这样不会一个 server 挂了就无法提供服务了。https://www.consul.io/docs/architecture/consensus#deployment_table
+
+生产环境中有些时候需要添加删除 server，常见场景：
+
+- 如果有 server 节点故障无法恢复，首先调用 ``consul force-leave <node-name>`` 删除该节点，然后再添加一个新的节点。
+- 如果要下线某台 server 的节点，一般是先添加一个节点，待新添加的节点状态变为健康后，再在要下线的机器上调用 ``consul leave`` 将其脱离集群。
+
+添加节点的方法和前面安装配置启动服务一样，另外把新的节点 IP 加到 retry_join 中，bootstrap_expect 不用变（这个参数只在第一次部署集群的时候才有意思，其它时候没有意义）。
+
+查看 server 角色机器的健康状态：
+
+.. code-block:: console
+
+    # consul operator  autopilot state
+
+autopilot 判定的节点健康的标准大概就是节点状态是 alive，并且 raft 日志没有落后 leader 太多，详细可见：https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations#server-health-checking
+
+更多可以参见官方文档以及：https://imaginea.gitbooks.io/consul-devops-handbook/content/
 
 Go API Examples
 ----------------------------------

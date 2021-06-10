@@ -70,7 +70,11 @@
 <li>有一个独立的 gossip 协议层，并且同时使用 SWIM 的故障检测相关消息来发送 gossip 消息。</li>
 <li>保留故障成员的信息（<em>failed</em> 信息）一段时间，这样全同步的时候可以将 failed 信息同步给其它成员。</li>
 </ul>
-<p>另外，还有一个 Lifeguard 机制解决因为 CPU 负载高/网络抖动导致的误识别。</p>
+<p>另外，还有一个 Lifeguard 机制解决因为 CPU 负载高/网络抖动导致的误识别。详细见：</p>
+<ul class="simple">
+<li><a class="reference external" href="https://arxiv.org/abs/1707.00788">论文 Lifeguard : SWIM-ing with Situational Awareness</a></li>
+<li><a class="reference external" href="https://www.hashicorp.com/blog/making-gossip-more-robust-with-lifeguard/">https://www.hashicorp.com/blog/making-gossip-more-robust-with-lifeguard/</a></li>
+</ul>
 </div>
 </div>
 

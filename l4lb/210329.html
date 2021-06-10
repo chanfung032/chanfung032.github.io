@@ -71,6 +71,18 @@
 <span class="gp">#</span> yum -y install consul
 </pre></div>
 </div>
+<p>国内服务器可能无法直接通过包管理直接安装 consul，可以手工下载安装。</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># 在国外服务器上下载 rpm 包。</span>
+<span class="c1"># consul 最新版本号可以在 https://www.consul.io/downloads 页面查看到。</span>
+wget https://rpm.releases.hashicorp.com/RHEL/7/x86_64/stable/consul-1.9.5-1.x86_64.rpm
+
+<span class="c1"># 将 consul-1.9.5-1.x86_64.rpm 复制拷贝到国内服务器上</span>
+<span class="c1"># ...</span>
+
+<span class="c1"># 安装</span>
+rpm -i consul-1.9.5-1.x86_64.rpm
+</pre></div>
+</div>
 <p>其它：<a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/get-started-install#install-consul">https://learn.hashicorp.com/tutorials/consul/get-started-install#install-consul</a></p>
 </div>
 <div class="section" id="ji-ben-shi-yong-shi-yong-ming-ling-hang-gong-ju-miao-shu">
@@ -103,7 +115,7 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 <span class="k">done</span>
 </pre></div>
 </div>
-<p>查看集群中的成员：</p>
+<p>查看集群中的节点：</p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> consul members
 <span class="go">Node  Address          Status  Type    Build  Protocol  DC   Segment</span>
 <span class="go">root  172.17.2.1:8301  alive   server  1.9.4  2         dc1  &lt;all&gt;</span>
@@ -122,6 +134,23 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 <li><a class="reference external" href="https://www.consul.io/docs/architecture/consensus">https://www.consul.io/docs/architecture/consensus</a></li>
 <li><a class="reference external" href="https://www.consul.io/docs/agent/options">https://www.consul.io/docs/agent/options</a></li>
 </ul>
+</div>
+<div class="section" id="qi-ta-chang-jian-yun-wei-cao-zuo">
+<h2>其它常见运维操作<a class="headerlink" href="#qi-ta-chang-jian-yun-wei-cao-zuo" title="Permalink to this headline">¶</a></h2>
+<p>consul 参数也可以通过配置文件配置，见：<a class="reference external" href="https://www.consul.io/docs/agent/options#configuration_files">https://www.consul.io/docs/agent/options#configuration_files</a></p>
+<p>生产环境一般会配置 3 或者 5 个 server 角色的 consul，这样不会一个 server 挂了就无法提供服务了。<a class="reference external" href="https://www.consul.io/docs/architecture/consensus#deployment_table">https://www.consul.io/docs/architecture/consensus#deployment_table</a></p>
+<p>生产环境中有些时候需要添加删除 server，常见场景：</p>
+<ul class="simple">
+<li>如果有 server 节点故障无法恢复，首先调用 <code class="docutils literal"><span class="pre">consul</span> <span class="pre">force-leave</span> <span class="pre">&lt;node-name&gt;</span></code> 删除该节点，然后再添加一个新的节点。</li>
+<li>如果要下线某台 server 的节点，一般是先添加一个节点，待新添加的节点状态变为健康后，再在要下线的机器上调用 <code class="docutils literal"><span class="pre">consul</span> <span class="pre">leave</span></code> 将其脱离集群。</li>
+</ul>
+<p>添加节点的方法和前面安装配置启动服务一样，另外把新的节点 IP 加到 retry_join 中，bootstrap_expect 不用变（这个参数只在第一次部署集群的时候才有意思，其它时候没有意义）。</p>
+<p>查看 server 角色机器的健康状态：</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> consul operator  autopilot state
+</pre></div>
+</div>
+<p>autopilot 判定的节点健康的标准大概就是节点状态是 alive，并且 raft 日志没有落后 leader 太多，详细可见：<a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations#server-health-checking">https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations#server-health-checking</a></p>
+<p>更多可以参见官方文档以及：<a class="reference external" href="https://imaginea.gitbooks.io/consul-devops-handbook/content/">https://imaginea.gitbooks.io/consul-devops-handbook/content/</a></p>
 </div>
 <div class="section" id="go-api-examples">
 <h2>Go API Examples<a class="headerlink" href="#go-api-examples" title="Permalink to this headline">¶</a></h2>
@@ -300,6 +329,7 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 <li><a class="reference internal" href="#ji-ben-shi-yong-shi-yong-ming-ling-hang-gong-ju-miao-shu">基本使用（使用命令行工具描述）</a></li>
 <li><a class="reference internal" href="#qi-dong-kai-fa-ce-shi-yong-agent">启动开发测试用 agent</a></li>
 <li><a class="reference internal" href="#kai-fa-ce-shi-yong-ben-di-ji-qun">开发测试用本地集群</a></li>
+<li><a class="reference internal" href="#qi-ta-chang-jian-yun-wei-cao-zuo">其它常见运维操作</a></li>
 <li><a class="reference internal" href="#go-api-examples">Go API Examples</a><ul>
 <li><a class="reference internal" href="#dao-ru-bao">导入包</a></li>
 <li><a class="reference internal" href="#kv-cun-chu">KV 存储</a></li>

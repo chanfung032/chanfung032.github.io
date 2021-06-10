@@ -31,4 +31,7 @@ Serf 的实现和 SWIM 有些微差别，首先，为了让 gossip 消息的传�
 - 有一个独立的 gossip 协议层，并且同时使用 SWIM 的故障检测相关消息来发送 gossip 消息。
 - 保留故障成员的信息（*failed* 信息）一段时间，这样全同步的时候可以将 failed 信息同步给其它成员。
 
-另外，还有一个 Lifeguard 机制解决因为 CPU 负载高/网络抖动导致的误识别。
+另外，还有一个 Lifeguard 机制解决因为 CPU 负载高/网络抖动导致的误识别。详细见：
+
+- `论文 Lifeguard : SWIM-ing with Situational Awareness <https://arxiv.org/abs/1707.00788>`_
+- https://www.hashicorp.com/blog/making-gossip-more-robust-with-lifeguard/
