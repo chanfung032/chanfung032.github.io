@@ -1,0 +1,248 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Go 语言实现——sync.Pool &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Go 语言实现——io.Copy 和 zerocopy 优化" href="golang-internals-io-copy-and-zerocopy.html" />
+    <link rel="prev" title="跳表 Skiplist" href="skiplist.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="go-yu-yan-shi-xian-sync-pool">
+<h1>Go 语言实现——sync.Pool<a class="headerlink" href="#go-yu-yan-shi-xian-sync-pool" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="shi-yong-shi-li">
+<h2>使用示例<a class="headerlink" href="#shi-yong-shi-li" title="Permalink to this headline">¶</a></h2>
+<p>sync.Pool 可以用来池化复用一些需要频繁申请释放的临时对象，减小 gc 的压力从而提高性能。</p>
+<p>前述 <a class="reference internal" href="golang-internals-io-copy-and-zerocopy.html"><span class="doc">Go 语言实现——io.Copy 和 zerocopy 优化</span></a> 中提到的 splice 就使用 sync.Pool 对第一步需要创建的 pipe 进行了池化复用。</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">splicePipe</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="c1">// ...</span>
+<span class="p">}</span>
+
+<span class="c1">// 如果不指定 New 方法，那么在 pool 中没有可用对象的时候，pool.Get 就返回 nil</span>
+<span class="c1">// 如果指定了则会调用 New 函数新建一个对象。</span>
+<span class="kd">var</span> <span class="nx">splicePipePool</span> <span class="p">=</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Pool</span><span class="p">{</span><span class="nx">New</span><span class="p">:</span> <span class="nx">newPoolPipe</span><span class="p">}</span>
+
+<span class="kd">func</span> <span class="nx">newPoolPipe</span><span class="p">()</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
+    <span class="c1">// 创建并初始化一个新的 splicePipe 对象</span>
+    <span class="nx">p</span> <span class="o">:=</span> <span class="nx">newPipe</span><span class="p">()</span>
+    <span class="c1">// 设置这个新的对象 gc 前调用 destroyPipe 函数</span>
+    <span class="nx">runtime</span><span class="p">.</span><span class="nx">SetFinalizer</span><span class="p">(</span><span class="nx">p</span><span class="p">,</span> <span class="nx">destroyPipe</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nx">p</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nx">getPipe</span><span class="p">()</span> <span class="p">(</span><span class="o">*</span><span class="nx">splicePipe</span><span class="p">,</span> <span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// 从 pool 中去一个闲置对象或者创建一个新对象</span>
+    <span class="nx">v</span> <span class="o">:=</span> <span class="nx">splicePipePool</span><span class="p">.</span><span class="nx">Get</span><span class="p">()</span>
+    <span class="k">return</span> <span class="nx">v</span><span class="p">.(</span><span class="o">*</span><span class="nx">splicePipe</span><span class="p">),</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nx">putPipe</span><span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">splicePipe</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// 将闲置对象放回 pool 中</span>
+    <span class="nx">splicePipePool</span><span class="p">.</span><span class="nx">Put</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nx">destroyPipe</span><span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">splicePipe</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// cleanup ...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.17/src/internal/poll/splice_linux.go#L166">https://github.com/golang/go/blob/release-branch.go1.17/src/internal/poll/splice_linux.go#L166</a></p>
+</div>
+<div class="section" id="shi-xian">
+<h2>实现<a class="headerlink" href="#shi-xian" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal"><span class="pre">sync.Pool</span></code> 结构体定义：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Pool</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="c1">// P 是 虚拟线程的个数</span>
+    <span class="nx">local</span>     <span class="p">[</span><span class="nx">P</span><span class="p">]</span><span class="nx">poolLocal</span>
+    <span class="nx">victim</span>    <span class="p">[</span><span class="nx">P</span><span class="p">]</span><span class="nx">poolLocal</span>
+
+    <span class="nx">New</span> <span class="kd">func</span><span class="p">()</span> <span class="kd">interface</span><span class="p">{}</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">poolLocal</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">private</span> <span class="kd">interface</span><span class="p">{}</span> <span class="c1">// 只能被本地 P 使用的对象</span>
+    <span class="nx">shared</span>  <span class="nx">poolChain</span>   <span class="c1">// 本地 P 使用 pushHead/popHead 操作对象; 其它 P 可以调用 popTail 从里面偷对象</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>每个虚拟线程维护一个 poolLocal，优先使用 poolLocal 来存储、获取闲置对象，当 poolLocal 没有可用闲置对象的时候，也可以从其它虚拟线程的 poolLocal.shared 中偷闲置对象。类似 GMP 调度中从其它线程偷 goroutine。</p>
+<p>往 pool 中存闲置对象的时候。</p>
+<ol class="arabic simple">
+<li>首先检查 poolLocal.private 是不是 nil，如果是 nil 直接存在 private 中。</li>
+<li>如果不为空，再将对象 pushHead 进 poolLocal.shared 中。</li>
+</ol>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Pool</span><span class="p">)</span> <span class="nx">Put</span><span class="p">(</span><span class="nx">x</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="nx">x</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="nx">pid</span> <span class="o">:=</span> <span class="nx">runtime_procPin</span><span class="p">()</span>
+    <span class="nx">l</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">local</span><span class="p">[</span><span class="nx">pid</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nx">l</span><span class="p">.</span><span class="nx">private</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">l</span><span class="p">.</span><span class="nx">private</span> <span class="p">=</span> <span class="nx">x</span>
+        <span class="nx">x</span> <span class="p">=</span> <span class="kc">nil</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nx">x</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">l</span><span class="p">.</span><span class="nx">shared</span><span class="p">.</span><span class="nx">pushHead</span><span class="p">(</span><span class="nx">x</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">runtime_procUnpin</span><span class="p">()</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>从 pool 中获取闲置对象的时候。</p>
+<ol class="arabic simple">
+<li>首先检查 private 是不是空，如果不为空直接返回 private。</li>
+<li>否则 popHead 从 poolLocal.shared 中尝试获取一个闲置对象返回。</li>
+<li>如果 poolLocal.shared 中也没有闲置对象，那么尝试从其它线程的 poolLocal 中偷一个闲置对象，逻辑同 1 和 2。</li>
+<li>如果还没有再从 p.victim 中安装前面 1、2、3 的逻辑尝试获取闲置对象返回。</li>
+<li>如果上述都失败，如果 pool.New 不为空，则调用 pool.New 新建一个对象返回。</li>
+</ol>
+<p>第 4 步的 victim 的来历如下，每次 gc 执行前会调用 sync.Pool 注册的一个清理函数会执行 <code class="docutils literal"><span class="pre">pool.victim,</span> <span class="pre">pool.local</span> <span class="pre">=</span> <span class="pre">nil,</span> <span class="pre">p.victim</span></code> 清理长期不使用的闲置对象，如果一个对象在两次 gc 期间都没有被 Get，这个对象就会被 gc 回收。</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Pool</span><span class="p">)</span> <span class="nx">Get</span><span class="p">()</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
+    <span class="nx">pid</span> <span class="o">:=</span> <span class="nx">runtime_procPin</span><span class="p">()</span>
+    <span class="nx">l</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">local</span><span class="p">[</span><span class="nx">pid</span><span class="p">]</span>
+    <span class="nx">x</span> <span class="o">:=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">private</span>
+    <span class="nx">l</span><span class="p">.</span><span class="nx">private</span> <span class="p">=</span> <span class="kc">nil</span>
+    <span class="k">if</span> <span class="nx">x</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">x</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">shared</span><span class="p">.</span><span class="nx">popHead</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nx">x</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="nx">x</span> <span class="p">=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">getSlow</span><span class="p">(</span><span class="nx">pid</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="nx">runtime_procUnpin</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nx">x</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">p</span><span class="p">.</span><span class="nx">New</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">x</span> <span class="p">=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">New</span><span class="p">()</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">x</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Pool</span><span class="p">)</span> <span class="nx">getSlow</span><span class="p">(</span><span class="nx">pid</span> <span class="kt">int</span><span class="p">)</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
+    <span class="c1">// 尝试从其它线程的 localPool.shared 中偷一个闲置对象</span>
+    <span class="nx">size</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">locals</span><span class="p">)</span>
+    <span class="nx">locals</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">local</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">size</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="nx">l</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">locals</span><span class="p">[(</span><span class="nx">pid</span><span class="o">+</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">%</span><span class="nb">int</span><span class="p">(</span><span class="nx">size</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="nx">x</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">shared</span><span class="p">.</span><span class="nx">popTail</span><span class="p">();</span> <span class="nx">x</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">x</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// 尝试从 p.victim 中获取一个闲置对象。</span>
+    <span class="c1">// sync.Pool 注册了一个 cleanup 函数，这个函数在每次 gc 前执行一次，</span>
+    <span class="nx">locals</span> <span class="p">=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">victim</span><span class="p">[</span><span class="nx">pid</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nx">x</span> <span class="o">:=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">private</span><span class="p">;</span> <span class="nx">x</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">l</span><span class="p">.</span><span class="nx">private</span> <span class="p">=</span> <span class="kc">nil</span>
+        <span class="k">return</span> <span class="nx">x</span>
+    <span class="p">}</span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nb">int</span><span class="p">(</span><span class="nx">size</span><span class="p">);</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="nx">l</span> <span class="o">:=</span> <span class="nx">indexLocal</span><span class="p">(</span><span class="nx">locals</span><span class="p">,</span> <span class="p">(</span><span class="nx">pid</span><span class="o">+</span><span class="nx">i</span><span class="p">)</span><span class="o">%</span><span class="nb">int</span><span class="p">(</span><span class="nx">size</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nx">x</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">shared</span><span class="p">.</span><span class="nx">popTail</span><span class="p">();</span> <span class="nx">x</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">x</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>下面是 Google 的一张图，poolLocal.shared 数据结构是一个 双向链表 + ringbuffer，可以忽略。看主要逻辑就行。</p>
+<img alt="_images/sync-pool.png" src="_images/sync-pool.png" />
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Go 语言实现——sync.Pool</a><ul>
+<li><a class="reference internal" href="#shi-yong-shi-li">使用示例</a></li>
+<li><a class="reference internal" href="#shi-xian">实现</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="skiplist.html" title="previous chapter">跳表 Skiplist</a></li>
+      <li>Next: <a href="golang-internals-io-copy-and-zerocopy.html" title="next chapter">Go 语言实现——io.Copy 和 zerocopy 优化</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/golang-internals-sync-pool.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/golang-internals-sync-pool.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
