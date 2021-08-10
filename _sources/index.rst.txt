@@ -12,7 +12,6 @@ Feng's blog
    aho-corasick-algo.rst
    tcpdump-bpf-filter-vlan-tagged-and-untagged-traffic.rst
    imago-intentional-dialogue.rst
-   golang-asynchronous-preemption.rst
    tls-protocol.rst
    tls-certificate.rst
    bayesian-method.rst
@@ -30,6 +29,7 @@ Feng's blog
    user-experience-design-for-apis.rst
    skiplist.rst
    golang-internals-io-copy-and-zerocopy.rst
+   golang-asynchronous-preemption.rst
    golang-internals-malloc.rst
    golang-internals-io.rst
    golang-internals-goroutine.rst
