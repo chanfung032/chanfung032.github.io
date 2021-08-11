@@ -127,11 +127,11 @@
 <ol class="arabic simple">
 <li>首先检查 private 是不是空，如果不为空直接返回 private。</li>
 <li>否则 popHead 从 poolLocal.shared 中尝试获取一个闲置对象返回。</li>
-<li>如果 poolLocal.shared 中也没有闲置对象，那么尝试从其它线程的 poolLocal 中偷一个闲置对象，逻辑同 1 和 2。</li>
-<li>如果还没有再从 p.victim 中安装前面 1、2、3 的逻辑尝试获取闲置对象返回。</li>
+<li>如果 poolLocal.shared 中也没有闲置对象，那么尝试从其它线程的 poolLocal.shared 中偷一个闲置对象。</li>
+<li>如果还没有再从 p.victim 中按照前面 1、2、3 的逻辑尝试获取闲置对象返回。</li>
 <li>如果上述都失败，如果 pool.New 不为空，则调用 pool.New 新建一个对象返回。</li>
 </ol>
-<p>第 4 步的 victim 的来历如下，每次 gc 执行前会调用 sync.Pool 注册的一个清理函数会执行 <code class="docutils literal"><span class="pre">pool.victim,</span> <span class="pre">pool.local</span> <span class="pre">=</span> <span class="pre">nil,</span> <span class="pre">p.victim</span></code> 清理长期不使用的闲置对象，如果一个对象在两次 gc 期间都没有被 Get，这个对象就会被 gc 回收。</p>
+<p>第 4 步的 victim 的来历如下，每次 gc 执行前会调用 sync.Pool 注册的一个清理函数会执行 <code class="docutils literal"><span class="pre">pool.victim,</span> <span class="pre">pool.local</span> <span class="pre">=</span> <span class="pre">pool.local,</span> <span class="pre">nil</span></code> 清理长期不使用的闲置对象，如果一个对象在两次 gc 期间都没有被 Get 出去，这个对象就会被 gc 回收。</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Pool</span><span class="p">)</span> <span class="nx">Get</span><span class="p">()</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
     <span class="nx">pid</span> <span class="o">:=</span> <span class="nx">runtime_procPin</span><span class="p">()</span>
     <span class="nx">l</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">local</span><span class="p">[</span><span class="nx">pid</span><span class="p">]</span>

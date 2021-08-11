@@ -92,11 +92,11 @@ https://github.com/golang/go/blob/release-branch.go1.17/src/internal/poll/splice
 
 1. 首先检查 private 是不是空，如果不为空直接返回 private。
 2. 否则 popHead 从 poolLocal.shared 中尝试获取一个闲置对象返回。
-3. 如果 poolLocal.shared 中也没有闲置对象，那么尝试从其它线程的 poolLocal 中偷一个闲置对象，逻辑同 1 和 2。
-4. 如果还没有再从 p.victim 中安装前面 1、2、3 的逻辑尝试获取闲置对象返回。
+3. 如果 poolLocal.shared 中也没有闲置对象，那么尝试从其它线程的 poolLocal.shared 中偷一个闲置对象。
+4. 如果还没有再从 p.victim 中按照前面 1、2、3 的逻辑尝试获取闲置对象返回。
 5. 如果上述都失败，如果 pool.New 不为空，则调用 pool.New 新建一个对象返回。
 
-第 4 步的 victim 的来历如下，每次 gc 执行前会调用 sync.Pool 注册的一个清理函数会执行 ``pool.victim, pool.local = nil, p.victim`` 清理长期不使用的闲置对象，如果一个对象在两次 gc 期间都没有被 Get，这个对象就会被 gc 回收。
+第 4 步的 victim 的来历如下，每次 gc 执行前会调用 sync.Pool 注册的一个清理函数会执行 ``pool.victim, pool.local = pool.local, nil`` 清理长期不使用的闲置对象，如果一个对象在两次 gc 期间都没有被 Get 出去，这个对象就会被 gc 回收。
 
 .. code-block:: go
 
