@@ -36,6 +36,7 @@ Feng's blog
    golang-internals-goroutine.rst
    golang-internals-bootstrap.rst
    golang-internals-function.rst
+   golang-internals-byte-array-and-string.rst
    golang-internals-nil.rst
    golang-internals-variable.rst
    docker-seccomp-bpf.rst
