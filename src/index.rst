@@ -28,6 +28,7 @@ Feng's blog
    nginx-lua-internals.rst
    user-experience-design-for-apis.rst
    skiplist.rst
+   golang-internals-context.rst
    golang-internals-sync-pool.rst
    golang-internals-io-copy-and-zerocopy.rst
    golang-asynchronous-preemption.rst
