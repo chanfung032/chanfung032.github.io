@@ -46,7 +46,7 @@
   <div class="section" id="go-yu-yan-shi-xian-byte-he-string">
 <h1>Go 语言实现——[]byte 和 string<a class="headerlink" href="#go-yu-yan-shi-xian-byte-he-string" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="byte-he-string-hu-xiang-lei-xing-zhuan-huan-fu-zhi-di-ceng-shu-ju-ma">
-<h2>[]byte 和 string 互相类型转换复制底层数据吗？<a class="headerlink" href="#byte-he-string-hu-xiang-lei-xing-zhuan-huan-fu-zhi-di-ceng-shu-ju-ma" title="Permalink to this headline">¶</a></h2>
+<span id="byte-string-conversion"></span><h2>[]byte 和 string 互相类型转换复制底层数据吗？<a class="headerlink" href="#byte-he-string-hu-xiang-lei-xing-zhuan-huan-fu-zhi-di-ceng-shu-ju-ma" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;helloworld&quot;</span><span class="p">)</span>
 <span class="nb">string</span><span class="p">([]</span><span class="kt">byte</span><span class="p">{</span><span class="mh">0x1</span><span class="p">,</span> <span class="mh">0x2</span><span class="p">})</span>
 </pre></div>
@@ -135,6 +135,70 @@
 <li><a class="reference external" href="https://github.com/golang/go/wiki/CompilerOptimizations#string-and-byte">https://github.com/golang/go/wiki/CompilerOptimizations#string-and-byte</a></li>
 </ul>
 </div>
+<div class="section" id="fasthttp-zhong-bytestring-di-yi-xie-you-hua-xiao-ji-qiao">
+<h2>fasthttp 中 []byte、string 的一些优化小技巧<a class="headerlink" href="#fasthttp-zhong-bytestring-di-yi-xie-you-hua-xiao-ji-qiao" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://github.com/valyala/fasthttp#fasthttp-best-practices">https://github.com/valyala/fasthttp#fasthttp-best-practices</a></p>
+<div class="section" id="fu-yong-byte">
+<h3>复用 []byte<a class="headerlink" href="#fu-yong-byte" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div>Do not allocate objects and []byte buffers - just reuse them as much as possible. Fasthttp API design encourages this.</div></blockquote>
+<p>fasthttp 中的很多接口有一个额外的 <code class="docutils literal"><span class="pre">dst</span></code> 参数，这个参数就是给复用 []byte 用的。</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">Get</span><span class="p">(</span><span class="nx">dst</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">url</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">statusCode</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">body</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">fasthttp.Get</span></code> 返回的 body 可以通过 dst 传给下一次调用重复使用，<code class="docutils literal"><span class="pre">fasthttp.Get</span></code> 中执行 <code class="docutils literal"><span class="pre">dst</span> <span class="pre">=</span> <span class="pre">dst[:0]</span></code> 重置 buffer，然后复用这个 buffer。</p>
+</div>
+<div class="section" id="shi-yong-sync-pool-huan-cun-pin-fan-shen-qing-shi-fang-di-dui-xiang">
+<h3>使用 sync.Pool 缓存频繁申请释放的对象<a class="headerlink" href="#shi-yong-sync-pool-huan-cun-pin-fan-shen-qing-shi-fang-di-dui-xiang" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div>sync.Pool is your best friend</div></blockquote>
+<p>sync.Pool 的实现说明参见：<a class="reference internal" href="golang-internals-sync-pool.html"><span class="doc">Go 语言实现——sync.Pool</span></a></p>
+<p>使用样例可以参见：<a class="reference external" href="https://github.com/valyala/fasthttp/search?q=sync.pool">https://github.com/valyala/fasthttp/search?q=sync.pool</a></p>
+</div>
+<div class="section" id="bi-mian-byte-he-string-di-lei-xing-zhuan-huan">
+<h3>避免 []byte 和 string 的类型转换<a class="headerlink" href="#bi-mian-byte-he-string-di-lei-xing-zhuan-huan" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div>Avoid conversion between []byte and string, since this may result in memory allocation+copy. Fasthttp API provides functions for both []byte and string - use these functions instead of converting manually between []byte and string. There are some exceptions - see this wiki page for more details</div></blockquote>
+<p>避免 []byte 和 string 之间的类型转换，因为大部分转换都需要重新分配内存再把数据拷贝过去。详见：<a class="reference internal" href="#byte-string-conversion"><span class="std std-ref">[]byte 和 string 互相类型转换复制底层数据吗？</span></a> 。</p>
+<p>fasthttp 中底层一般都是使用 []byte 类型来存储 http 的数据，但有些接口也提供了 XxxString() 版本接受 string 参数，String 版本里是使用 <code class="docutils literal"><span class="pre">append(b,</span> <span class="pre">s...)</span></code> 这个方式来避免转换，直接将数据复制到底层 []byte 类型的 buffer 中的。</p>
+</div>
+<div class="section" id="nil-byte-wu-xu-te-shu-dui-dai">
+<h3>nil []byte 无需特殊对待<a class="headerlink" href="#nil-byte-wu-xu-te-shu-dui-dai" title="Permalink to this headline">¶</a></h3>
+<p>[]byte 的零值 nil 不用特殊对待，可以和空 slice <code class="docutils literal"><span class="pre">[]byte{}</span></code> 一样的使用（nil 和 空 slice 只是指向底层数组的指针不一样，其它结构都是一样的，详见：<a class="reference internal" href="golang-internals-nil.html"><span class="doc">Go 语言实现——nil</span></a>）。</p>
+<p>下面这些都是合法的：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">var</span> <span class="p">(</span>
+    <span class="c1">// both buffers are uninitialized</span>
+    <span class="nx">dst</span> <span class="p">[]</span><span class="kt">byte</span>
+    <span class="nx">src</span> <span class="p">[]</span><span class="kt">byte</span>
+<span class="p">)</span>
+<span class="c1">// 下面这些都是合法的</span>
+<span class="nx">dst</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">dst</span><span class="p">,</span> <span class="nx">src</span><span class="o">...</span><span class="p">)</span>
+<span class="nb">copy</span><span class="p">(</span><span class="nx">dst</span><span class="p">,</span> <span class="nx">src</span><span class="p">)</span>
+<span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">src</span><span class="p">)</span> <span class="o">==</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+<span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">src</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nx">src</span> <span class="p">=</span> <span class="nx">src</span><span class="p">[:</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">ch</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">src</span> <span class="p">{</span>
+    <span class="nx">doSomething</span><span class="p">(</span><span class="nx">i</span><span class="p">,</span> <span class="nx">ch</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// 不需要像下面这样检查 []byte 是不是 nil，直接用就可以了</span>
+<span class="c1">//     srcLen := 0</span>
+<span class="c1">//     if src != nil {</span>
+<span class="c1">//         srcLen = len(src)</span>
+<span class="c1">//     }</span>
+<span class="nx">srcLen</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">src</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="string-ke-yi-bei-append-gei-byte">
+<h3>string 可以被 append 给 []byte<a class="headerlink" href="#string-ke-yi-bei-append-gei-byte" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">var</span> <span class="nx">dst</span> <span class="p">[]</span><span class="kt">byte</span>
+<span class="nx">dst</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">dst</span><span class="p">,</span> <span class="s">&quot;foobar&quot;</span><span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
 </div>
 
 
@@ -148,6 +212,14 @@
   <ul>
 <li><a class="reference internal" href="#">Go 语言实现——[]byte 和 string</a><ul>
 <li><a class="reference internal" href="#byte-he-string-hu-xiang-lei-xing-zhuan-huan-fu-zhi-di-ceng-shu-ju-ma">[]byte 和 string 互相类型转换复制底层数据吗？</a></li>
+<li><a class="reference internal" href="#fasthttp-zhong-bytestring-di-yi-xie-you-hua-xiao-ji-qiao">fasthttp 中 []byte、string 的一些优化小技巧</a><ul>
+<li><a class="reference internal" href="#fu-yong-byte">复用 []byte</a></li>
+<li><a class="reference internal" href="#shi-yong-sync-pool-huan-cun-pin-fan-shen-qing-shi-fang-di-dui-xiang">使用 sync.Pool 缓存频繁申请释放的对象</a></li>
+<li><a class="reference internal" href="#bi-mian-byte-he-string-di-lei-xing-zhuan-huan">避免 []byte 和 string 的类型转换</a></li>
+<li><a class="reference internal" href="#nil-byte-wu-xu-te-shu-dui-dai">nil []byte 无需特殊对待</a></li>
+<li><a class="reference internal" href="#string-ke-yi-bei-append-gei-byte">string 可以被 append 给 []byte</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

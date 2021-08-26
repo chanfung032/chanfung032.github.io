@@ -1,6 +1,8 @@
 Go 语言实现——[]byte 和 string
 ======================================
 
+.. _byte string conversion:
+
 []byte 和 string 互相类型转换复制底层数据吗？
 ------------------------------------------------
 
@@ -103,3 +105,81 @@ Go 语言实现——[]byte 和 string
 - https://golang.design/under-the-hood/zh-cn/part1basic/ch01basic/asm/
 - https://syslog.ravelin.com/byte-vs-string-in-go-d645b67ca7ff
 - https://github.com/golang/go/wiki/CompilerOptimizations#string-and-byte
+
+
+fasthttp 中 []byte、string 的一些优化小技巧
+---------------------------------------------
+
+https://github.com/valyala/fasthttp#fasthttp-best-practices
+
+复用 []byte
+``````````````````
+
+    Do not allocate objects and []byte buffers - just reuse them as much as possible. Fasthttp API design encourages this.
+
+fasthttp 中的很多接口有一个额外的 ``dst`` 参数，这个参数就是给复用 []byte 用的。
+
+.. code-block:: go
+
+    func Get(dst []byte, url string) (statusCode int, body []byte, err error)
+
+``fasthttp.Get`` 返回的 body 可以通过 dst 传给下一次调用重复使用，``fasthttp.Get`` 中执行 ``dst = dst[:0]`` 重置 buffer，然后复用这个 buffer。
+
+
+使用 sync.Pool 缓存频繁申请释放的对象
+``````````````````````````````````````
+
+    sync.Pool is your best friend
+
+sync.Pool 的实现说明参见：:doc:`golang-internals-sync-pool`
+
+使用样例可以参见：https://github.com/valyala/fasthttp/search?q=sync.pool
+
+避免 []byte 和 string 的类型转换
+````````````````````````````````````
+
+    Avoid conversion between []byte and string, since this may result in memory allocation+copy. Fasthttp API provides functions for both []byte and string - use these functions instead of converting manually between []byte and string. There are some exceptions - see this wiki page for more details
+
+避免 []byte 和 string 之间的类型转换，因为大部分转换都需要重新分配内存再把数据拷贝过去。详见：:ref:`byte string conversion` 。
+
+fasthttp 中底层一般都是使用 []byte 类型来存储 http 的数据，但有些接口也提供了 XxxString() 版本接受 string 参数，String 版本里是使用 ``append(b, s...)`` 这个方式来避免转换，直接将数据复制到底层 []byte 类型的 buffer 中的。
+
+nil []byte 无需特殊对待
+``````````````````````````````
+
+[]byte 的零值 nil 不用特殊对待，可以和空 slice ``[]byte{}`` 一样的使用（nil 和 空 slice 只是指向底层数组的指针不一样，其它结构都是一样的，详见：:doc:`golang-internals-nil`）。
+
+下面这些都是合法的：
+
+.. code-block:: go
+
+    var (
+        // both buffers are uninitialized
+        dst []byte
+        src []byte
+    )
+    // 下面这些都是合法的
+    dst = append(dst, src...)
+    copy(dst, src)
+    (string(src) == "")
+    (len(src) == 0)
+    src = src[:0]
+
+    for i, ch := range src {
+        doSomething(i, ch)
+    }
+
+    // 不需要像下面这样检查 []byte 是不是 nil，直接用就可以了
+    //     srcLen := 0
+    //     if src != nil {
+    //         srcLen = len(src)
+    //     }
+    srcLen := len(src)
+
+string 可以被 append 给 []byte
+```````````````````````````````````````
+
+.. code-block:: go
+
+    var dst []byte
+    dst = append(dst, "foobar"...)
