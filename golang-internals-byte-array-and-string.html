@@ -199,6 +199,52 @@
 </div>
 </div>
 </div>
+<div class="section" id="range-string-di-liang-zhong-fang-shi">
+<h2>range string 的两种方式<a class="headerlink" href="#range-string-di-liang-zhong-fang-shi" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">r</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span> <span class="p">{</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>第一种，默认的方式，这种情况下，Go 假定字符串是 utf-8 编码的，range 的时候是一个字符一个字符的遍历的，这个字符可以是 Ascii 字符，也可以是中文、日文等任意合法的 unicode 字符。参见源码可以看到以上这段代码被翻译为了以下语句：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">ha</span> <span class="o">:=</span> <span class="nx">s</span>
+<span class="k">for</span> <span class="nx">hv1</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">hv1</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">ha</span><span class="p">);</span> <span class="p">{</span>
+  <span class="nx">hv1t</span> <span class="o">:=</span> <span class="nx">hv1</span>
+  <span class="nx">hv2</span> <span class="o">:=</span> <span class="nb">rune</span><span class="p">(</span><span class="nx">ha</span><span class="p">[</span><span class="nx">hv1</span><span class="p">])</span>
+  <span class="c1">// 检查当前字符是不是 ASCII 字符</span>
+  <span class="k">if</span> <span class="nx">hv2</span> <span class="p">&lt;</span> <span class="nx">utf8</span><span class="p">.</span><span class="nx">RuneSelf</span> <span class="p">{</span>
+     <span class="nx">hv1</span><span class="o">++</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+     <span class="c1">// 非 ASCII 字符需要解码</span>
+     <span class="nx">hv2</span><span class="p">,</span> <span class="nx">hv1</span> <span class="p">=</span> <span class="nx">decoderune</span><span class="p">(</span><span class="nx">ha</span><span class="p">,</span> <span class="nx">hv1</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="nx">i</span><span class="p">,</span> <span class="nx">r</span> <span class="p">=</span> <span class="nx">hv1t</span><span class="p">,</span> <span class="nx">hv2</span>
+
+  <span class="c1">// 原始 for 循环的 body 放在这</span>
+  <span class="c1">// ...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">r</span></code> 的类型为 <code class="docutils literal"><span class="pre">rune</span></code>， <code class="docutils literal"><span class="pre">rune</span></code> 是 Go 给 <code class="docutils literal"><span class="pre">unicode</span> <span class="pre">code</span> <span class="pre">point</span></code> 起的一个别称。</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// src/builtin/builtin.go</span>
+<span class="kd">type</span> <span class="kt">rune</span> <span class="p">=</span> <span class="kt">int32</span>
+
+<span class="c1">// https://golang.org/ref/spec#Rune_literals</span>
+<span class="nx">r</span> <span class="o">:=</span> <span class="sc">&#39;⌘&#39;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://go.dev/blog/strings#code-points-characters-and-runes-h2">https://go.dev/blog/strings#code-points-characters-and-runes-h2</a></li>
+<li><a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.17/src/cmd/compile/internal/walk/range.go#L220">https://github.com/golang/go/blob/release-branch.go1.17/src/cmd/compile/internal/walk/range.go#L220</a></li>
+<li><a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.17/src/builtin/builtin.go#L92">https://github.com/golang/go/blob/release-branch.go1.17/src/builtin/builtin.go#L92</a></li>
+</ul>
+<p>第二种，一个字节一个字节的遍历，语法如下：</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">b</span> <span class="o">:=</span> <span class="k">range</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Go 编译器会对 range 后面的 <code class="docutils literal"><span class="pre">[]byte(s)</span></code> 作优化，这种情况下不需要再申请内存复制数据，因为在这个写法下该 slice 就是只读的，没法再对其作修改了。</p>
+<p><a class="reference external" href="https://github.com/golang/go/wiki/CompilerOptimizations#string-and-byte">https://github.com/golang/go/wiki/CompilerOptimizations#string-and-byte</a></p>
+</div>
 </div>
 
 
@@ -220,6 +266,7 @@
 <li><a class="reference internal" href="#string-ke-yi-bei-append-gei-byte">string 可以被 append 给 []byte</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#range-string-di-liang-zhong-fang-shi">range string 的两种方式</a></li>
 </ul>
 </li>
 </ul>

@@ -183,3 +183,57 @@ string 可以被 append 给 []byte
 
     var dst []byte
     dst = append(dst, "foobar"...)
+
+range string 的两种方式
+-------------------------------
+
+.. code-block:: go
+
+    for i, r := range s {
+    }
+
+第一种，默认的方式，这种情况下，Go 假定字符串是 utf-8 编码的，range 的时候是一个字符一个字符的遍历的，这个字符可以是 Ascii 字符，也可以是中文、日文等任意合法的 unicode 字符。参见源码可以看到以上这段代码被翻译为了以下语句：
+
+.. code-block:: go
+
+    ha := s
+    for hv1 := 0; hv1 < len(ha); {
+      hv1t := hv1
+      hv2 := rune(ha[hv1])
+      // 检查当前字符是不是 ASCII 字符
+      if hv2 < utf8.RuneSelf {
+         hv1++
+      } else {
+         // 非 ASCII 字符需要解码
+         hv2, hv1 = decoderune(ha, hv1)
+      }
+      i, r = hv1t, hv2
+
+      // 原始 for 循环的 body 放在这
+      // ...
+    }
+
+``r`` 的类型为 ``rune``， ``rune`` 是 Go 给 ``unicode code point`` 起的一个别称。
+
+.. code-block:: go
+
+    // src/builtin/builtin.go
+    type rune = int32
+
+    // https://golang.org/ref/spec#Rune_literals
+    r := '⌘'
+
+- https://go.dev/blog/strings#code-points-characters-and-runes-h2
+- https://github.com/golang/go/blob/release-branch.go1.17/src/cmd/compile/internal/walk/range.go#L220
+- https://github.com/golang/go/blob/release-branch.go1.17/src/builtin/builtin.go#L92
+
+第二种，一个字节一个字节的遍历，语法如下：
+
+.. code-block:: go
+
+    for i, b := range []byte(s) {
+    }
+
+Go 编译器会对 range 后面的 ``[]byte(s)`` 作优化，这种情况下不需要再申请内存复制数据，因为在这个写法下该 slice 就是只读的，没法再对其作修改了。
+
+https://github.com/golang/go/wiki/CompilerOptimizations#string-and-byte
