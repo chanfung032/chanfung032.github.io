@@ -1,27 +1,20 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>贝叶斯方法 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Regular Expression Matching Can Be Simple And Fast" href="regexp.html" />
@@ -32,8 +25,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,59 +35,59 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="bei-ye-si-fang-fa">
+  <section id="bei-ye-si-fang-fa">
 <h1>贝叶斯方法<a class="headerlink" href="#bei-ye-si-fang-fa" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="tui-dao">
+<section id="tui-dao">
 <h2>推导<a class="headerlink" href="#tui-dao" title="Permalink to this headline">¶</a></h2>
 <p>根据 <a class="reference external" href="https://zh.wikipedia.org/wiki/%E6%9D%A1%E4%BB%B6%E7%8B%AC%E7%AB%8B">条件独立</a> 公式，如果事件 X 和 Y 相互独立，那么：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[P(X,Y) = P(X)P(Y)\]</div>
 <p>根据 <a class="reference external" href="https://zh.wikipedia.org/wiki/%E6%9D%A1%E4%BB%B6%E6%A6%82%E7%8E%87">条件概率</a> 公式：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[\begin{split}P(Y|X) = P(X,Y)/P(X) \\
 P(X|Y) = P(X,Y)/P(Y)\end{split}\]</div>
 <p>综上可得：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[P(Y|X) = P(X|Y)P(Y)/P(X)\]</div>
 <p>接着，根据 <a class="reference external" href="https://zh.wikipedia.org/wiki/%E5%85%A8%E6%A6%82%E7%8E%87%E5%85%AC%E5%BC%8F">全概率公式</a> ：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[P(X) = \sum\limits_{k}P(X|Y =Y_k)P(Y_k) 其中\sum\limits_{k}P(Y_k)=1\]</div>
 <p>可得出贝叶斯公式如下：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[P(Y_k|X) = \frac{P(X|Y_k)P(Y_k)}{\sum\limits_{k}P(X|Y =Y_k)P(Y_k)}\]</div>
-</div>
-<div class="section" id="pu-su-bei-ye-si-fen-lei">
+</section>
+<section id="pu-su-bei-ye-si-fen-lei">
 <h2>朴素贝叶斯分类<a class="headerlink" href="#pu-su-bei-ye-si-fen-lei" title="Permalink to this headline">¶</a></h2>
 <p>朴素贝叶斯分类器：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[y = \arg \max_{c_k} P(Y = c_k | X = x)\]</div>
-<p>也就是分类时，对给定的输入 <span class="math">\(x\)</span>，计算概率分布 <span class="math">\(P(Y=c_k | X = x)\)</span>，将最大的类 <span class="math">\(c_k\)</span> 作为 x 的类输出。</p>
-<div class="math">
+<p>也就是分类时，对给定的输入 <span class="math notranslate nohighlight">\(x\)</span>，计算概率分布 <span class="math notranslate nohighlight">\(P(Y=c_k | X = x)\)</span>，将最大的类 <span class="math notranslate nohighlight">\(c_k\)</span> 作为 x 的类输出。</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{split} P(Y=c_k \ | \ X=x) &amp;= \frac{P(X = x \ | \ Y = c_k) \ P(Y = c_k)}{P(X = x)} \\
 &amp;=  \frac{P(X = x \ | \ Y = c_k) \ P(Y = c_k)}{\sum_k P(X = x \ | \ Y = c_k) \ P(Y = c_k)} \\
 &amp;= \frac{P(Y = c_k) \ \prod_j P(X^{(j)}=x^{(j)} | Y = c_k)}{\sum_k P(Y = c_k) \ \prod_j P(X^{(j)}=x^{(j)} | Y = c_k)} \end{split}\end{split}\]</div>
-<p>在上面的公式中，朴素贝叶斯法对条件概率分布作了条件独立性的假设。由于这是一个较强的假设，朴素贝叶斯法也由此得名，具体地，也就是假设： <span class="math">\(P(X = x|Y = c_k) = P(X^{(1)} = x^{(1)},..., X^{(n)} = x^{(n)}|Y=C_k)  = \prod_{j=1}^{n}{P(X^{(j)} = x^{(j)})|Y = C_k})\)</span> 。</p>
-<p>因为分母对所有 <span class="math">\(c_k\)</span> 都相同，可以去掉，最终有：</p>
-<div class="math">
+<p>在上面的公式中，朴素贝叶斯法对条件概率分布作了条件独立性的假设。由于这是一个较强的假设，朴素贝叶斯法也由此得名，具体地，也就是假设： <span class="math notranslate nohighlight">\(P(X = x|Y = c_k) = P(X^{(1)} = x^{(1)},..., X^{(n)} = x^{(n)}|Y=C_k)  = \prod_{j=1}^{n}{P(X^{(j)} = x^{(j)})|Y = C_k})\)</span> 。</p>
+<p>因为分母对所有 <span class="math notranslate nohighlight">\(c_k\)</span> 都相同，可以去掉，最终有：</p>
+<div class="math notranslate nohighlight">
 \[y = \arg \max_{c_k} P(Y = c_k) \prod_j P(X^{(j)}=x^{(j)} | Y = c_k)\]</div>
-</div>
-<div class="section" id="shi-ji-ying-yong-pin-xie-jiu-zheng">
+</section>
+<section id="shi-ji-ying-yong-pin-xie-jiu-zheng">
 <h2>实际应用：拼写纠正<a class="headerlink" href="#shi-ji-ying-yong-pin-xie-jiu-zheng" title="Permalink to this headline">¶</a></h2>
 <p>要解决的问题：用户输入了一个不在字典中的单词，猜测这个用户真正想要输入的单词是什么？ 用形式化的语言描述就是：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[P(我们猜测用户想输入的单词|实际输入的单词)\]</div>
 <p>抽象化标记为：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[P(c|W)\]</div>
 <p>运用贝叶斯公式，可以得到：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[P(c|W) = P(c) * P(W|c) / P(W)\]</div>
-<p>对于不同的拼写纠正 <span class="math">\(c1\)</span> <span class="math">\(c2\)</span> …，<span class="math">\(P(W)\)</span> 都是一样的，所以比较 <span class="math">\(P(c1|W)\)</span> 和 <span class="math">\(P(c2|W)\)</span> 的时候可以忽略这个常数，即</p>
-<div class="math">
+<p>对于不同的拼写纠正 <span class="math notranslate nohighlight">\(c1\)</span> <span class="math notranslate nohighlight">\(c2\)</span> …，<span class="math notranslate nohighlight">\(P(W)\)</span> 都是一样的，所以比较 <span class="math notranslate nohighlight">\(P(c1|W)\)</span> 和 <span class="math notranslate nohighlight">\(P(c2|W)\)</span> 的时候可以忽略这个常数，即</p>
+<div class="math notranslate nohighlight">
 \[P(c|W) \propto P(c) * P(W|c)\]</div>
 <p>这个式子的抽象含义是：对于给定观测数据，一个猜测是好是坏，取决于“这个猜测本身独立的可能性大小（先验概率，Prior ）”和“这个猜测生成我们观测到的数据的可能性大小”（似然，Likelihood ）的乘积。具体到拼写纠正的例子上，含义就是，用户实际是想输入 the 的可能性大小取决于 the 本身在词汇表中被使用的可能性（频繁程度）大小（先验概率）和 想打 the 却打成 thew 的可能性大小（似然）的乘积。</p>
 <p>一个完整的代码（来自 <a class="reference external" href="http://norvig.com/spell-correct.html">Peter Norvig - How to Write a Spelling Corrector</a> Peter Norvig 是《人工智能：现代方法》的作者之一）：</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">re</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
 
 <span class="k">def</span> <span class="nf">words</span><span class="p">(</span><span class="n">text</span><span class="p">):</span> <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\w+&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
@@ -144,13 +136,13 @@ P(X|Y) = P(X,Y)/P(Y)\end{split}\]</div>
 </div>
 <p>参考文献：</p>
 <ul class="simple">
-<li><a class="reference external" href="http://mindhacks.cn/2008/09/21/the-magical-bayesian-method/">数学之美番外篇：平凡而又神奇的贝叶斯方法</a></li>
-<li><a class="reference external" href="https://www.cnblogs.com/pinard/p/6069267.html">朴素贝叶斯算法原理小结</a></li>
-<li>《统计学习方法》/李航/第四章 朴素贝叶斯法</li>
-<li><a class="reference external" href="https://scikit-learn.org/stable/modules/naive_bayes.html">https://scikit-learn.org/stable/modules/naive_bayes.html</a></li>
+<li><p><a class="reference external" href="http://mindhacks.cn/2008/09/21/the-magical-bayesian-method/">数学之美番外篇：平凡而又神奇的贝叶斯方法</a></p></li>
+<li><p><a class="reference external" href="https://www.cnblogs.com/pinard/p/6069267.html">朴素贝叶斯算法原理小结</a></p></li>
+<li><p>《统计学习方法》/李航/第四章 朴素贝叶斯法</p></li>
+<li><p><a class="reference external" href="https://scikit-learn.org/stable/modules/naive_bayes.html">https://scikit-learn.org/stable/modules/naive_bayes.html</a></p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -159,7 +151,7 @@ P(X|Y) = P(X,Y)/P(Y)\end{split}\]</div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">贝叶斯方法</a><ul>
 <li><a class="reference internal" href="#tui-dao">推导</a></li>
@@ -168,15 +160,7 @@ P(X|Y) = P(X,Y)/P(Y)\end{split}\]</div>
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="tls-certificate.html" title="previous chapter">TLS——证书信任链</a></li>
-      <li>Next: <a href="regexp.html" title="next chapter">Regular Expression Matching Can Be Simple And Fast</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -185,15 +169,15 @@ P(X|Y) = P(X,Y)/P(Y)\end{split}\]</div>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -202,7 +186,7 @@ P(X|Y) = P(X,Y)/P(Y)\end{split}\]</div>
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

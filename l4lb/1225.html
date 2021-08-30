@@ -1,39 +1,29 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>#1225 基于静态策略的转发表生成和更新方法 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#1230 调试" href="1230.html" />
-    <link rel="prev" title="#1222 GLB" href="1222.html" />
+    <link rel="next" title="#1222 GLB" href="1222.html" />
+    <link rel="prev" title="#1230 调试" href="1230.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,24 +33,24 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="ji-yu-jing-tai-ce-lve-di-zhuan-fa-biao-sheng-cheng-he-geng-xin-fang-fa">
-<h1>#1225 基于静态策略的转发表生成和更新方法<a class="headerlink" href="#ji-yu-jing-tai-ce-lve-di-zhuan-fa-biao-sheng-cheng-he-geng-xin-fang-fa" title="Permalink to this headline">¶</a></h1>
+  <section id="ji-yu-jing-tai-ce-lve-de-zhuan-fa-biao-sheng-cheng-he-geng-xin-fang-fa">
+<h1>#1225 基于静态策略的转发表生成和更新方法<a class="headerlink" href="#ji-yu-jing-tai-ce-lve-de-zhuan-fa-biao-sheng-cheng-he-geng-xin-fang-fa" title="Permalink to this headline">¶</a></h1>
 <p>本方法是在 cf 文章里提到的 LRM 策略 + 交换 primary、secondary 这两个方法基础上演绎而来。</p>
 <p>转发表的变更步骤如下：</p>
 <ol class="arabic simple">
-<li>检查后端配置/状态是否有变更，如果有，更新基础表（以下简称基表）。</li>
-<li>根据后端的状态以及 load 微调基表（交换某些槽位的 primary 和 secondary）生成最终的转发表。</li>
+<li><p>检查后端配置/状态是否有变更，如果有，更新基础表（以下简称基表）。</p></li>
+<li><p>根据后端的状态以及 load 微调基表（交换某些槽位的 primary 和 secondary）生成最终的转发表。</p></li>
 </ol>
 <p>基表具有以下特性：</p>
 <ul class="simple">
-<li>primary 中各个后端数量基本均衡。因为 primary 是主要负担流量的机器</li>
-<li>primary 中每个后端对应的 secondary 集合中各种后端数目均衡。防止微调 load 后承接流量的 secondary 分布均衡。</li>
-<li>每个槽位 primary 和 secondary 中至少有一台后端是健康的。保证服务高可用。</li>
+<li><p>primary 中各个后端数量基本均衡。因为 primary 是主要负担流量的机器</p></li>
+<li><p>primary 中每个后端对应的 secondary 集合中各种后端数目均衡。防止微调 load 后承接流量的 secondary 分布均衡。</p></li>
+<li><p>每个槽位 primary 和 secondary 中至少有一台后端是健康的。保证服务高可用。</p></li>
 </ul>
 <p>微调程序主要做两件事：</p>
 <ul class="simple">
-<li>对于 load 太高的后端的交换一定比例槽位的 primary 和 secondary。</li>
-<li>对于 primary 不健康的槽位，交换他们的 primary 和 secondary。</li>
+<li><p>对于 load 太高的后端的交换一定比例槽位的 primary 和 secondary。</p></li>
+<li><p>对于 primary 不健康的槽位，交换他们的 primary 和 secondary。</p></li>
 </ul>
 <p>基表能不变更就不变更，尽量通过微调交换 primary 和 secondary 的方式来更新转发表，这样可以尽可能的维持长连接。</p>
 <p>微调程序逻辑简单就不说了，下面主要说下基表的生成过程。</p>
@@ -72,7 +62,7 @@
 <p>首先，添加新的后端。比如新加一台服务器 B4，此时 primary 中已经有的 B1、B2、B3 需要各自匀出 25 个槽位给 B4，这样 primary 中各种后端的数目才一样，每个后端在挑选自己要匀出来的 25 个槽位时，选择 updated_at 时间最小的 25 个。</p>
 <p>第二，删除后端，比如删除后端 B1，首先我们找到所有 primary 为 B1 的槽位，当前有 75 个删除槽位，一共 B2、B3、B4 3 个其它后端，那么每个后端获得 75/3 = 25 个名额，我们按照 updated_at 从大到小的顺序依次更新这些槽位，每个槽位更新的时候优先选择其 secondary 中的后端，同时将该后端的名额减 1，如果减到 0，那么该位置暂时留空，一遍循环后再使用还有名额的后端更新留空的位置。如果使用的是 secondary 替代，不修改该槽位的 updated_at。此时，B1 只是换到了 secondary 中，graceful draining 一段时间后再更新 secondary 中的 B1 为其它机器（仍需满足上面基表特性 2 的约束）。</p>
 <p>第三，对于挂一台机器，不变更。对于挂 2 台或以上机器，同删除后端，但是只选取那些 primary 和 secondary 都挂的条目更新。</p>
-</div>
+</section>
 
 
           </div>
@@ -80,17 +70,7 @@
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">基于 xdp 的 L4LB 开发笔记</a><ul>
-      <li>Previous: <a href="1222.html" title="previous chapter">#1222 GLB</a></li>
-      <li>Next: <a href="1230.html" title="next chapter">#1230 调试</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
+        <div class="sphinxsidebarwrapper">
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -99,15 +79,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -116,7 +96,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

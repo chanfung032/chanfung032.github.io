@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>User experience design for APIs &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="跳表 Skiplist" href="skiplist.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,27 +33,27 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="user-experience-design-for-apis">
+  <section id="user-experience-design-for-apis">
 <h1>User experience design for APIs<a class="headerlink" href="#user-experience-design-for-apis" title="Permalink to this headline">¶</a></h1>
 <p>原文：<a class="reference external" href="https://blog.keras.io/user-experience-design-for-apis.html">https://blog.keras.io/user-experience-design-for-apis.html</a></p>
-<div class="section" id="deliberately-design-end-to-end-user-workflows">
+<section id="deliberately-design-end-to-end-user-workflows">
 <h2>1 - Deliberately design end-to-end user workflows.<a class="headerlink" href="#deliberately-design-end-to-end-user-workflows" title="Permalink to this headline">¶</a></h2>
 <p>Most API developers focus on atomic methods rather than holistic workflows. They let users figure out end-to-end workflows through evolutionary happenstance, given the basic primitives they provided. The resulting user experience is often one long chain of hacks that route around technical constraints that were invisible at the level of individual methods.</p>
 <p>不要只是实现一些原子方法，而让用户自己去摸索并组合出自己要实现的业务流程。</p>
 <p>To avoid this, start by listing the most common workflows that your API will be involved in. The use cases that most people will care about. Actually go through them yourself, and take notes. Better yet: watch a new user go through them, and identify pain points. Ruthlessly iron out those pain points. In particular:</p>
 <p>列出自己 API 的常见使用场景，试着在这些场景下用用自己的 API，或者观察一个新用户的摸索使用过程，找到这个过程中的痛点并解决。</p>
 <ul class="simple">
-<li><strong>Your workflows should closely map to domain-specific notions that users care about.</strong> If you are designing an API for cooking burgers, it should probably feature unsurprising objects such as “patty”, “cheese”, “bun”, “grill”, etc. And if you are designing a deep learning API, then your core data structures and their methods should closely map to the concepts used by people familiar with the field: models/networks, layers, activations, optimizers, losses, epochs, etc.</li>
-<li><strong>Ideally, no API element should deal with implementation details.</strong> You do not want the average user to deal with “primary_frame_fn”, “defaultGradeLevel”, “graph_hook”, “shardedVariableFactory”, or “hash_scope”, because these are not concepts from the underlying problem domain, they are highly specific concepts that come from your internal implementation choices.</li>
-<li><strong>Deliberately design the user onboarding process.</strong> How are complete newcomers going to find out the best way to solve their use case with your tool? Have an answer ready. Make sure your onboarding material closely maps to what your users care about: don’t teach newcomers how your API is implemented, teach them how they can use it to solve their own problems.</li>
+<li><p><strong>Your workflows should closely map to domain-specific notions that users care about.</strong> If you are designing an API for cooking burgers, it should probably feature unsurprising objects such as “patty”, “cheese”, “bun”, “grill”, etc. And if you are designing a deep learning API, then your core data structures and their methods should closely map to the concepts used by people familiar with the field: models/networks, layers, activations, optimizers, losses, epochs, etc.</p></li>
+<li><p><strong>Ideally, no API element should deal with implementation details.</strong> You do not want the average user to deal with “primary_frame_fn”, “defaultGradeLevel”, “graph_hook”, “shardedVariableFactory”, or “hash_scope”, because these are not concepts from the underlying problem domain, they are highly specific concepts that come from your internal implementation choices.</p></li>
+<li><p><strong>Deliberately design the user onboarding process.</strong> How are complete newcomers going to find out the best way to solve their use case with your tool? Have an answer ready. Make sure your onboarding material closely maps to what your users care about: don’t teach newcomers how your API is implemented, teach them how they can use it to solve their own problems.</p></li>
 </ul>
 <ul class="simple">
-<li><strong>API 的设计抽象应该贴近业务的表达</strong> 比如设计一个深度学习的 API，你的核心数据结构、函数方法应该映射到 models/networks, layers, activations, optimizers, losses, epochs 这些用户熟悉的概念。</li>
-<li><strong>不要暴露 API 的实现细节</strong> 。</li>
-<li><strong>优化新用户的初次使用体验</strong> 教用户怎么使用你的 API 解决他们的问题，而不是你的 API 是怎么实现的。</li>
+<li><p><strong>API 的设计抽象应该贴近业务的表达</strong> 比如设计一个深度学习的 API，你的核心数据结构、函数方法应该映射到 models/networks, layers, activations, optimizers, losses, epochs 这些用户熟悉的概念。</p></li>
+<li><p><strong>不要暴露 API 的实现细节</strong> 。</p></li>
+<li><p><strong>优化新用户的初次使用体验</strong> 教用户怎么使用你的 API 解决他们的问题，而不是你的 API 是怎么实现的。</p></li>
 </ul>
-</div>
-<div class="section" id="reduce-cognitive-load-for-your-users">
+</section>
+<section id="reduce-cognitive-load-for-your-users">
 <h2>2 - Reduce cognitive load for your users.<a class="headerlink" href="#reduce-cognitive-load-for-your-users" title="Permalink to this headline">¶</a></h2>
 <p>In the end-to-end workflows you design, always strive to reduce the mental effort that your users have to invest to understand and remember how things work. The less effort and focus you require from your users, the more they can invest in solving their actual problems – instead of trying to figure out how to use this or that method. In particular:</p>
 <p>尽可能的傻瓜化你的 API，让用户可以专注于解决他们的业务问题，而不是花费时间在琢磨怎么使用你的 API 上。</p>
@@ -81,8 +71,8 @@
 <p>The litmus test I use to tell whether an API is well-designed is the following: if a new user goes through the workflow for their use case on day one (following the documentation or a tutorial), and they come back the next day to solve the same problem in a slightly different context, will they be able to follow their workflow without looking up the documentation/tutorial? Will they be able to remember their workflow in one shot? A good API is one where the cognitive load of most workflows is so low that it can be learned in one shot.</p>
 <p>This litmus test also gives you a way to quantify how good or bad an API is, by counting the number of times the average user needs to look up information about a workflow in order to master it. The worst workflows are those that can never be fully remembered, and require following a lengthy tutorial every single time.</p>
 <p>如何判断一个 API 设计得是好是坏呢？我的方法是这样的：今天用户通过查文档解决了某个问题，明天用户是否可以不用再查文档仅凭记忆就可以解决类似问题？如果是，那这个 API 设计就是好的。</p>
-</div>
-<div class="section" id="provide-helpful-feedback-to-your-users">
+</section>
+<section id="provide-helpful-feedback-to-your-users">
 <h2>3 - Provide helpful feedback to your users.<a class="headerlink" href="#provide-helpful-feedback-to-your-users" title="Permalink to this headline">¶</a></h2>
 <p>Good design is interactive. It should be possible to use a good API while only minimally relying on documentation and tutorials – by simply trying things that seem intuitive, and acting upon the feedback you get back from the API. In particular:</p>
 <p>一个好的 API 设计应该提供好的交互体验，让用户可以不用文档，仅凭直觉加上接口的反馈信息就能搞懂接口的使用方法。</p>
@@ -92,13 +82,13 @@
 <p>提供一个地方让用户可以问问题。否则怎么发现那些需要解决的用户痛点问题呢。</p>
 <p>Provide detailed feedback messages upon user error. A good error message should answer: what happened, in what context? What did the software expect? How can the user fix it? They should be contextual, informative, and actionable. Every error message that transparently provides the user with the solution to their problem means one less support ticket, multiplied by how many times users run into the same issue.</p>
 <p>对于用户的错误提供详细的错误信息，一个好的错误信息应该包含以下几点：错误是在哪、在什么情况下抛出来的？正常情况下这里应该是什么？用户应该怎样 fix 这个错误。好的错误信息会大大降低用户提工单寻求支持的几率。</p>
-</div>
-<div class="section" id="conclusion">
+</section>
+<section id="conclusion">
 <h2>Conclusion<a class="headerlink" href="#conclusion" title="Permalink to this headline">¶</a></h2>
 <p>Always remember: software is for humans, not just for machines. Keep the user in mind at all times.</p>
 <p>记住：程序并不只是写给机器去执行的，也是写给人去用的，所以写的时候想想那些用它的人，也设身处地的为他们考虑考虑。</p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -107,7 +97,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">User experience design for APIs</a><ul>
 <li><a class="reference internal" href="#deliberately-design-end-to-end-user-workflows">1 - Deliberately design end-to-end user workflows.</a></li>
@@ -117,15 +107,7 @@
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="nginx-lua-internals.html" title="previous chapter">Nginx Lua 剖析</a></li>
-      <li>Next: <a href="skiplist.html" title="next chapter">跳表 Skiplist</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -134,15 +116,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -151,7 +133,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

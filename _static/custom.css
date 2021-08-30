@@ -10,10 +10,11 @@ table.noborder td {
 blockquote {
   background: #EEE;
   border-left: 6px solid #ccc;
-  margin: 1.5em 10px;
+  margin: 1.5em 0px;
   padding: 0.5em 10px;
   quotes: """""""";
 }
+/*
 blockquote:before {
   color: #ccc;
   content: open-quote;
@@ -22,6 +23,7 @@ blockquote:before {
   margin-right: 0.25em;
   vertical-align: -0.4em;
 }
+*/
 blockquote p {
   display: inline;
 }

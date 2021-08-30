@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Go 语言实现——异步抢占调度 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Go 语言实现——内存管理" href="golang-internals-malloc.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,7 +33,7 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="go-yu-yan-shi-xian-yi-bu-qiang-zhan-diao-du">
+  <section id="go-yu-yan-shi-xian-yi-bu-qiang-zhan-diao-du">
 <h1>Go 语言实现——异步抢占调度<a class="headerlink" href="#go-yu-yan-shi-xian-yi-bu-qiang-zhan-diao-du" title="Permalink to this headline">¶</a></h1>
 <p>Go 1.14 中添加了异步抢占调度：</p>
 <blockquote>
@@ -51,8 +41,8 @@
 <p><a class="reference external" href="https://golang.org/doc/go1.14#runtime">https://golang.org/doc/go1.14#runtime</a></p>
 </div></blockquote>
 <p>这个功能主要是解决 <a class="reference internal" href="golang-internals-goroutine.html"><span class="doc">Go 语言实现——goroutine</span></a> 切换一节中曾经说过的 <em>goroutine 如果一直不调用函数，那么它就不会被抢占</em> 问题。</p>
-<p>顺着 <a class="reference internal" href="golang-internals-goroutine.html#golang-goroutine-schedule"><span class="std std-ref">之前的解析</span></a> 往下看，diff 一下可以看到， <code class="docutils literal"><span class="pre">preemptone</span></code> 比之前的代码增加了下面的部分：</p>
-<div class="highlight-diff"><div class="highlight"><pre><span></span> func preemptone(_p_ *p) bool {
+<p>顺着 <a class="reference internal" href="golang-internals-goroutine.html#golang-goroutine-schedule"><span class="std std-ref">之前的解析</span></a> 往下看，diff 一下可以看到， <code class="docutils literal notranslate"><span class="pre">preemptone</span></code> 比之前的代码增加了下面的部分：</p>
+<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span> func preemptone(_p_ *p) bool {
      mp := _p_.m.ptr()
      if mp == nil || mp == getg().m {
          return false
@@ -75,13 +65,13 @@
  }
 </pre></div>
 </div>
-<p>这个 <code class="docutils literal"><span class="pre">preemptM</span></code> 做的就是使用 tgkill 系统调用给要抢占的线程发送一个信号，literally。</p>
+<p>这个 <code class="docutils literal notranslate"><span class="pre">preemptM</span></code> 做的就是使用 tgkill 系统调用给要抢占的线程发送一个信号，literally。</p>
 <blockquote>
 <div><p>int tgkill(int tgid, int tid, int sig);</p>
 <p>tgkill() sends the signal sig to the thread with the thread ID tid in the thread group tgid. (By contrast, kill(2) can only be used to send a signal to a process (i.e., thread group) as a whole, and the signal will be delivered to an arbitrary thread within that process.)</p>
 <p><a class="reference external" href="https://linux.die.net/man/2/tgkill">https://linux.die.net/man/2/tgkill</a></p>
 </div></blockquote>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">preemptM</span><span class="p">(</span><span class="nx">mp</span> <span class="o">*</span><span class="nx">m</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">preemptM</span><span class="p">(</span><span class="nx">mp</span> <span class="o">*</span><span class="nx">m</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nx">Cas</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">mp</span><span class="p">.</span><span class="nx">signalPending</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
         <span class="nx">signalM</span><span class="p">(</span><span class="nx">mp</span><span class="p">,</span> <span class="nx">sigPreempt</span><span class="p">)</span>
     <span class="p">}</span>
@@ -95,8 +85,8 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>信号处理函数在收到该信号后，会制造一个在当前指令处调用 <code class="docutils literal"><span class="pre">asyncPreempt</span></code> 函数的现场，这样在信号函数处理完，goroutine 返回执行后其会从 <code class="docutils literal"><span class="pre">asyncPreempt</span></code> 函数开始往下执行。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">sighandler</span><span class="p">(</span><span class="nx">sig</span> <span class="kt">uint32</span><span class="p">,</span> <span class="nx">info</span> <span class="o">*</span><span class="nx">siginfo</span><span class="p">,</span> <span class="nx">ctxt</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">,</span> <span class="nx">gp</span> <span class="o">*</span><span class="nx">g</span><span class="p">)</span> <span class="p">{</span>
+<p>信号处理函数在收到该信号后，会制造一个在当前指令处调用 <code class="docutils literal notranslate"><span class="pre">asyncPreempt</span></code> 函数的现场，这样在信号函数处理完，goroutine 返回执行后其会从 <code class="docutils literal notranslate"><span class="pre">asyncPreempt</span></code> 函数开始往下执行。</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">sighandler</span><span class="p">(</span><span class="nx">sig</span> <span class="kt">uint32</span><span class="p">,</span> <span class="nx">info</span> <span class="o">*</span><span class="nx">siginfo</span><span class="p">,</span> <span class="nx">ctxt</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">,</span> <span class="nx">gp</span> <span class="o">*</span><span class="nx">g</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">c</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">sigctxt</span><span class="p">{</span><span class="nx">info</span><span class="p">,</span> <span class="nx">ctxt</span><span class="p">}</span>
     <span class="c1">//...</span>
     <span class="k">if</span> <span class="nx">sig</span> <span class="o">==</span> <span class="nx">sigPreempt</span> <span class="p">{</span>
@@ -124,8 +114,8 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<p><code class="docutils literal"><span class="pre">asyncPreempt</span></code> 函数为保存当前的各种寄存器，然后调用 <code class="docutils literal"><span class="pre">asyncPreempt2</span></code> ，这个函数中会调用调度相关的函数抢占当前线程给其它 goroutine 去执行。</p>
-<div class="highlight-asm"><div class="highlight"><pre><span></span>TEXT ·asyncPreempt(SB),NOSPLIT|NOFRAME,$0-0
+<p><code class="docutils literal notranslate"><span class="pre">asyncPreempt</span></code> 函数为保存当前的各种寄存器，然后调用 <code class="docutils literal notranslate"><span class="pre">asyncPreempt2</span></code> ，这个函数中会调用调度相关的函数抢占当前线程给其它 goroutine 去执行。</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>TEXT ·asyncPreempt(SB),NOSPLIT|NOFRAME,$0-0
     ...
     MOVQ AX, 0(SP)
     MOVQ CX, 8(SP)
@@ -142,7 +132,7 @@
     RET
 </pre></div>
 </div>
-</div>
+</section>
 
 
           </div>
@@ -150,15 +140,7 @@
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="golang-internals-io-copy-and-zerocopy.html" title="previous chapter">Go 语言实现——io.Copy 和 zerocopy 优化</a></li>
-      <li>Next: <a href="golang-internals-malloc.html" title="next chapter">Go 语言实现——内存管理</a></li>
-  </ul></li>
-</ul>
-</div>
+        <div class="sphinxsidebarwrapper">
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -167,15 +149,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -184,7 +166,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

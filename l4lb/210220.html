@@ -1,39 +1,29 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>#0220 性能 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#0226 性能" href="210226.html" />
-    <link rel="prev" title="#0129 性能" href="210129.html" />
+    <link rel="next" title="#0129 性能" href="210129.html" />
+    <link rel="prev" title="#0226 性能" href="210226.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,16 +33,16 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="xing-neng">
+  <section id="xing-neng">
 <h1>#0220 性能<a class="headerlink" href="#xing-neng" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="numa-ti-xi-jia-gou">
+<section id="numa-ti-xi-jia-gou">
 <h2>NUMA 体系架构<a class="headerlink" href="#numa-ti-xi-jia-gou" title="Permalink to this headline">¶</a></h2>
 <p>NUMA（非统一内存访问）和 UMA （统一内存访问）是两种不同的 CPU-内存连接方式，NUMA 的架构大致如下图所示：</p>
 <img alt="../_images/numa.png" src="../_images/numa.png" />
 <p>（mc 指 memory controller）</p>
 <p>UMA 中所有 CPU 访问内存的时间都是一样的，但在 NUMA 体系架构下，每个 CPU 有直接相连的本地内存，访问本地内存比较快，访问非本地内存的时候，需要通过 CPU 之间的连接走远端的 mc 来访问，会比访问本地内存慢。</p>
 <p>可以通过下面的命令可以查看机器的 NUMA 配置：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> lscpu
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>lscpu
 <span class="go">...</span>
 <span class="go">Socket(s):             2 // 两个 CPU 插槽</span>
 <span class="go">NUMA node(s):          2 // 两个 NUMA node（逻辑概念）</span>
@@ -61,7 +51,7 @@
 <span class="go">NUMA node1 CPU(s):     1,3,5,7,9,11,13,15,17,19,21,23</span>
 <span class="go">...</span>
 
-<span class="gp">#</span> numactl --hardware
+<span class="gp"># </span>numactl --hardware
 <span class="go">available: 2 nodes (0-1)</span>
 <span class="go">node 0 cpus: 0 2 4 6 8 10 12 14 16 18 20 22</span>
 <span class="go">node 0 size: 32253 MB</span>
@@ -76,15 +66,15 @@
 </pre></div>
 </div>
 <ul class="simple">
-<li><a class="reference external" href="https://www.boost.org/doc/libs/1_65_0/libs/fiber/doc/html/fiber/numa.html">https://www.boost.org/doc/libs/1_65_0/libs/fiber/doc/html/fiber/numa.html</a></li>
-<li><a class="reference external" href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/performance_tuning_guide/main-cpu#s-cpu-numa-topology">https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/performance_tuning_guide/main-cpu#s-cpu-numa-topology</a></li>
+<li><p><a class="reference external" href="https://www.boost.org/doc/libs/1_65_0/libs/fiber/doc/html/fiber/numa.html">https://www.boost.org/doc/libs/1_65_0/libs/fiber/doc/html/fiber/numa.html</a></p></li>
+<li><p><a class="reference external" href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/performance_tuning_guide/main-cpu#s-cpu-numa-topology">https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/performance_tuning_guide/main-cpu#s-cpu-numa-topology</a></p></li>
 </ul>
-</div>
-<div class="section" id="ru-he-jie-shou-fa-song-bai-wan-pps-udp-bao">
+</section>
+<section id="ru-he-jie-shou-fa-song-bai-wan-pps-udp-bao">
 <h2>如何接收/发送百万 pps UDP 包<a class="headerlink" href="#ru-he-jie-shou-fa-song-bai-wan-pps-udp-bao" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://blog.cloudflare.com/how-to-receive-a-million-packets/">https://blog.cloudflare.com/how-to-receive-a-million-packets/</a></p>
 <p>使用 <a class="reference external" href="http://man7.org/linux/man-pages/man2/sendmmsg.2.html">sendmmsg</a> ，<a class="reference external" href="http://man7.org/linux/man-pages/man2/recvmmsg.2.html">recvmmsg</a> 等批量发送/接收接口，减少频繁系统调用的上下文切换负载。</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># 发送伪代码</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 发送伪代码</span>
 <span class="n">fd</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
 <span class="n">fd</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="mi">65400</span><span class="p">))</span> <span class="c1"># select source port to reduce nondeterminism</span>
 <span class="n">fd</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s2">&quot;192.168.254.1&quot;</span><span class="p">,</span> <span class="mi">4321</span><span class="p">))</span>
@@ -101,7 +91,7 @@
 </div>
 <hr class="docutils" />
 <p>压测的时候源 IP 和 目的 IP 一般都是固定的，默认 udp 仅使用这两个 IP 来将包哈希到不同的 rx 队列去，可以修改哈希方法使用 IP 和端口。</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># 查看当前 udp 哈希方法</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 查看当前 udp 哈希方法</span>
 ethtool -n eth0 rx-flow-hash udp4
 <span class="c1"># 修改 udp 哈希方法为 hash(src ip, src port, dst ip, dst port)</span>
 ethtool -N eth0 rx-flow-hash udp4 sdfn
@@ -111,24 +101,24 @@ ethtool -N eth0 rx-flow-hash udp4 sd
 </div>
 <hr class="docutils" />
 <ul class="simple">
-<li>网卡的 rx 队列和上层应用程序绑定的 CPU 在同一个 NUMA Node 上时性能最好。</li>
-<li>同一个 fd 描述符，使用多线程接收性能还不如单线程，因为存在锁竞争，绕过的一个方法就是使用 <a class="reference external" href="https://lwn.net/Articles/542629/">SO_REUSEPORT</a> ，创建多个 fd 描述符监听同一端口。</li>
+<li><p>网卡的 rx 队列和上层应用程序绑定的 CPU 在同一个 NUMA Node 上时性能最好。</p></li>
+<li><p>同一个 fd 描述符，使用多线程接收性能还不如单线程，因为存在锁竞争，绕过的一个方法就是使用 <a class="reference external" href="https://lwn.net/Articles/542629/">SO_REUSEPORT</a> ，创建多个 fd 描述符监听同一端口。</p></li>
 </ul>
-</div>
-<div class="section" id="zi-jie-xdp-acl-shi-xian-fang-an-yong-yu-ti-dai-iptables">
+</section>
+<section id="zi-jie-xdp-acl-shi-xian-fang-an-yong-yu-ti-dai-iptables">
 <h2>字节 xdp acl 实现方案（用于替代 iptables）<a class="headerlink" href="#zi-jie-xdp-acl-shi-xian-fang-an-yong-yu-ti-dai-iptables" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://mp.weixin.qq.com/s/25mhUrNhF3HW8H6-ES7waA">https://mp.weixin.qq.com/s/25mhUrNhF3HW8H6-ES7waA</a></p>
 <p>将规则分拆后分别存入 src、dst、sport、dport，proto，action 这 5 个 Map，key 为 ip、port、proto，value 为 bitmap，bitmap 每一个 bit 代表一条规则。0x1 是第一条规则，0x10 是第二条规则，依次类推。</p>
 <a class="reference internal image-reference" href="../_images/byte-xdp-acl.png"><img alt="../_images/byte-xdp-acl.png" src="../_images/byte-xdp-acl.png" style="width: 400px;" /></a>
 <p>匹配的时候使用 IP 包的 ip、port 等为 key 在所有 Map 中查找 value，然后将所有的 value 或到一起，使用下面这个 bit hack 来取到最低位的 bit，即为最先匹配的规则编号，然后使用规则编号在 action map 中查找对应的 action。</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">bitmap</span> <span class="o">&amp;=</span> <span class="o">-</span><span class="n">bitmap</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">bitmap</span> <span class="o">&amp;=</span> <span class="o">-</span><span class="n">bitmap</span>
 </pre></div>
 </div>
 <p><a class="reference external" href="https://stackoverflow.com/questions/12247186/find-the-lowest-set-bit">https://stackoverflow.com/questions/12247186/find-the-lowest-set-bit</a></p>
 <hr class="docutils" />
 <p>对于 cidr（比如 192.168.0.0/24），是把其描述的所有 IP 都遍历出来放入 map 还是直接将原始 cidr 描述放入 map，如果是原始 cidr，是不是需要遍历 map？</p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -137,7 +127,7 @@ ethtool -N eth0 rx-flow-hash udp4 sd
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">#0220 性能</a><ul>
 <li><a class="reference internal" href="#numa-ti-xi-jia-gou">NUMA 体系架构</a></li>
@@ -146,17 +136,7 @@ ethtool -N eth0 rx-flow-hash udp4 sd
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">基于 xdp 的 L4LB 开发笔记</a><ul>
-      <li>Previous: <a href="210129.html" title="previous chapter">#0129 性能</a></li>
-      <li>Next: <a href="210226.html" title="next chapter">#0226 性能</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -165,15 +145,15 @@ ethtool -N eth0 rx-flow-hash udp4 sd
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -182,7 +162,7 @@ ethtool -N eth0 rx-flow-hash udp4 sd
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

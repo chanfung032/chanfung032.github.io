@@ -1,39 +1,31 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>#1207 Maglev &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#1209 tc-bpf" href="1209.html" />
-    <link rel="prev" title="#1201 xdp" href="1201.html" />
+    <link rel="next" title="#1201 xdp" href="1201.html" />
+    <link rel="prev" title="#1209 tc-bpf" href="1209.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,36 +35,36 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="maglev">
+  <section id="maglev">
 <h1>#1207 Maglev<a class="headerlink" href="#maglev" title="Permalink to this headline">¶</a></h1>
 <p>论文：<a class="reference external" href="https://research.google.com/pubs/archive/44824.pdf">https://research.google.com/pubs/archive/44824.pdf</a></p>
-<div class="section" id="jia-gou">
+<section id="jia-gou">
 <h2>架构<a class="headerlink" href="#jia-gou" title="Permalink to this headline">¶</a></h2>
 <p>Maglev 整体的架构和 unimog 基本差不多，如下图所示：</p>
 <img alt="../_images/maglev-packet-flow.png" src="../_images/maglev-packet-flow.png" />
 <ol class="arabic simple">
-<li>DNS 将服务解析到 VIP，用户访问服务时和 VIP 建立连接。</li>
-<li>用户访问的流量包到达边缘机房的核心路由后使用 ECMP 将包分配给 Maglev。</li>
-<li>Maglev 根据流量包的五元组计算哈希，使用哈希映射得到后端服务器，然后使用 GRE(Generic Routing Encapsulation) 封包，将流量包发给后端服务器。</li>
-<li>最后后端服务器收到包后解包再处理包，处理完成后的回包直接发送出去，不再经过 Maglev。</li>
+<li><p>DNS 将服务解析到 VIP，用户访问服务时和 VIP 建立连接。</p></li>
+<li><p>用户访问的流量包到达边缘机房的核心路由后使用 ECMP 将包分配给 Maglev。</p></li>
+<li><p>Maglev 根据流量包的五元组计算哈希，使用哈希映射得到后端服务器，然后使用 GRE(Generic Routing Encapsulation) 封包，将流量包发给后端服务器。</p></li>
+<li><p>最后后端服务器收到包后解包再处理包，处理完成后的回包直接发送出去，不再经过 Maglev。</p></li>
 </ol>
 <p>和 unimog 不一样的地方在于 Maglev 使用的是 Connection Tracking + Consistent Hashing 来调度连接。</p>
 <ol class="arabic simple">
-<li>Maglev 每调度一个新连接后会将其分配的后端信息存储下来，这样下次同一连接的包过来时，直接将包发给对应的后端即可，这样后端的服务器有变更或者挂了，已建立的连接的包仍然会被发给同一个后端。</li>
-<li>当 Maglev 本身有变更或者挂了的时候，ECMP 重新哈希之后一个连接的包可能会被分配给另外一个 Maglev 去处理，这个新分配的 Maglev 上可能没有这个连接的信息，此时就得依赖一致性哈希去将连接的包调度给同一个后端。</li>
+<li><p>Maglev 每调度一个新连接后会将其分配的后端信息存储下来，这样下次同一连接的包过来时，直接将包发给对应的后端即可，这样后端的服务器有变更或者挂了，已建立的连接的包仍然会被发给同一个后端。</p></li>
+<li><p>当 Maglev 本身有变更或者挂了的时候，ECMP 重新哈希之后一个连接的包可能会被分配给另外一个 Maglev 去处理，这个新分配的 Maglev 上可能没有这个连接的信息，此时就得依赖一致性哈希去将连接的包调度给同一个后端。</p></li>
 </ol>
 <img alt="../_images/maglev-forwarder.png" src="../_images/maglev-forwarder.png" />
 <p>Maglev 的 Connection Tracking 使用固定大小的哈希表来存储连接信息，当 Maglev 是和其它服务混合部署的时候，会尤其限制这个哈希表的大小。</p>
-</div>
-<div class="section" id="yi-zhi-xing-ha-xi-suan-fa">
+</section>
+<section id="yi-zhi-xing-ha-xi-suan-fa">
 <h2>一致性哈希算法<a class="headerlink" href="#yi-zhi-xing-ha-xi-suan-fa" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://writings.sh/post/consistent-hashing-algorithms-part-4-maglev-consistent-hash">https://writings.sh/post/consistent-hashing-algorithms-part-4-maglev-consistent-hash</a></p>
-<p>一致性哈希的实现和 cf 的 forwarding table 非常类似，就是生成一个大的查找表，表中的条目映射到实际的后端服务器，设表长为 <span class="math">\(M\)</span> ，流量包的五元组为 <span class="math">\(k\)</span> ，则映射到后端的服务器的过程就是 <span class="math">\(entry \left[ hash(k) \% M \right]\)</span>  。</p>
+<p>一致性哈希的实现和 cf 的 forwarding table 非常类似，就是生成一个大的查找表，表中的条目映射到实际的后端服务器，设表长为 <span class="math notranslate nohighlight">\(M\)</span> ，流量包的五元组为 <span class="math notranslate nohighlight">\(k\)</span> ，则映射到后端的服务器的过程就是 <span class="math notranslate nohighlight">\(entry \left[ hash(k) \% M \right]\)</span>  。</p>
 <img alt="../_images/maglev-lookup-table.png" src="../_images/maglev-lookup-table.png" />
 <p>查找表生成算法：</p>
-<p>首先，为每一个后端服务器计算出一个长度为 <span class="math">\(M\)</span> 的 <em>查找表中的填充位置</em> 的偏好序列。</p>
-<p>取两个无关的哈希函数 <span class="math">\(h1\)</span> 和 <span class="math">\(h2\)</span> ，假设后端的名字是 <span class="math">\(b\)</span>，计算偏好序列的方法如下：</p>
-<div class="math">
+<p>首先，为每一个后端服务器计算出一个长度为 <span class="math notranslate nohighlight">\(M\)</span> 的 <em>查找表中的填充位置</em> 的偏好序列。</p>
+<p>取两个无关的哈希函数 <span class="math notranslate nohighlight">\(h1\)</span> 和 <span class="math notranslate nohighlight">\(h2\)</span> ，假设后端的名字是 <span class="math notranslate nohighlight">\(b\)</span>，计算偏好序列的方法如下：</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{split}\begin{array}{lcl}
   offset = h_1(b) \% M \\
   skip = h_2(b) \% (M - 1) + 1 \\
@@ -81,20 +73,20 @@
 <p>然后我们循环所有的后端，对于每一个后端，使用其偏好序列中的数字作为查找表的位置索引，将后端填充到该位置上，如果该位置已经填充了后端，则顺延使用偏好序列中的下一个数字。如此直到整个查找表填充完成。</p>
 <p>以论文中的示例查找表为例，我们用单步的方式来填充下这个表来理解下填充的整个过程：</p>
 <ol class="arabic simple">
-<li><span class="math">\(B0\)</span> 的偏好序列的第一个数字是 3， 所以填充 <span class="math">\(B0\)</span> 到 <span class="math">\(entry \left[3 \right]\)</span>。</li>
-<li>轮到 <span class="math">\(B1\)</span> 填充了，<span class="math">\(B1\)</span> 的偏好序列第一个是 0，所以填充 <span class="math">\(B1\)</span> 到 <span class="math">\(entry \left[0 \right]\)</span>。</li>
-<li>轮到 <span class="math">\(B2\)</span> 填充了，由于 <span class="math">\(entry \left[3 \right]\)</span> 被占用， 所以向下看 B2 偏好序列的下一个数字，是 4，因此填充 <span class="math">\(B2\)</span> 到 <span class="math">\(entry \left[4 \right]\)</span>。</li>
-<li>接下来， 又轮到 <span class="math">\(B0\)</span> 填充了， 该看它的偏好序列的第 2 个数字了，是 0，但是 <span class="math">\(entry \left[0 \right]\)</span> 被占用了； 所以要继续看偏好序列的第 3 个数字，是 4， 同理， 这个也不能用，直到测试到 1 可以用， 则填充 B0 到 <span class="math">\(entry \left[1 \right]\)</span> 。</li>
-<li>如上， 直到把整张查找表填充满。</li>
+<li><p><span class="math notranslate nohighlight">\(B0\)</span> 的偏好序列的第一个数字是 3， 所以填充 <span class="math notranslate nohighlight">\(B0\)</span> 到 <span class="math notranslate nohighlight">\(entry \left[3 \right]\)</span>。</p></li>
+<li><p>轮到 <span class="math notranslate nohighlight">\(B1\)</span> 填充了，<span class="math notranslate nohighlight">\(B1\)</span> 的偏好序列第一个是 0，所以填充 <span class="math notranslate nohighlight">\(B1\)</span> 到 <span class="math notranslate nohighlight">\(entry \left[0 \right]\)</span>。</p></li>
+<li><p>轮到 <span class="math notranslate nohighlight">\(B2\)</span> 填充了，由于 <span class="math notranslate nohighlight">\(entry \left[3 \right]\)</span> 被占用， 所以向下看 B2 偏好序列的下一个数字，是 4，因此填充 <span class="math notranslate nohighlight">\(B2\)</span> 到 <span class="math notranslate nohighlight">\(entry \left[4 \right]\)</span>。</p></li>
+<li><p>接下来， 又轮到 <span class="math notranslate nohighlight">\(B0\)</span> 填充了， 该看它的偏好序列的第 2 个数字了，是 0，但是 <span class="math notranslate nohighlight">\(entry \left[0 \right]\)</span> 被占用了； 所以要继续看偏好序列的第 3 个数字，是 4， 同理， 这个也不能用，直到测试到 1 可以用， 则填充 B0 到 <span class="math notranslate nohighlight">\(entry \left[1 \right]\)</span> 。</p></li>
+<li><p>如上， 直到把整张查找表填充满。</p></li>
 </ol>
 <img alt="../_images/maglev-populate-lookup-table.png" src="../_images/maglev-populate-lookup-table.png" />
-<p>查找表的长度一般为一个大于 <span class="math">\(100 \times N\)</span> 的质数。</p>
-<p>Maglev 的一致性哈希在某个后端挂了的情况下，影响的连接除了分发到这个后端的连接之外，还会稍微关联扰动（disruption）一些其它的连接，我们以下图删除一个后端为例，可以看到，<span class="math">\(Entry\)</span> 中除了为 <span class="math">\(B1\)</span> 的条目改变了之外，还影响了 <span class="math">\(entry \left[6 \right]\)</span> 。</p>
+<p>查找表的长度一般为一个大于 <span class="math notranslate nohighlight">\(100 \times N\)</span> 的质数。</p>
+<p>Maglev 的一致性哈希在某个后端挂了的情况下，影响的连接除了分发到这个后端的连接之外，还会稍微关联扰动（disruption）一些其它的连接，我们以下图删除一个后端为例，可以看到，<span class="math notranslate nohighlight">\(Entry\)</span> 中除了为 <span class="math notranslate nohighlight">\(B1\)</span> 的条目改变了之外，还影响了 <span class="math notranslate nohighlight">\(entry \left[6 \right]\)</span> 。</p>
 <img alt="../_images/maglev-remove-backend.png" src="../_images/maglev-remove-backend.png" />
 <p>Maglev 一致哈希的均衡性比普通的一致性哈希和 Rendezvous 哈希都要好。</p>
 <img alt="../_images/maglev-hash-efficiency.png" src="../_images/maglev-hash-efficiency.png" />
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -103,7 +95,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">#1207 Maglev</a><ul>
 <li><a class="reference internal" href="#jia-gou">架构</a></li>
@@ -111,17 +103,7 @@
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">基于 xdp 的 L4LB 开发笔记</a><ul>
-      <li>Previous: <a href="1201.html" title="previous chapter">#1201 xdp</a></li>
-      <li>Next: <a href="1209.html" title="next chapter">#1209 tc-bpf</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -130,15 +112,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -147,7 +129,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

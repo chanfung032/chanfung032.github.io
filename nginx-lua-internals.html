@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Nginx Lua 剖析 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="User experience design for APIs" href="user-experience-design-for-apis.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,10 +33,10 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="nginx-lua-pou-xi">
+  <section id="nginx-lua-pou-xi">
 <h1>Nginx Lua 剖析<a class="headerlink" href="#nginx-lua-pou-xi" title="Permalink to this headline">¶</a></h1>
 <p>以下面的 nginx.conf 为例，我们来看下 nginx lua 的执行过程。</p>
-<div class="highlight-nginx"><div class="highlight"><pre><span></span><span class="k">http</span> <span class="p">{</span>
+<div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="k">http</span> <span class="p">{</span>
     <span class="kn">server</span> <span class="p">{</span>
         <span class="kn">listen</span> <span class="mi">80</span><span class="p">;</span>
         <span class="kn">location</span> <span class="s">/</span> <span class="p">{</span>
@@ -57,153 +47,153 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="pei-zhi-jia-zai-he-chu-shi-hua">
+<section id="pei-zhi-jia-zai-he-chu-shi-hua">
 <h2>配置加载和初始化<a class="headerlink" href="#pei-zhi-jia-zai-he-chu-shi-hua" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">ngx_module_t</span> <span class="n">ngx_http_lua_module</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="n">NGX_MODULE_V1</span><span class="p">,</span>
-    <span class="o">&amp;</span><span class="n">ngx_http_lua_module_ctx</span><span class="p">,</span>   <span class="cm">/*  module context */</span>
-    <span class="n">ngx_http_lua_cmds</span><span class="p">,</span>          <span class="cm">/*  module directives */</span>
-    <span class="n">NGX_HTTP_MODULE</span><span class="p">,</span>            <span class="cm">/*  module type */</span>
-    <span class="nb">NULL</span><span class="p">,</span>                       <span class="cm">/*  init master */</span>
-    <span class="nb">NULL</span><span class="p">,</span>                       <span class="cm">/*  init module */</span>
-    <span class="n">ngx_http_lua_init_worker</span><span class="p">,</span>   <span class="cm">/*  init process */</span>
-    <span class="nb">NULL</span><span class="p">,</span>                       <span class="cm">/*  init thread */</span>
-    <span class="nb">NULL</span><span class="p">,</span>                       <span class="cm">/*  exit thread */</span>
-    <span class="nb">NULL</span><span class="p">,</span>                       <span class="cm">/*  exit process */</span>
-    <span class="nb">NULL</span><span class="p">,</span>                       <span class="cm">/*  exit master */</span>
-    <span class="n">NGX_MODULE_V1_PADDING</span>
-<span class="p">};</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ngx_module_t</span><span class="w"> </span><span class="n">ngx_http_lua_module</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">NGX_MODULE_V1</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="o">&amp;</span><span class="n">ngx_http_lua_module_ctx</span><span class="p">,</span><span class="w">   </span><span class="cm">/*  module context */</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_cmds</span><span class="p">,</span><span class="w">          </span><span class="cm">/*  module directives */</span><span class="w"></span>
+<span class="w">    </span><span class="n">NGX_HTTP_MODULE</span><span class="p">,</span><span class="w">            </span><span class="cm">/*  module type */</span><span class="w"></span>
+<span class="w">    </span><span class="nb">NULL</span><span class="p">,</span><span class="w">                       </span><span class="cm">/*  init master */</span><span class="w"></span>
+<span class="w">    </span><span class="nb">NULL</span><span class="p">,</span><span class="w">                       </span><span class="cm">/*  init module */</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_init_worker</span><span class="p">,</span><span class="w">   </span><span class="cm">/*  init process */</span><span class="w"></span>
+<span class="w">    </span><span class="nb">NULL</span><span class="p">,</span><span class="w">                       </span><span class="cm">/*  init thread */</span><span class="w"></span>
+<span class="w">    </span><span class="nb">NULL</span><span class="p">,</span><span class="w">                       </span><span class="cm">/*  exit thread */</span><span class="w"></span>
+<span class="w">    </span><span class="nb">NULL</span><span class="p">,</span><span class="w">                       </span><span class="cm">/*  exit process */</span><span class="w"></span>
+<span class="w">    </span><span class="nb">NULL</span><span class="p">,</span><span class="w">                       </span><span class="cm">/*  exit master */</span><span class="w"></span>
+<span class="w">    </span><span class="n">NGX_MODULE_V1_PADDING</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
 
-<span class="n">ngx_http_module_t</span> <span class="n">ngx_http_lua_module_ctx</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="nb">NULL</span><span class="p">,</span>                             <span class="cm">/*  preconfiguration */</span>
-    <span class="n">ngx_http_lua_init</span><span class="p">,</span>                <span class="cm">/*  postconfiguration */</span>
+<span class="n">ngx_http_module_t</span><span class="w"> </span><span class="n">ngx_http_lua_module_ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nb">NULL</span><span class="p">,</span><span class="w">                             </span><span class="cm">/*  preconfiguration */</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_init</span><span class="p">,</span><span class="w">                </span><span class="cm">/*  postconfiguration */</span><span class="w"></span>
 
-    <span class="n">ngx_http_lua_create_main_conf</span><span class="p">,</span>    <span class="cm">/*  create main configuration */</span>
-    <span class="n">ngx_http_lua_init_main_conf</span><span class="p">,</span>      <span class="cm">/*  init main configuration */</span>
+<span class="w">    </span><span class="n">ngx_http_lua_create_main_conf</span><span class="p">,</span><span class="w">    </span><span class="cm">/*  create main configuration */</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_init_main_conf</span><span class="p">,</span><span class="w">      </span><span class="cm">/*  init main configuration */</span><span class="w"></span>
 
-    <span class="nb">NULL</span><span class="p">,</span>                             <span class="cm">/*  create server configuration */</span>
-    <span class="nb">NULL</span><span class="p">,</span>                             <span class="cm">/*  merge server configuration */</span>
+<span class="w">    </span><span class="nb">NULL</span><span class="p">,</span><span class="w">                             </span><span class="cm">/*  create server configuration */</span><span class="w"></span>
+<span class="w">    </span><span class="nb">NULL</span><span class="p">,</span><span class="w">                             </span><span class="cm">/*  merge server configuration */</span><span class="w"></span>
 
-    <span class="n">ngx_http_lua_create_loc_conf</span><span class="p">,</span>     <span class="cm">/*  create location configuration */</span>
-    <span class="n">ngx_http_lua_merge_loc_conf</span>       <span class="cm">/*  merge location configuration */</span>
-<span class="p">};</span>
+<span class="w">    </span><span class="n">ngx_http_lua_create_loc_conf</span><span class="p">,</span><span class="w">     </span><span class="cm">/*  create location configuration */</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_merge_loc_conf</span><span class="w">       </span><span class="cm">/*  merge location configuration */</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
 
-<span class="k">static</span> <span class="n">ngx_command_t</span> <span class="n">ngx_http_lua_cmds</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="c1">// ...</span>
+<span class="k">static</span><span class="w"> </span><span class="n">ngx_command_t</span><span class="w"> </span><span class="n">ngx_http_lua_cmds</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ...</span>
 
-    <span class="p">{</span> <span class="n">ngx_string</span><span class="p">(</span><span class="s">&quot;content_by_lua&quot;</span><span class="p">),</span>
-      <span class="n">NGX_HTTP_LOC_CONF</span><span class="o">|</span><span class="n">NGX_HTTP_LIF_CONF</span><span class="o">|</span><span class="n">NGX_CONF_TAKE1</span><span class="p">,</span>
-      <span class="n">ngx_http_lua_content_by_lua</span><span class="p">,</span>
-      <span class="n">NGX_HTTP_LOC_CONF_OFFSET</span><span class="p">,</span>
-      <span class="mi">0</span><span class="p">,</span>
-      <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span> <span class="n">ngx_http_lua_content_handler_inline</span> <span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="n">ngx_string</span><span class="p">(</span><span class="s">&quot;content_by_lua&quot;</span><span class="p">),</span><span class="w"></span>
+<span class="w">      </span><span class="n">NGX_HTTP_LOC_CONF</span><span class="o">|</span><span class="n">NGX_HTTP_LIF_CONF</span><span class="o">|</span><span class="n">NGX_CONF_TAKE1</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="n">ngx_http_lua_content_by_lua</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="n">NGX_HTTP_LOC_CONF_OFFSET</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">ngx_http_lua_content_handler_inline</span><span class="w"> </span><span class="p">},</span><span class="w"></span>
 
-    <span class="c1">// ...</span>
-    <span class="n">ngx_null_command</span>
-<span class="p">};</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="n">ngx_null_command</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
 </pre></div>
 </div>
 <p>首先，在配置加载阶段，比较重要的是以下两个函数：</p>
 <ol class="arabic simple">
-<li>在 nginx.conf 中读到 content_by_lua 指令时的回调函数 <em>ngx_http_lua_content_by_lua</em>。</li>
-<li>nginx.conf 加载完成后阶段（postconfiguration）初始化 lua vm 的函数 <em>ngx_http_lua_init</em>。</li>
+<li><p>在 nginx.conf 中读到 content_by_lua 指令时的回调函数 <em>ngx_http_lua_content_by_lua</em>。</p></li>
+<li><p>nginx.conf 加载完成后阶段（postconfiguration）初始化 lua vm 的函数 <em>ngx_http_lua_init</em>。</p></li>
 </ol>
 <p>content_by_lua 指令的回调函数做的事情很简单，就是保存代码到该 location 对应的 lua module location configuration 中，然后配置 nginx 让在其在 content phase 调用 lua module 的 handler 来生成 http 响应。</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="kt">char</span> <span class="o">*</span>
-<span class="nf">ngx_http_lua_content_by_lua</span><span class="p">(</span><span class="n">ngx_conf_t</span> <span class="o">*</span><span class="n">cf</span><span class="p">,</span> <span class="n">ngx_command_t</span> <span class="o">*</span><span class="n">cmd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">conf</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">u_char</span>                      <span class="o">*</span><span class="n">p</span><span class="p">;</span>
-    <span class="n">u_char</span>                      <span class="o">*</span><span class="n">chunkname</span><span class="p">;</span>
-    <span class="n">ngx_str_t</span>                   <span class="o">*</span><span class="n">value</span><span class="p">;</span>
-    <span class="n">ngx_http_core_loc_conf_t</span>    <span class="o">*</span><span class="n">clcf</span><span class="p">;</span>
-    <span class="n">ngx_http_lua_main_conf_t</span>    <span class="o">*</span><span class="n">lmcf</span><span class="p">;</span>
-    <span class="n">ngx_http_lua_loc_conf_t</span>     <span class="o">*</span><span class="n">llcf</span> <span class="o">=</span> <span class="n">conf</span><span class="p">;</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="w"></span>
+<span class="nf">ngx_http_lua_content_by_lua</span><span class="p">(</span><span class="n">ngx_conf_t</span><span class="w"> </span><span class="o">*</span><span class="n">cf</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_command_t</span><span class="w"> </span><span class="o">*</span><span class="n">cmd</span><span class="p">,</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">conf</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">u_char</span><span class="w">                      </span><span class="o">*</span><span class="n">p</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">u_char</span><span class="w">                      </span><span class="o">*</span><span class="n">chunkname</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_str_t</span><span class="w">                   </span><span class="o">*</span><span class="n">value</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_core_loc_conf_t</span><span class="w">    </span><span class="o">*</span><span class="n">clcf</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_main_conf_t</span><span class="w">    </span><span class="o">*</span><span class="n">lmcf</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_loc_conf_t</span><span class="w">     </span><span class="o">*</span><span class="n">llcf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">conf</span><span class="p">;</span><span class="w"></span>
 
-    <span class="n">value</span> <span class="o">=</span> <span class="n">cf</span><span class="o">-&gt;</span><span class="n">args</span><span class="o">-&gt;</span><span class="n">elts</span><span class="p">;</span>
+<span class="w">    </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cf</span><span class="o">-&gt;</span><span class="n">args</span><span class="o">-&gt;</span><span class="n">elts</span><span class="p">;</span><span class="w"></span>
 
-    <span class="c1">// 保存 lua 代码到当前 location 的 lua module 配置中。</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">cmd</span><span class="o">-&gt;</span><span class="n">post</span> <span class="o">==</span> <span class="n">ngx_http_lua_content_handler_inline</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">chunkname</span> <span class="o">=</span> <span class="n">ngx_http_lua_gen_chunk_name</span><span class="p">(</span><span class="n">cf</span><span class="p">,</span> <span class="s">&quot;content_by_lua&quot;</span><span class="p">,</span>
-                                                <span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;content_by_lua&quot;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
-        <span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_chunkname</span> <span class="o">=</span> <span class="n">chunkname</span><span class="p">;</span>
-        <span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_src</span><span class="p">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
-        <span class="n">p</span> <span class="o">=</span> <span class="n">ngx_palloc</span><span class="p">(</span><span class="n">cf</span><span class="o">-&gt;</span><span class="n">pool</span><span class="p">,</span> <span class="n">NGX_HTTP_LUA_INLINE_KEY_LEN</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
-        <span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_src_key</span> <span class="o">=</span> <span class="n">p</span><span class="p">;</span>
-        <span class="n">p</span> <span class="o">=</span> <span class="n">ngx_copy</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">NGX_HTTP_LUA_INLINE_TAG</span><span class="p">,</span> <span class="n">NGX_HTTP_LUA_INLINE_TAG_LEN</span><span class="p">);</span>
-        <span class="n">p</span> <span class="o">=</span> <span class="n">ngx_http_lua_digest_hex</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">data</span><span class="p">,</span> <span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">len</span><span class="p">);</span>
-        <span class="o">*</span><span class="n">p</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="c1">// 保存 lua 代码到当前 location 的 lua module 配置中。</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cmd</span><span class="o">-&gt;</span><span class="n">post</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">ngx_http_lua_content_handler_inline</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">chunkname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_gen_chunk_name</span><span class="p">(</span><span class="n">cf</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;content_by_lua&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                                </span><span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;content_by_lua&quot;</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_chunkname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chunkname</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_src</span><span class="p">.</span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span><span class="w"></span>
+<span class="w">        </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_palloc</span><span class="p">(</span><span class="n">cf</span><span class="o">-&gt;</span><span class="n">pool</span><span class="p">,</span><span class="w"> </span><span class="n">NGX_HTTP_LUA_INLINE_KEY_LEN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_src_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_copy</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="n">NGX_HTTP_LUA_INLINE_TAG</span><span class="p">,</span><span class="w"> </span><span class="n">NGX_HTTP_LUA_INLINE_TAG_LEN</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_digest_hex</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="o">*</span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;\0&#39;</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_handler</span> <span class="o">=</span> <span class="p">(</span><span class="n">ngx_http_handler_pt</span><span class="p">)</span> <span class="n">cmd</span><span class="o">-&gt;</span><span class="n">post</span><span class="p">;</span>
+<span class="w">    </span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">ngx_http_handler_pt</span><span class="p">)</span><span class="w"> </span><span class="n">cmd</span><span class="o">-&gt;</span><span class="n">post</span><span class="p">;</span><span class="w"></span>
 
-    <span class="c1">// 将 ngx_http_lua_capture_header_filter 和</span>
-    <span class="c1">// ngx_http_lua_capture_body_filter 插入到 header 和 body filter 链中</span>
-    <span class="c1">// lmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_lua_module);</span>
-    <span class="c1">// lmcf-&gt;requires_capture_filter = 1;</span>
+<span class="w">    </span><span class="c1">// 将 ngx_http_lua_capture_header_filter 和</span>
+<span class="w">    </span><span class="c1">// ngx_http_lua_capture_body_filter 插入到 header 和 body filter 链中</span>
+<span class="w">    </span><span class="c1">// lmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_lua_module);</span>
+<span class="w">    </span><span class="c1">// lmcf-&gt;requires_capture_filter = 1;</span>
 
-    <span class="c1">// 设置 nginx 在 content phase 调用 ngx_http_lua_content_handler</span>
-    <span class="c1">// 来生成响应。</span>
-    <span class="n">clcf</span> <span class="o">=</span> <span class="n">ngx_http_conf_get_module_loc_conf</span><span class="p">(</span><span class="n">cf</span><span class="p">,</span> <span class="n">ngx_http_core_module</span><span class="p">);</span>
-    <span class="n">clcf</span><span class="o">-&gt;</span><span class="n">handler</span> <span class="o">=</span> <span class="n">ngx_http_lua_content_handler</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// 设置 nginx 在 content phase 调用 ngx_http_lua_content_handler</span>
+<span class="w">    </span><span class="c1">// 来生成响应。</span>
+<span class="w">    </span><span class="n">clcf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_conf_get_module_loc_conf</span><span class="p">(</span><span class="n">cf</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_http_core_module</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">clcf</span><span class="o">-&gt;</span><span class="n">handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_content_handler</span><span class="p">;</span><span class="w"></span>
 
-    <span class="k">return</span> <span class="n">NGX_CONF_OK</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">NGX_CONF_OK</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>所有的配置解析处理完毕后，nginx 会回调 ngx_http_lua_init 函数初始化 lua vm。</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="k">static</span> <span class="n">ngx_int_t</span>
-<span class="nf">ngx_http_lua_init</span><span class="p">(</span><span class="n">ngx_conf_t</span> <span class="o">*</span><span class="n">cf</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">ngx_http_lua_main_conf_t</span>   <span class="o">*</span><span class="n">lmcf</span><span class="p">;</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="n">ngx_int_t</span><span class="w"></span>
+<span class="nf">ngx_http_lua_init</span><span class="p">(</span><span class="n">ngx_conf_t</span><span class="w"> </span><span class="o">*</span><span class="n">cf</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_main_conf_t</span><span class="w">   </span><span class="o">*</span><span class="n">lmcf</span><span class="p">;</span><span class="w"></span>
 
-    <span class="n">lmcf</span> <span class="o">=</span> <span class="n">ngx_http_conf_get_module_main_conf</span><span class="p">(</span><span class="n">cf</span><span class="p">,</span> <span class="n">ngx_http_lua_module</span><span class="p">);</span>
+<span class="w">    </span><span class="n">lmcf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_conf_get_module_main_conf</span><span class="p">(</span><span class="n">cf</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_http_lua_module</span><span class="p">);</span><span class="w"></span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="n">lmcf</span><span class="o">-&gt;</span><span class="n">lua</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// 初始化 lua 虚拟机</span>
-        <span class="n">lmcf</span><span class="o">-&gt;</span><span class="n">lua</span> <span class="o">=</span> <span class="n">ngx_http_lua_init_vm</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="n">cf</span><span class="o">-&gt;</span><span class="n">cycle</span><span class="p">,</span> <span class="n">cf</span><span class="o">-&gt;</span><span class="n">pool</span><span class="p">,</span> <span class="n">lmcf</span><span class="p">,</span>
-                                         <span class="n">cf</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">lmcf</span><span class="o">-&gt;</span><span class="n">lua</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// 初始化 lua 虚拟机</span>
+<span class="w">        </span><span class="n">lmcf</span><span class="o">-&gt;</span><span class="n">lua</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_init_vm</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">cf</span><span class="o">-&gt;</span><span class="n">cycle</span><span class="p">,</span><span class="w"> </span><span class="n">cf</span><span class="o">-&gt;</span><span class="n">pool</span><span class="p">,</span><span class="w"> </span><span class="n">lmcf</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                         </span><span class="n">cf</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="k">return</span> <span class="n">NGX_OK</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">NGX_OK</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="n">lua_State</span> <span class="o">*</span>
-<span class="nf">ngx_http_lua_init_vm</span><span class="p">(</span><span class="n">lua_State</span> <span class="o">*</span><span class="n">parent_vm</span><span class="p">,</span> <span class="n">ngx_cycle_t</span> <span class="o">*</span><span class="n">cycle</span><span class="p">,</span>
-    <span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span><span class="p">,</span> <span class="n">ngx_http_lua_main_conf_t</span> <span class="o">*</span><span class="n">lmcf</span><span class="p">,</span> <span class="n">ngx_log_t</span> <span class="o">*</span><span class="n">log</span><span class="p">,</span>
-    <span class="n">ngx_pool_cleanup_t</span> <span class="o">**</span><span class="n">pcln</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">lua_State</span>  <span class="o">*</span><span class="n">L</span><span class="p">;</span>
-    <span class="n">L</span> <span class="o">=</span> <span class="n">ngx_http_lua_new_state</span><span class="p">(</span><span class="n">parent_vm</span><span class="p">,</span> <span class="n">cycle</span><span class="p">,</span> <span class="n">lmcf</span><span class="p">,</span> <span class="n">log</span><span class="p">);</span>
-    <span class="k">return</span> <span class="n">L</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="w"></span>
+<span class="nf">ngx_http_lua_init_vm</span><span class="p">(</span><span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="n">parent_vm</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_cycle_t</span><span class="w"> </span><span class="o">*</span><span class="n">cycle</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_pool_t</span><span class="w"> </span><span class="o">*</span><span class="n">pool</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_http_lua_main_conf_t</span><span class="w"> </span><span class="o">*</span><span class="n">lmcf</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_log_t</span><span class="w"> </span><span class="o">*</span><span class="n">log</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_pool_cleanup_t</span><span class="w"> </span><span class="o">**</span><span class="n">pcln</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">lua_State</span><span class="w">  </span><span class="o">*</span><span class="n">L</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">L</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_new_state</span><span class="p">(</span><span class="n">parent_vm</span><span class="p">,</span><span class="w"> </span><span class="n">cycle</span><span class="p">,</span><span class="w"> </span><span class="n">lmcf</span><span class="p">,</span><span class="w"> </span><span class="n">log</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">L</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="k">static</span> <span class="n">lua_State</span> <span class="o">*</span>
-<span class="nf">ngx_http_lua_new_state</span><span class="p">(</span><span class="n">lua_State</span> <span class="o">*</span><span class="n">parent_vm</span><span class="p">,</span> <span class="n">ngx_cycle_t</span> <span class="o">*</span><span class="n">cycle</span><span class="p">,</span>
-    <span class="n">ngx_http_lua_main_conf_t</span> <span class="o">*</span><span class="n">lmcf</span><span class="p">,</span> <span class="n">ngx_log_t</span> <span class="o">*</span><span class="n">log</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">L</span> <span class="o">=</span> <span class="n">luaL_newstate</span><span class="p">();</span>
-    <span class="n">luaL_openlibs</span><span class="p">(</span><span class="n">L</span><span class="p">);</span>
+<span class="k">static</span><span class="w"> </span><span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="w"></span>
+<span class="nf">ngx_http_lua_new_state</span><span class="p">(</span><span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="n">parent_vm</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_cycle_t</span><span class="w"> </span><span class="o">*</span><span class="n">cycle</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_main_conf_t</span><span class="w"> </span><span class="o">*</span><span class="n">lmcf</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_log_t</span><span class="w"> </span><span class="o">*</span><span class="n">log</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">L</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">luaL_newstate</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="n">luaL_openlibs</span><span class="p">(</span><span class="n">L</span><span class="p">);</span><span class="w"></span>
 
-    <span class="n">lua_getglobal</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="s">&quot;package&quot;</span><span class="p">);</span>
-    <span class="c1">// ... 设置 package.path 和 package.cpath 等</span>
-    <span class="n">lua_pop</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span> <span class="cm">/* remove the &quot;package&quot; table */</span>
+<span class="w">    </span><span class="n">lua_getglobal</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;package&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ... 设置 package.path 和 package.cpath 等</span>
+<span class="w">    </span><span class="n">lua_pop</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"> </span><span class="cm">/* remove the &quot;package&quot; table */</span><span class="w"></span>
 
-    <span class="c1">// 创建用来保存 coroutine 和 code cache 等的全局 table</span>
-    <span class="c1">// LUA_REGISTRYINDEX[&amp;ngx_http_lua_coroutines_key] = {}</span>
-    <span class="c1">// LUA_REGISTRYINDEX[&amp;ngx_http_lua_code_cache_key] = {}</span>
-    <span class="c1">// ...</span>
-    <span class="n">ngx_http_lua_init_registry</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">log</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// 创建用来保存 coroutine 和 code cache 等的全局 table</span>
+<span class="w">    </span><span class="c1">// LUA_REGISTRYINDEX[&amp;ngx_http_lua_coroutines_key] = {}</span>
+<span class="w">    </span><span class="c1">// LUA_REGISTRYINDEX[&amp;ngx_http_lua_code_cache_key] = {}</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="n">ngx_http_lua_init_registry</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">log</span><span class="p">);</span><span class="w"></span>
 
-    <span class="c1">// 调用 ngx_http_lua_inject_* 函数注入 ngx.* 常量和 api。</span>
-    <span class="n">ngx_http_lua_init_globals</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">cycle</span><span class="p">,</span> <span class="n">lmcf</span><span class="p">,</span> <span class="n">log</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// 调用 ngx_http_lua_inject_* 函数注入 ngx.* 常量和 api。</span>
+<span class="w">    </span><span class="n">ngx_http_lua_init_globals</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">cycle</span><span class="p">,</span><span class="w"> </span><span class="n">lmcf</span><span class="p">,</span><span class="w"> </span><span class="n">log</span><span class="p">);</span><span class="w"></span>
 
-    <span class="k">return</span> <span class="n">L</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">L</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="dai-ma-yun-hang">
-<h2>代码运行<a class="headerlink" href="#dai-ma-yun-hang" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="dai-ma-yun-xing">
+<h2>代码运行<a class="headerlink" href="#dai-ma-yun-xing" title="Permalink to this headline">¶</a></h2>
 <p>在 nginx 请求处理的 content 阶段，nginx 会回调之前配置阶段设置的 <em>ngx_http_lua_content_handler</em> 来处理请求生成响应。（关于 nginx 多阶段处理请求可以参考：<a class="reference external" href="http://tengine.taobao.org/book/chapter_12.html#id8">http://tengine.taobao.org/book/chapter_12.html#id8</a>）</p>
 <p><em>ngx_http_lua_content_handler</em> 会创建将 content_by_lua 的 lua 代码放在下面的 … 处，编译，缓存。</p>
 <blockquote>
@@ -215,208 +205,208 @@
 </div></blockquote>
 <p>然后，创建一个新的 coroutine，在这个 coroutine 中运行编译好的 lua 代码。</p>
 <p>如果 lua 代码没有执行完毕，比如调用 <em>ngx.sleep(1)</em> 接口，该函数会调用 nginx 的接口添加一个 timer，然后 yield 返回。最终从 <em>ngx_http_lua_content_handler</em> 中返回。当 timer 事件触发后，nginx 会继续 run phase，这个时候会再次回调 <em>ngx_http_lua_content_handler</em> ，该 hanndler 会调用 lua_resume 继续从上次 yield 的地方继续向下执行。</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">ngx_int_t</span>
-<span class="nf">ngx_http_lua_content_handler</span><span class="p">(</span><span class="n">ngx_http_request_t</span> <span class="o">*</span><span class="n">r</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">ngx_http_lua_loc_conf_t</span>     <span class="o">*</span><span class="n">llcf</span><span class="p">;</span>
-    <span class="n">ngx_http_lua_ctx_t</span>          <span class="o">*</span><span class="n">ctx</span><span class="p">;</span>
-    <span class="n">ngx_int_t</span>                    <span class="n">rc</span><span class="p">;</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ngx_int_t</span><span class="w"></span>
+<span class="nf">ngx_http_lua_content_handler</span><span class="p">(</span><span class="n">ngx_http_request_t</span><span class="w"> </span><span class="o">*</span><span class="n">r</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_loc_conf_t</span><span class="w">     </span><span class="o">*</span><span class="n">llcf</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_ctx_t</span><span class="w">          </span><span class="o">*</span><span class="n">ctx</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_int_t</span><span class="w">                    </span><span class="n">rc</span><span class="p">;</span><span class="w"></span>
 
-    <span class="n">llcf</span> <span class="o">=</span> <span class="n">ngx_http_get_module_loc_conf</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">ngx_http_lua_module</span><span class="p">);</span>
+<span class="w">    </span><span class="n">llcf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_get_module_loc_conf</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_http_lua_module</span><span class="p">);</span><span class="w"></span>
 
-    <span class="n">ctx</span> <span class="o">=</span> <span class="n">ngx_http_get_module_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">ngx_http_lua_module</span><span class="p">);</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">ctx</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">ctx</span> <span class="o">=</span> <span class="n">ngx_http_lua_create_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">);</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_get_module_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_http_lua_module</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ctx</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_create_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">entered_content_phase</span><span class="p">)</span> <span class="p">{</span>
-        <span class="c1">// 重入 content handler ，调用 resume_handler 恢复 lua 从 yield 地方继续执行</span>
-        <span class="n">rc</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">resume_handler</span><span class="p">(</span><span class="n">r</span><span class="p">);</span>
-        <span class="k">return</span> <span class="n">rc</span><span class="p">;</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">entered_content_phase</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// 重入 content handler ，调用 resume_handler 恢复 lua 从 yield 地方继续执行</span>
+<span class="w">        </span><span class="n">rc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">resume_handler</span><span class="p">(</span><span class="n">r</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">rc</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="c1">// 第一次调用 content handler，调用 content_by_lua cmd.post 执行 lua 代码</span>
-    <span class="c1">// 也就是 ngx_http_lua_content_handler_inline。</span>
-    <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">entered_content_phase</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="k">return</span> <span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_handler</span><span class="p">(</span><span class="n">r</span><span class="p">);</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="c1">// 第一次调用 content handler，调用 content_by_lua cmd.post 执行 lua 代码</span>
+<span class="w">    </span><span class="c1">// 也就是 ngx_http_lua_content_handler_inline。</span>
+<span class="w">    </span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">entered_content_phase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_handler</span><span class="p">(</span><span class="n">r</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="n">ngx_int_t</span>
-<span class="nf">ngx_http_lua_content_handler_inline</span><span class="p">(</span><span class="n">ngx_http_request_t</span> <span class="o">*</span><span class="n">r</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">lua_State</span>                   <span class="o">*</span><span class="n">L</span><span class="p">;</span>
-    <span class="n">ngx_int_t</span>                    <span class="n">rc</span><span class="p">;</span>
-    <span class="n">ngx_http_lua_loc_conf_t</span>     <span class="o">*</span><span class="n">llcf</span><span class="p">;</span>
+<span class="n">ngx_int_t</span><span class="w"></span>
+<span class="nf">ngx_http_lua_content_handler_inline</span><span class="p">(</span><span class="n">ngx_http_request_t</span><span class="w"> </span><span class="o">*</span><span class="n">r</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">lua_State</span><span class="w">                   </span><span class="o">*</span><span class="n">L</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_int_t</span><span class="w">                    </span><span class="n">rc</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_loc_conf_t</span><span class="w">     </span><span class="o">*</span><span class="n">llcf</span><span class="p">;</span><span class="w"></span>
 
-    <span class="n">llcf</span> <span class="o">=</span> <span class="n">ngx_http_get_module_loc_conf</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">ngx_http_lua_module</span><span class="p">);</span>
+<span class="w">    </span><span class="n">llcf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_get_module_loc_conf</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_http_lua_module</span><span class="p">);</span><span class="w"></span>
 
-    <span class="n">L</span> <span class="o">=</span> <span class="n">ngx_http_lua_get_lua_vm</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">L</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_get_lua_vm</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span><span class="w"></span>
 
-    <span class="c1">// lua code 会被插入到下面 ... 处</span>
-    <span class="c1">//    return function()</span>
-    <span class="c1">//        ...</span>
-    <span class="c1">//    end</span>
-    <span class="c1">// 编译并缓存到 LUA_REGISTRYINDEX[&amp;ngx_http_lua_code_cache_key] 这个 table 中</span>
-    <span class="n">rc</span> <span class="o">=</span> <span class="n">ngx_http_lua_cache_loadbuffer</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_src</span><span class="p">.</span><span class="n">value</span><span class="p">.</span><span class="n">data</span><span class="p">,</span>
-                                       <span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_src</span><span class="p">.</span><span class="n">value</span><span class="p">.</span><span class="n">len</span><span class="p">,</span>
-                                       <span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_src_key</span><span class="p">,</span>
-                                       <span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="p">)</span>
-                                       <span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_chunkname</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// lua code 会被插入到下面 ... 处</span>
+<span class="w">    </span><span class="c1">//    return function()</span>
+<span class="w">    </span><span class="c1">//        ...</span>
+<span class="w">    </span><span class="c1">//    end</span>
+<span class="w">    </span><span class="c1">// 编译并缓存到 LUA_REGISTRYINDEX[&amp;ngx_http_lua_code_cache_key] 这个 table 中</span>
+<span class="w">    </span><span class="n">rc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_cache_loadbuffer</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_src</span><span class="p">.</span><span class="n">value</span><span class="p">.</span><span class="n">data</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                       </span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_src</span><span class="p">.</span><span class="n">value</span><span class="p">.</span><span class="n">len</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                       </span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_src_key</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                       </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="w"></span>
+<span class="w">                                       </span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">content_chunkname</span><span class="p">);</span><span class="w"></span>
 
-    <span class="k">return</span> <span class="n">ngx_http_lua_content_by_chunk</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">r</span><span class="p">);</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">ngx_http_lua_content_by_chunk</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="n">ngx_int_t</span>
-<span class="nf">ngx_http_lua_content_by_chunk</span><span class="p">(</span><span class="n">lua_State</span> <span class="o">*</span><span class="n">L</span><span class="p">,</span> <span class="n">ngx_http_request_t</span> <span class="o">*</span><span class="n">r</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="kt">int</span>                      <span class="n">co_ref</span><span class="p">;</span>
-    <span class="n">ngx_int_t</span>                <span class="n">rc</span><span class="p">;</span>
-    <span class="n">lua_State</span>               <span class="o">*</span><span class="n">co</span><span class="p">;</span>
-    <span class="n">ngx_http_lua_ctx_t</span>      <span class="o">*</span><span class="n">ctx</span><span class="p">;</span>
-    <span class="n">ngx_http_cleanup_t</span>      <span class="o">*</span><span class="n">cln</span><span class="p">;</span>
-    <span class="n">ngx_http_lua_loc_conf_t</span>      <span class="o">*</span><span class="n">llcf</span><span class="p">;</span>
+<span class="n">ngx_int_t</span><span class="w"></span>
+<span class="nf">ngx_http_lua_content_by_chunk</span><span class="p">(</span><span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_http_request_t</span><span class="w"> </span><span class="o">*</span><span class="n">r</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w">                      </span><span class="n">co_ref</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_int_t</span><span class="w">                </span><span class="n">rc</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">lua_State</span><span class="w">               </span><span class="o">*</span><span class="n">co</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_ctx_t</span><span class="w">      </span><span class="o">*</span><span class="n">ctx</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_cleanup_t</span><span class="w">      </span><span class="o">*</span><span class="n">cln</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_loc_conf_t</span><span class="w">      </span><span class="o">*</span><span class="n">llcf</span><span class="p">;</span><span class="w"></span>
 
-    <span class="n">ctx</span> <span class="o">=</span> <span class="n">ngx_http_get_module_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">ngx_http_lua_module</span><span class="p">);</span>
+<span class="w">    </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_get_module_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_http_lua_module</span><span class="p">);</span><span class="w"></span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="n">ctx</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">ctx</span> <span class="o">=</span> <span class="n">ngx_http_lua_create_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">);</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-        <span class="n">ngx_http_lua_reset_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">ctx</span><span class="p">);</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ctx</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_create_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">ngx_http_lua_reset_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">entered_content_phase</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">entered_content_phase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
 
-    <span class="c1">// 创建一个新的 coroutine 用来执行 lua 代码</span>
-    <span class="n">co</span> <span class="o">=</span> <span class="n">ngx_http_lua_new_thread</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">co_ref</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// 创建一个新的 coroutine 用来执行 lua 代码</span>
+<span class="w">    </span><span class="n">co</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_new_thread</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">co_ref</span><span class="p">);</span><span class="w"></span>
 
-    <span class="c1">// 将 lua 代码从 vm 的 L 中移到新建的 co 中</span>
-    <span class="n">lua_xmove</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">co</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// 将 lua 代码从 vm 的 L 中移到新建的 co 中</span>
+<span class="w">    </span><span class="n">lua_xmove</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">co</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
 
-    <span class="cm">/*  set closure&#39;s env table to new coroutine&#39;s globals table */</span>
-    <span class="n">ngx_http_lua_get_globals_table</span><span class="p">(</span><span class="n">co</span><span class="p">);</span>
-    <span class="n">lua_setfenv</span><span class="p">(</span><span class="n">co</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">);</span>
+<span class="w">    </span><span class="cm">/*  set closure&#39;s env table to new coroutine&#39;s globals table */</span><span class="w"></span>
+<span class="w">    </span><span class="n">ngx_http_lua_get_globals_table</span><span class="p">(</span><span class="n">co</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">lua_setfenv</span><span class="p">(</span><span class="n">co</span><span class="p">,</span><span class="w"> </span><span class="mi">-2</span><span class="p">);</span><span class="w"></span>
 
-    <span class="c1">// 将 r 指针放入 coroutine 的 globals table 中，name 为 __ngx_req</span>
-    <span class="c1">// ngx.req.* 相关的函数会通过 __ngx_req 取到 r 指针，然后获取函数需要的数据。</span>
-    <span class="n">ngx_http_lua_set_req</span><span class="p">(</span><span class="n">co</span><span class="p">,</span> <span class="n">r</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// 将 r 指针放入 coroutine 的 globals table 中，name 为 __ngx_req</span>
+<span class="w">    </span><span class="c1">// ngx.req.* 相关的函数会通过 __ngx_req 取到 r 指针，然后获取函数需要的数据。</span>
+<span class="w">    </span><span class="n">ngx_http_lua_set_req</span><span class="p">(</span><span class="n">co</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">);</span><span class="w"></span>
 
-    <span class="c1">// 保存当前运行的 coroutine 的上下文信息</span>
-    <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">cur_co_ctx</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">entry_co_ctx</span><span class="p">;</span>
-    <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">cur_co_ctx</span><span class="o">-&gt;</span><span class="n">co</span> <span class="o">=</span> <span class="n">co</span><span class="p">;</span>
-    <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">cur_co_ctx</span><span class="o">-&gt;</span><span class="n">co_ref</span> <span class="o">=</span> <span class="n">co_ref</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// 保存当前运行的 coroutine 的上下文信息</span>
+<span class="w">    </span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">cur_co_ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">entry_co_ctx</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">cur_co_ctx</span><span class="o">-&gt;</span><span class="n">co</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">co</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">cur_co_ctx</span><span class="o">-&gt;</span><span class="n">co_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">co_ref</span><span class="p">;</span><span class="w"></span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">cleanup</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">cln</span> <span class="o">=</span> <span class="n">ngx_http_cleanup_add</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-        <span class="n">cln</span><span class="o">-&gt;</span><span class="n">handler</span> <span class="o">=</span> <span class="n">ngx_http_lua_request_cleanup_handler</span><span class="p">;</span>
-        <span class="n">cln</span><span class="o">-&gt;</span><span class="n">data</span> <span class="o">=</span> <span class="n">ctx</span><span class="p">;</span>
-        <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">cleanup</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">cln</span><span class="o">-&gt;</span><span class="n">handler</span><span class="p">;</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">cleanup</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">cln</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_cleanup_add</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="n">cln</span><span class="o">-&gt;</span><span class="n">handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_request_cleanup_handler</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">cln</span><span class="o">-&gt;</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ctx</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">cleanup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">cln</span><span class="o">-&gt;</span><span class="n">handler</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">context</span> <span class="o">=</span> <span class="n">NGX_HTTP_LUA_CONTEXT_CONTENT</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">context</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">NGX_HTTP_LUA_CONTEXT_CONTENT</span><span class="p">;</span><span class="w"></span>
 
-    <span class="n">llcf</span> <span class="o">=</span> <span class="n">ngx_http_get_module_loc_conf</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">ngx_http_lua_module</span><span class="p">);</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">check_client_abort</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">r</span><span class="o">-&gt;</span><span class="n">read_event_handler</span> <span class="o">=</span> <span class="n">ngx_http_lua_rd_check_broken_connection</span><span class="p">;</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-        <span class="n">r</span><span class="o">-&gt;</span><span class="n">read_event_handler</span> <span class="o">=</span> <span class="n">ngx_http_block_reading</span><span class="p">;</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="n">llcf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_get_module_loc_conf</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_http_lua_module</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">llcf</span><span class="o">-&gt;</span><span class="n">check_client_abort</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">r</span><span class="o">-&gt;</span><span class="n">read_event_handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_rd_check_broken_connection</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">r</span><span class="o">-&gt;</span><span class="n">read_event_handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_block_reading</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="c1">// 执行 lua 代码，如果代码 yield 了，那么 yield 的地方会注册对应的事件，</span>
-    <span class="c1">// 并设置 ctx-&gt;resume_handler，事件触发后 nginx 会再次调用当前 content</span>
-    <span class="c1">// handler 继续 run phase，此时 content handler 会直接调用 ctx-&gt;resume_handler</span>
-    <span class="c1">// 继续执行 coroutine。</span>
-    <span class="n">rc</span> <span class="o">=</span> <span class="n">ngx_http_lua_run_thread</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// 执行 lua 代码，如果代码 yield 了，那么 yield 的地方会注册对应的事件，</span>
+<span class="w">    </span><span class="c1">// 并设置 ctx-&gt;resume_handler，事件触发后 nginx 会再次调用当前 content</span>
+<span class="w">    </span><span class="c1">// handler 继续 run phase，此时 content handler 会直接调用 ctx-&gt;resume_handler</span>
+<span class="w">    </span><span class="c1">// 继续执行 coroutine。</span>
+<span class="w">    </span><span class="n">rc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_run_thread</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="n">rc</span> <span class="o">==</span> <span class="n">NGX_ERROR</span> <span class="o">||</span> <span class="n">rc</span> <span class="o">&gt;=</span> <span class="n">NGX_OK</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="n">rc</span><span class="p">;</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">rc</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">NGX_ERROR</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">rc</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">NGX_OK</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">rc</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="c1">// 如果前面的 lua 代码中有创建新的 coroutine，执行这些 coroutine。</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">rc</span> <span class="o">==</span> <span class="n">NGX_AGAIN</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="n">ngx_http_lua_content_run_posted_threads</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-    <span class="p">}</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">rc</span> <span class="o">==</span> <span class="n">NGX_DONE</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="n">ngx_http_lua_content_run_posted_threads</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="c1">// 如果前面的 lua 代码中有创建新的 coroutine，执行这些 coroutine。</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">rc</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">NGX_AGAIN</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">ngx_http_lua_content_run_posted_threads</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">rc</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">NGX_DONE</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">ngx_http_lua_content_run_posted_threads</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="k">return</span> <span class="n">NGX_OK</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">NGX_OK</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>lua 代码调用了 <em>ngx.say()</em> （也就是在 <em>ngx_http_lua_init</em> 中 inject 进去的 API）来输出 http response body。这个函数是封装了 ngx_http_output_filter ，用来向客户端发送 http 响应。</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="k">static</span> <span class="kt">int</span>
-<span class="nf">ngx_http_lua_ngx_say</span><span class="p">(</span><span class="n">lua_State</span> <span class="o">*</span><span class="n">L</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="k">return</span> <span class="n">ngx_http_lua_ngx_echo</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-<span class="p">}</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"></span>
+<span class="nf">ngx_http_lua_ngx_say</span><span class="p">(</span><span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="n">L</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">ngx_http_lua_ngx_echo</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="k">static</span> <span class="kt">int</span>
-<span class="nf">ngx_http_lua_ngx_echo</span><span class="p">(</span><span class="n">lua_State</span> <span class="o">*</span><span class="n">L</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="n">newline</span><span class="p">)</span>
-<span class="p">{</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="n">ngx_http_lua_get_req</span><span class="p">(</span><span class="n">L</span><span class="p">);</span>
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"></span>
+<span class="nf">ngx_http_lua_ngx_echo</span><span class="p">(</span><span class="n">lua_State</span><span class="w"> </span><span class="o">*</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="n">newline</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_get_req</span><span class="p">(</span><span class="n">L</span><span class="p">);</span><span class="w"></span>
 
-    <span class="n">ctx</span> <span class="o">=</span> <span class="n">ngx_http_get_module_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">ngx_http_lua_module</span><span class="p">);</span>
+<span class="w">    </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_get_module_ctx</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">ngx_http_lua_module</span><span class="p">);</span><span class="w"></span>
 
-    <span class="c1">// 计算所有参数转化成 string 后加起来的大小</span>
-    <span class="n">nargs</span> <span class="o">=</span> <span class="n">lua_gettop</span><span class="p">(</span><span class="n">L</span><span class="p">);</span>
-    <span class="n">size</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">nargs</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">type</span> <span class="o">=</span> <span class="n">lua_type</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
-        <span class="k">switch</span> <span class="p">(</span><span class="n">type</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">case</span> <span class="nl">LUA_TNUMBER</span><span class="p">:</span>
-            <span class="k">case</span> <span class="nl">LUA_TSTRING</span><span class="p">:</span>
-                <span class="n">lua_tolstring</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">len</span><span class="p">);</span>
-                <span class="n">size</span> <span class="o">+=</span> <span class="n">len</span><span class="p">;</span>
-                <span class="k">break</span><span class="p">;</span>
-            <span class="c1">// ...</span>
-            <span class="k">default</span><span class="o">:</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">newline</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">size</span> <span class="o">+=</span> <span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="c1">// 计算所有参数转化成 string 后加起来的大小</span>
+<span class="w">    </span><span class="n">nargs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lua_gettop</span><span class="p">(</span><span class="n">L</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">nargs</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lua_type</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">type</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="nl">LUA_TNUMBER</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="nl">LUA_TSTRING</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="n">lua_tolstring</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="w">                </span><span class="n">size</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">len</span><span class="p">;</span><span class="w"></span>
+<span class="w">                </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// ...</span>
+<span class="w">            </span><span class="k">default</span><span class="o">:</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">newline</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">size</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="c1">// 创建一个新的 buf 用来发送响应内容</span>
-    <span class="n">cl</span> <span class="o">=</span> <span class="n">ngx_http_lua_chain_get_free_buf</span><span class="p">(</span><span class="n">r</span><span class="o">-&gt;</span><span class="n">connection</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">,</span> <span class="n">r</span><span class="o">-&gt;</span><span class="n">pool</span><span class="p">,</span>
-                                         <span class="o">&amp;</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">free_bufs</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
-    <span class="n">b</span> <span class="o">=</span> <span class="n">cl</span><span class="o">-&gt;</span><span class="n">buf</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// 创建一个新的 buf 用来发送响应内容</span>
+<span class="w">    </span><span class="n">cl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_chain_get_free_buf</span><span class="p">(</span><span class="n">r</span><span class="o">-&gt;</span><span class="n">connection</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="o">-&gt;</span><span class="n">pool</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                         </span><span class="o">&amp;</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">free_bufs</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cl</span><span class="o">-&gt;</span><span class="n">buf</span><span class="p">;</span><span class="w"></span>
 
-    <span class="c1">// 将 ngx.say 的内容 copy 到 buf 中准备发送。</span>
-    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="n">nargs</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
-        <span class="n">type</span> <span class="o">=</span> <span class="n">lua_type</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
-        <span class="k">switch</span> <span class="p">(</span><span class="n">type</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">case</span> <span class="nl">LUA_TNUMBER</span><span class="p">:</span>
-            <span class="k">case</span> <span class="nl">LUA_TSTRING</span><span class="p">:</span>
-                <span class="n">p</span> <span class="o">=</span> <span class="n">lua_tolstring</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">len</span><span class="p">);</span>
-                <span class="n">b</span><span class="o">-&gt;</span><span class="n">last</span> <span class="o">=</span> <span class="n">ngx_copy</span><span class="p">(</span><span class="n">b</span><span class="o">-&gt;</span><span class="n">last</span><span class="p">,</span> <span class="p">(</span><span class="n">u_char</span> <span class="o">*</span><span class="p">)</span> <span class="n">p</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
-                <span class="k">break</span><span class="p">;</span>
-           <span class="c1">// ...</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">newline</span><span class="p">)</span> <span class="p">{</span>
-        <span class="o">*</span><span class="n">b</span><span class="o">-&gt;</span><span class="n">last</span><span class="o">++</span> <span class="o">=</span> <span class="sc">&#39;\n&#39;</span><span class="p">;</span>
-    <span class="p">}</span>
+<span class="w">    </span><span class="c1">// 将 ngx.say 的内容 copy 到 buf 中准备发送。</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">nargs</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lua_type</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">type</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="nl">LUA_TNUMBER</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="nl">LUA_TSTRING</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lua_tolstring</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="w">                </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">last</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_copy</span><span class="p">(</span><span class="n">b</span><span class="o">-&gt;</span><span class="n">last</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">u_char</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="w">                </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="w">           </span><span class="c1">// ...</span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">newline</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="o">*</span><span class="n">b</span><span class="o">-&gt;</span><span class="n">last</span><span class="o">++</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;\n&#39;</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
 
-    <span class="c1">// 这个函数最终会调用 ngx_http_output_filter 来向客户端发送 http 响应。</span>
-    <span class="n">rc</span> <span class="o">=</span> <span class="n">ngx_http_lua_send_chain_link</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">cl</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// 这个函数最终会调用 ngx_http_output_filter 来向客户端发送 http 响应。</span>
+<span class="w">    </span><span class="n">rc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngx_http_lua_send_chain_link</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">ctx</span><span class="p">,</span><span class="w"> </span><span class="n">cl</span><span class="p">);</span><span class="w"></span>
 
-    <span class="n">lua_pushinteger</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="n">lua_pushinteger</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="cosocket">
+</section>
+<section id="cosocket">
 <h2>cosocket<a class="headerlink" href="#cosocket" title="Permalink to this headline">¶</a></h2>
 <p>cosocket 通过 lua 的 coroutine 将 nginx 的异步 socket 封装成了同步的 socket 接口。类似与 Go 的 net 库，这里 nginx 等价于 Go 里的 netpoller，cosocket 就是 net 库.</p>
 <p>参考：</p>
 <ul class="simple">
-<li>openresty 源码剖析——lua 代码的加载 <a class="reference external" href="http://www.cnblogs.com/magicsoar/p/6774872.html">http://www.cnblogs.com/magicsoar/p/6774872.html</a></li>
-<li>openresty 源码剖析——lua 代码的执行 <a class="reference external" href="http://www.cnblogs.com/magicsoar/p/6832204.html">http://www.cnblogs.com/magicsoar/p/6832204.html</a></li>
-<li>Lua Application Program Interface: <a class="reference external" href="https://www.lua.org/manual/5.1/manual.html#3">https://www.lua.org/manual/5.1/manual.html#3</a></li>
+<li><p>openresty 源码剖析——lua 代码的加载 <a class="reference external" href="http://www.cnblogs.com/magicsoar/p/6774872.html">http://www.cnblogs.com/magicsoar/p/6774872.html</a></p></li>
+<li><p>openresty 源码剖析——lua 代码的执行 <a class="reference external" href="http://www.cnblogs.com/magicsoar/p/6832204.html">http://www.cnblogs.com/magicsoar/p/6832204.html</a></p></li>
+<li><p>Lua Application Program Interface: <a class="reference external" href="https://www.lua.org/manual/5.1/manual.html#3">https://www.lua.org/manual/5.1/manual.html#3</a></p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -425,24 +415,16 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Nginx Lua 剖析</a><ul>
 <li><a class="reference internal" href="#pei-zhi-jia-zai-he-chu-shi-hua">配置加载和初始化</a></li>
-<li><a class="reference internal" href="#dai-ma-yun-hang">代码运行</a></li>
+<li><a class="reference internal" href="#dai-ma-yun-xing">代码运行</a></li>
 <li><a class="reference internal" href="#cosocket">cosocket</a></li>
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="bitcoin-explained.html" title="previous chapter">比特币的工作原理</a></li>
-      <li>Next: <a href="user-experience-design-for-apis.html" title="next chapter">User experience design for APIs</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -451,15 +433,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -468,7 +450,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

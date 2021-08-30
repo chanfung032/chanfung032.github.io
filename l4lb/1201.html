@@ -1,39 +1,29 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>#1201 xdp &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#1207 Maglev" href="1207.html" />
-    <link rel="prev" title="#1125 Stateless Datacenter Load-balancing with Beamer" href="1125.html" />
+    <link rel="next" title="#1125 Stateless Datacenter Load-balancing with Beamer" href="1125.html" />
+    <link rel="prev" title="#1207 Maglev" href="1207.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,29 +33,29 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="xdp">
+  <section id="xdp">
 <h1>#1201 xdp<a class="headerlink" href="#xdp" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="da-jian-kai-fa-huan-jing">
+<section id="da-jian-kai-fa-huan-jing">
 <h2>搭建开发环境<a class="headerlink" href="#da-jian-kai-fa-huan-jing" title="Permalink to this headline">¶</a></h2>
 <p>使用 vagrant+centos8（centos8 内核版本 &gt;=4.18.0-80，可以符合 xdp 程序开发的最低内核版本要求）。</p>
 <p><a class="reference external" href="https://en.wikipedia.org/wiki/CentOS#CentOS_version_8">https://en.wikipedia.org/wiki/CentOS#CentOS_version_8</a></p>
 <p>主要的依赖有 libbpf、llvm，clang、libelf。llvm+clang 将 xdp c 程序编译为 bpf，存储在 ELF obj 文件中。libbpf 用来 load bpf 程序入内核并将 bpf 程序 attach 到内核的各种 hook 中去。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> yum install clang llvm elfutils-libelf-devel libbpf bpftool
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>yum install clang llvm elfutils-libelf-devel libbpf bpftool
 </pre></div>
 </div>
 <p>详细可以参见（centos 的参见其中的 fedora 部分即可）：
 <a class="reference external" href="https://github.com/xdp-project/xdp-tutorial/blob/master/setup_dependencies.org#dependencies">https://github.com/xdp-project/xdp-tutorial/blob/master/setup_dependencies.org#dependencies</a></p>
-</div>
-<div class="section" id="di-yi-ge-xdp-cheng-xu">
+</section>
+<section id="di-yi-ge-xdp-cheng-xu">
 <h2>第一个 xdp 程序<a class="headerlink" href="#di-yi-ge-xdp-cheng-xu" title="Permalink to this headline">¶</a></h2>
 <p>一个 xdp 程序一般包含两个部分：</p>
 <ol class="arabic simple">
-<li>control plane 一个用户空间程序，一般以 _user.c 结尾，用来将 xdp bpf 程序加载从 elf 文件中加载入内核并且后续可以通过 bpf map 和其交互。</li>
-<li>data plane 加载入内核的 bpf 程序，这个一般以 _kern.c 结尾，使用 clang 和 llvm 编译为 bpf。</li>
+<li><p>control plane 一个用户空间程序，一般以 _user.c 结尾，用来将 xdp bpf 程序加载从 elf 文件中加载入内核并且后续可以通过 bpf map 和其交互。</p></li>
+<li><p>data plane 加载入内核的 bpf 程序，这个一般以 _kern.c 结尾，使用 clang 和 llvm 编译为 bpf。</p></li>
 </ol>
 <p>以 <a class="reference external" href="https://github.com/xdp-project/xdp-tutorial/tree/master/basic01-xdp-pass">https://github.com/xdp-project/xdp-tutorial/tree/master/basic01-xdp-pass</a> 为例（就是一个啥也不干，直接将包交给内核去处理的程序）。</p>
 <p>data plane 的程序大致如下：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> cat xdp_pass_kern.c
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cat xdp_pass_kern.c
 <span class="gp">#</span>include &lt;linux/bpf.h&gt;
 
 <span class="gp">#</span>define SEC<span class="o">(</span>NAME<span class="o">)</span> __attribute__<span class="o">((</span>section<span class="o">(</span>NAME<span class="o">)</span>, used<span class="o">))</span>
@@ -78,58 +68,58 @@
 </pre></div>
 </div>
 <p>将其编译为 obj 文件：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> clang -O2 -target bpf -c xdp_pass_kern.c -o xdp_pass_kern.o
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>clang -O2 -target bpf -c xdp_pass_kern.c -o xdp_pass_kern.o
 </pre></div>
 </div>
 <p>control plane xdp_pass_user.c 的代码比较长，但核心代码如下：</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="kt">int</span> <span class="n">prog_fd</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-<span class="k">struct</span> <span class="n">bpf_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">;</span>
-<span class="n">bpf_prog_load</span> <span class="p">(</span><span class="s">&quot;xdp_pass_kern.o&quot;</span><span class="p">,</span> <span class="n">BPF_PROG_TYPE_XDP</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">prog_fd</span><span class="p">);</span>
-<span class="n">bpf_set_link_xdp_fd</span> <span class="p">(</span><span class="n">ifindex</span><span class="p">,</span> <span class="n">prog_fd</span><span class="p">,</span> <span class="n">xdp_flags</span><span class="p">);</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">prog_fd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span><span class="w"></span>
+<span class="k">struct</span> <span class="nc">bpf_object</span><span class="w"> </span><span class="o">*</span><span class="n">obj</span><span class="p">;</span><span class="w"></span>
+<span class="n">bpf_prog_load</span><span class="w"> </span><span class="p">(</span><span class="s">&quot;xdp_pass_kern.o&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_PROG_TYPE_XDP</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">prog_fd</span><span class="p">);</span><span class="w"></span>
+<span class="n">bpf_set_link_xdp_fd</span><span class="w"> </span><span class="p">(</span><span class="n">ifindex</span><span class="p">,</span><span class="w"> </span><span class="n">prog_fd</span><span class="p">,</span><span class="w"> </span><span class="n">xdp_flags</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
 <p>其中，ifindex 是要加载的网络接口的 index，这段代码主要就是调用 bpf_prog_load 加载 obj 文件中的 bpf 代码进内核，然后调用 bpf_set_link_xdp_fd 将这段代码挂载到网络接口的 hook 中去。</p>
 <p>编译：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> gcc -Wall -I../libbpf/src//build/usr/include/-g -I../headers/-L../libbpf/src/-o xdp_pass_user ../common//common_params.o <span class="se">\</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>gcc -Wall -I../libbpf/src//build/usr/include/-g -I../headers/-L../libbpf/src/-o xdp_pass_user ../common//common_params.o <span class="se">\</span>
 xdp_pass_user.c -l:libbpf.a -lelf
 </pre></div>
 </div>
 <p>执行：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> ./xdp_pass_user -d eth1  --skb-mode
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>./xdp_pass_user -d eth1  --skb-mode
 <span class="go">Success: Loading XDP prog name:xdp_prog_simple (id:24) on device:eth1 (ifindex:3)</span>
 </pre></div>
 </div>
 <p>查看：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> ip link list dev eth1
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ip link list dev eth1
 <span class="go">3: eth1: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 xdpgeneric qdisc fq_codel state UP mode DEFAULT group default qlen 1000</span>
 <span class="go">    link/ether 08:00:27:82:92:cd brd ff:ff:ff:ff:ff:ff</span>
 <span class="go">    prog/xdp id 24 tag 3b185187f1855c4c jited</span>
 </pre></div>
 </div>
 <p>最后一行可以看到 xdp 程序被加载入网络接口的 hook 中了。</p>
-</div>
-<div class="section" id="shi-yong-ip-ming-ling-jia-zai-xdp-cheng-xu">
+</section>
+<section id="shi-yong-ip-ming-ling-jia-zai-xdp-cheng-xu">
 <h2>使用 ip 命令加载 xdp 程序<a class="headerlink" href="#shi-yong-ip-ming-ling-jia-zai-xdp-cheng-xu" title="Permalink to this headline">¶</a></h2>
 <p>简单的 xdp 程序也可以使用 ip 命令直接加载，不用自己写加载程序。</p>
 <p>加载：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> ip link <span class="nb">set</span> dev eth1 xdp obj xdp_pass_kern.o sec xdp
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ip link <span class="nb">set</span> dev eth1 xdp obj xdp_pass_kern.o sec xdp
 </pre></div>
 </div>
 <p>如果已加载了 xdp 程序，可以使用下面命令强制替换现有 xdp 程序。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> ip -force link <span class="nb">set</span> dev eth1 xdp obj xdp_pass_kern.o sec xdp
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ip -force link <span class="nb">set</span> dev eth1 xdp obj xdp_pass_kern.o sec xdp
 </pre></div>
 </div>
 <p>卸载：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> ip link <span class="nb">set</span> dev eth1 xdp off
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ip link <span class="nb">set</span> dev eth1 xdp off
 </pre></div>
 </div>
-</div>
-<div class="section" id="xdp-dai-ma-jia-zai-mo-shi">
+</section>
+<section id="xdp-dai-ma-jia-zai-mo-shi">
 <h2>xdp 代码加载模式<a class="headerlink" href="#xdp-dai-ma-jia-zai-mo-shi" title="Permalink to this headline">¶</a></h2>
 <p>xdp 代码有好几种加载的模式：skb/driver/hardware，性能上 skb &lt; driver &lt; hardware，但 driver 和 hardware 需要驱动和硬件的支持。</p>
 <p><a class="reference external" href="https://stackoverflow.com/questions/57171394/with-attach-xdp-does-flags-control-the-mode/57173029#57173029">https://stackoverflow.com/questions/57171394/with-attach-xdp-does-flags-control-the-mode/57173029#57173029</a></p>
 <p>查看网络接口的 driver</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> ethtool -i eth1
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ethtool -i eth1
 <span class="go">driver: e1000</span>
 <span class="go">version: 7.3.21-k8-NAPI</span>
 <span class="go">firmware-version:</span>
@@ -144,231 +134,231 @@ xdp_pass_user.c -l:libbpf.a -lelf
 </div>
 <p>目前支持 xdp driver 的 driver list：</p>
 <p><a class="reference external" href="https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md#xdp">https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md#xdp</a></p>
-</div>
-<div class="section" id="map">
+</section>
+<section id="map">
 <h2>Map<a class="headerlink" href="#map" title="Permalink to this headline">¶</a></h2>
 <p>这个应该可以用来存储 forwading table。</p>
 <p>定义（在 _kernel.c 中定义一个全局变量）：</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="n">bpf_map_def</span> <span class="nf">SEC</span> <span class="p">(</span><span class="s">&quot;maps&quot;</span><span class="p">)</span> <span class="n">xdp_stats_map</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="p">.</span><span class="n">type</span>        <span class="o">=</span> <span class="n">BPF_MAP_TYPE_ARRAY</span><span class="p">,</span>
-    <span class="p">.</span><span class="n">key_size</span>    <span class="o">=</span> <span class="k">sizeof</span> <span class="p">(</span><span class="n">__u32</span><span class="p">),</span>
-    <span class="p">.</span><span class="n">value_size</span>  <span class="o">=</span> <span class="k">sizeof</span> <span class="p">(</span><span class="k">struct</span> <span class="n">datarec</span><span class="p">),</span>
-    <span class="p">.</span><span class="n">max_entries</span> <span class="o">=</span> <span class="n">XDP_ACTION_MAX</span><span class="p">,</span>
-<span class="p">};</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">bpf_map_def</span><span class="w"> </span><span class="n">SEC</span><span class="w"> </span><span class="p">(</span><span class="s">&quot;maps&quot;</span><span class="p">)</span><span class="w"> </span><span class="n">xdp_stats_map</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">type</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="n">BPF_MAP_TYPE_ARRAY</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">key_size</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="k">sizeof</span><span class="w"> </span><span class="p">(</span><span class="n">__u32</span><span class="p">),</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">value_size</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="k">sizeof</span><span class="w"> </span><span class="p">(</span><span class="k">struct</span> <span class="nc">datarec</span><span class="p">),</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">max_entries</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">XDP_ACTION_MAX</span><span class="p">,</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
 </pre></div>
 </div>
 <p>在 bpf 程序中，直接调用 bpf 接口就可以操作 map 了：</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">rec</span> <span class="o">=</span> <span class="n">bpf_map_lookup_elem</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">xdp_stats_map</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">key</span><span class="p">);</span>
-<span class="n">lock_xadd</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">rec</span><span class="o">-&gt;</span><span class="n">rx_packets</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">rec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_map_lookup_elem</span><span class="w"> </span><span class="p">(</span><span class="o">&amp;</span><span class="n">xdp_stats_map</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">key</span><span class="p">);</span><span class="w"></span>
+<span class="n">lock_xadd</span><span class="w"> </span><span class="p">(</span><span class="o">&amp;</span><span class="n">rec</span><span class="o">-&gt;</span><span class="n">rx_packets</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
 <p id="bpf-map">在用户态的程序中操作 map 需要先通过 map 名获取 map 的 fd，然后再通过 map fd 操作：</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">map</span> <span class="o">=</span>  <span class="n">bpf_object__find_map_by_name</span> <span class="p">(</span><span class="n">bpf_obj</span><span class="p">,</span> <span class="s">&quot;xdp_stats_map&quot;</span><span class="p">);</span>
-<span class="n">map_fd</span> <span class="o">=</span> <span class="n">bpf_map__fd</span> <span class="p">(</span><span class="n">map</span><span class="p">);</span>
-<span class="n">map_get_value_array</span> <span class="p">(</span><span class="n">map_fd</span> <span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">value</span><span class="p">)</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">map</span><span class="w"> </span><span class="o">=</span><span class="w">  </span><span class="n">bpf_object__find_map_by_name</span><span class="w"> </span><span class="p">(</span><span class="n">bpf_obj</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;xdp_stats_map&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="n">map_fd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_map__fd</span><span class="w"> </span><span class="p">(</span><span class="n">map</span><span class="p">);</span><span class="w"></span>
+<span class="n">map_get_value_array</span><span class="w"> </span><span class="p">(</span><span class="n">map_fd</span><span class="w"> </span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">value</span><span class="p">)</span><span class="w"></span>
 </pre></div>
 </div>
 <p>bpf map 有很多种类型：<a class="reference external" href="https://github.com/torvalds/linux/blob/master/include/uapi/linux/bpf.h#:~:text=BPF_MAP_TYPE">https://github.com/torvalds/linux/blob/master/include/uapi/linux/bpf.h#:~:text=BPF_MAP_TYPE</a></p>
-</div>
-<div class="section" id="pinning-map">
+</section>
+<section id="pinning-map">
 <h2>Pinning Map<a class="headerlink" href="#pinning-map" title="Permalink to this headline">¶</a></h2>
 <p>前述 <a class="reference internal" href="#bpf-map"><span class="std std-ref">bpf map 操作</span></a> 中，bpf map 的操作需要 bpf 程序的 bpf_object 对象，通过其获取 bpf map 的 fd。bpf map 可以通过 pinning 操作将 map 和一个文件路径绑定在一起，这样要读取 map 直接从该文件路径获取 map 的 fd 就可以了。</p>
 <p>Mount BPF 文件系统：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> mount -t bpf bpf /sys/fs/bpf/
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mount -t bpf bpf /sys/fs/bpf/
 </pre></div>
 </div>
 <p>在 loader 程序中 pinning map：</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="c1">// 清理</span>
-<span class="n">bpf_object__unpin_maps</span><span class="p">(</span><span class="n">bpf_obj</span><span class="p">,</span> <span class="s">&quot;/sys/fs/bpf/eth1&quot;</span><span class="p">);</span>
-<span class="n">bpf_object__pin_maps</span><span class="p">(</span><span class="n">bpf_obj</span><span class="p">,</span> <span class="s">&quot;/sys/fs/bpf/eth1/xdp_stats_map&quot;</span><span class="p">);</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// 清理</span>
+<span class="n">bpf_object__unpin_maps</span><span class="p">(</span><span class="n">bpf_obj</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/sys/fs/bpf/eth1&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="n">bpf_object__pin_maps</span><span class="p">(</span><span class="n">bpf_obj</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/sys/fs/bpf/eth1/xdp_stats_map&quot;</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
 <p>其它程序如果要操作 map，直接通过路径获取 map 的 fd 即可：</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="kt">int</span> <span class="n">stats_map_fd</span><span class="p">;</span>
-<span class="k">struct</span> <span class="n">bpf_map_info</span> <span class="n">info</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
-<span class="n">stats_map_fd</span> <span class="o">=</span> <span class="n">open_bpf_map_file</span><span class="p">(</span><span class="s">&quot;/sys/fs/bpf/eth1/&quot;</span><span class="p">,</span> <span class="s">&quot;xdp_stats_map&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">info</span><span class="p">);</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">stats_map_fd</span><span class="p">;</span><span class="w"></span>
+<span class="k">struct</span> <span class="nc">bpf_map_info</span><span class="w"> </span><span class="n">info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">};</span><span class="w"></span>
+<span class="n">stats_map_fd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">open_bpf_map_file</span><span class="p">(</span><span class="s">&quot;/sys/fs/bpf/eth1/&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;xdp_stats_map&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">info</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="han-shu-nei-lian-xun-huan-zhan-kai">
+</section>
+<section id="han-shu-nei-lian-xun-huan-zhan-kai">
 <h2>函数内联、循环展开<a class="headerlink" href="#han-shu-nei-lian-xun-huan-zhan-kai" title="Permalink to this headline">¶</a></h2>
 <p>bpf 对函数和循环的支持有限，所以 bpf 程序中</p>
 <ul class="simple">
-<li>如果使用子函数，需要在函数前面加上 <code class="docutils literal"><span class="pre">__always_inline</span></code>，让函数始终内联。</li>
-<li>如果有循环，需要在循环语句前加上 <code class="docutils literal"><span class="pre">#pragma</span> <span class="pre">unroll</span></code>，让循环展开。</li>
+<li><p>如果使用子函数，需要在函数前面加上 <code class="docutils literal notranslate"><span class="pre">__always_inline</span></code>，让函数始终内联。</p></li>
+<li><p>如果有循环，需要在循环语句前加上 <code class="docutils literal notranslate"><span class="pre">#pragma</span> <span class="pre">unroll</span></code>，让循环展开。</p></li>
 </ul>
 <p>而不是让编译器自己去做决定。</p>
-</div>
-<div class="section" id="wang-luo-bao-jie-xi">
+</section>
+<section id="wang-luo-bao-jie-xi">
 <h2>网络包解析<a class="headerlink" href="#wang-luo-bao-jie-xi" title="Permalink to this headline">¶</a></h2>
 <p>下面是一个简单的 IPv6 版本的 ICMP 处理程序示例，功能是丢掉 sequence number 为偶数的 icmp 包。</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="kt">int</span>  <span class="nf">xdp_parser_func</span><span class="p">(</span><span class="k">struct</span> <span class="n">xdp_md</span> <span class="o">*</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// [data, data_end) 为网络包数据</span>
-    <span class="kt">void</span> <span class="o">*</span><span class="n">data</span>     <span class="o">=</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)(</span><span class="kt">long</span><span class="p">)</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">;</span>
-    <span class="kt">void</span> <span class="o">*</span><span class="n">data_end</span> <span class="o">=</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)(</span><span class="kt">long</span><span class="p">)</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">data_end</span><span class="p">;</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w">  </span><span class="nf">xdp_parser_func</span><span class="p">(</span><span class="k">struct</span> <span class="nc">xdp_md</span><span class="w"> </span><span class="o">*</span><span class="n">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// [data, data_end) 为网络包数据</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="kt">long</span><span class="p">)</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">data_end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="kt">long</span><span class="p">)</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">data_end</span><span class="p">;</span><span class="w"></span>
 
-    <span class="k">struct</span> <span class="n">ethhdr</span> <span class="o">*</span><span class="n">eth</span> <span class="o">=</span> <span class="n">data</span><span class="p">;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">eth</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;</span> <span class="n">data_end</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">XDP_ABORT</span><span class="p">;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">eth</span><span class="o">-&gt;</span><span class="n">h_proto</span> <span class="o">!=</span> <span class="n">bpf_htons</span><span class="p">(</span><span class="n">ETH_P_IPV6</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">XDP_DROP</span><span class="p">;</span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">ethhdr</span><span class="w"> </span><span class="o">*</span><span class="n">eth</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">data</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">eth</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">data_end</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">XDP_ABORT</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">eth</span><span class="o">-&gt;</span><span class="n">h_proto</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">bpf_htons</span><span class="p">(</span><span class="n">ETH_P_IPV6</span><span class="p">))</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">XDP_DROP</span><span class="p">;</span><span class="w"></span>
 
-    <span class="k">struct</span> <span class="n">ipv6hdr</span> <span class="o">*</span><span class="n">ip6h</span> <span class="o">=</span> <span class="n">eth</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">ip6h</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;</span> <span class="n">data_end</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">XDP_ABORT</span><span class="p">;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">ip6h</span><span class="o">-&gt;</span><span class="n">nexthdr</span> <span class="o">!=</span> <span class="n">IPPROTO_ICMPV6</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">XDP_DROP</span><span class="p">;</span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">ipv6hdr</span><span class="w"> </span><span class="o">*</span><span class="n">ip6h</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">eth</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ip6h</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">data_end</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">XDP_ABORT</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ip6h</span><span class="o">-&gt;</span><span class="n">nexthdr</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">IPPROTO_ICMPV6</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">XDP_DROP</span><span class="p">;</span><span class="w"></span>
 
-    <span class="k">struct</span> <span class="n">icmp6hdr</span> <span class="o">*</span><span class="n">icmp_hdr</span> <span class="o">=</span> <span class="n">ip6h</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">bpf_ntohs</span><span class="p">(</span><span class="n">icmp_hdr</span><span class="o">-&gt;</span><span class="n">icmp6_sequence</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">XDP_DROP</span><span class="p">;</span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">icmp6hdr</span><span class="w"> </span><span class="o">*</span><span class="n">icmp_hdr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ip6h</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">bpf_ntohs</span><span class="p">(</span><span class="n">icmp_hdr</span><span class="o">-&gt;</span><span class="n">icmp6_sequence</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">XDP_DROP</span><span class="p">;</span><span class="w"></span>
 
-    <span class="k">return</span> <span class="n">XDP_PASS</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">XDP_PASS</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>解析网络包第一步，包含定义 packet header 的各种头文件：</p>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="40%" />
-<col width="60%" />
+<col style="width: 40%" />
+<col style="width: 60%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Struct</th>
-<th class="head">Header file</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Struct</p></th>
+<th class="head"><p>Header file</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>struct ethhdr</td>
-<td>&lt;linux/if_ether.h&gt;</td>
+<tbody>
+<tr class="row-even"><td><p>struct ethhdr</p></td>
+<td><p>&lt;linux/if_ether.h&gt;</p></td>
 </tr>
-<tr class="row-odd"><td>struct ipv6hdr</td>
-<td>&lt;linux/ipv6.h&gt;</td>
+<tr class="row-odd"><td><p>struct ipv6hdr</p></td>
+<td><p>&lt;linux/ipv6.h&gt;</p></td>
 </tr>
-<tr class="row-even"><td>struct iphdr</td>
-<td>&lt;linux/ip.h&gt;</td>
+<tr class="row-even"><td><p>struct iphdr</p></td>
+<td><p>&lt;linux/ip.h&gt;</p></td>
 </tr>
-<tr class="row-odd"><td>struct icmp6hdr</td>
-<td>&lt;linux/icmpv6.h&gt;</td>
+<tr class="row-odd"><td><p>struct icmp6hdr</p></td>
+<td><p>&lt;linux/icmpv6.h&gt;</p></td>
 </tr>
-<tr class="row-even"><td>struct icmphdr</td>
-<td>&lt;linux/icmp.h&gt;</td>
+<tr class="row-even"><td><p>struct icmphdr</p></td>
+<td><p>&lt;linux/icmp.h&gt;</p></td>
 </tr>
 </tbody>
 </table>
-<p>第二步，bounds checking，在读取 *hdr 结构体中的字段时，首先需要检查 *hdr 结构体是否在 [data, data_end) 之间，如果不检查，程序后续加载的时候 bpf verifier 会报错。也就是上面代码中的 <code class="docutils literal"><span class="pre">if</span> <span class="pre">(eth</span> <span class="pre">+</span> <span class="pre">1</span> <span class="pre">&gt;</span> <span class="pre">data_end)</span> <span class="pre">...</span></code> 这样的判断，It’s necessary。</p>
+<p>第二步，bounds checking，在读取 *hdr 结构体中的字段时，首先需要检查 *hdr 结构体是否在 [data, data_end) 之间，如果不检查，程序后续加载的时候 bpf verifier 会报错。也就是上面代码中的 <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">(eth</span> <span class="pre">+</span> <span class="pre">1</span> <span class="pre">&gt;</span> <span class="pre">data_end)</span> <span class="pre">...</span></code> 这样的判断，It’s necessary。</p>
 <p>最后，网络包的数据是直接从网卡读到的数据，所以引用字段时要注意字节序，不要混用网络序和主机序的数据，必要时使用 bpf_htons/bpf_ntohs 之类的函数互相转换。</p>
 <ul class="simple">
-<li><a class="reference external" href="https://en.wikipedia.org/wiki/Ethernet_frame">https://en.wikipedia.org/wiki/Ethernet_frame</a></li>
-<li><a class="reference external" href="https://en.wikipedia.org/wiki/IPv6_packet">https://en.wikipedia.org/wiki/IPv6_packet</a></li>
-<li><a class="reference external" href="https://code.woboq.org/linux/linux/tools/testing/selftests/bpf/bpf_endian.h.html">https://code.woboq.org/linux/linux/tools/testing/selftests/bpf/bpf_endian.h.html</a></li>
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/Ethernet_frame">https://en.wikipedia.org/wiki/Ethernet_frame</a></p></li>
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/IPv6_packet">https://en.wikipedia.org/wiki/IPv6_packet</a></p></li>
+<li><p><a class="reference external" href="https://code.woboq.org/linux/linux/tools/testing/selftests/bpf/bpf_endian.h.html">https://code.woboq.org/linux/linux/tools/testing/selftests/bpf/bpf_endian.h.html</a></p></li>
 </ul>
 <hr class="docutils" />
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="nb">NULL</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
-<span class="n">printf</span><span class="p">(</span><span class="s">&quot;%p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="nb">NULL</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="nb">NULL</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+<span class="n">printf</span><span class="p">(</span><span class="s">&quot;%p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="nb">NULL</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
 <p>上面的代码运行的结果是：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mh">0x1</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mh">0x1</span>
 <span class="mh">0x4</span>
 </pre></div>
 </div>
-<p>指针加 1 的时候，如果是 <code class="docutils literal"><span class="pre">void*</span></code> 指针，指针是往后移一个字节，如果指针有类型，那么则是往后移 <code class="docutils literal"><span class="pre">sizeof(类型）</span></code> 个字节。所以上面所有 hdr 类型的 bounds checking 的时候都是使用相同的指针加 1 操作。</p>
-</div>
-<div class="section" id="wang-luo-bao-rewrite">
+<p>指针加 1 的时候，如果是 <code class="docutils literal notranslate"><span class="pre">void*</span></code> 指针，指针是往后移一个字节，如果指针有类型，那么则是往后移 <code class="docutils literal notranslate"><span class="pre">sizeof(类型）</span></code> 个字节。所以上面所有 hdr 类型的 bounds checking 的时候都是使用相同的指针加 1 操作。</p>
+</section>
+<section id="wang-luo-bao-rewrite">
 <h2>网络包 Rewrite<a class="headerlink" href="#wang-luo-bao-rewrite" title="Permalink to this headline">¶</a></h2>
-<p>xdp 程序可以直接修改 [ctx-&gt;data, ctx-&gt;data_end] 之间的数据，并且可以通过 <code class="docutils literal"><span class="pre">bpf_xdp_adjust_head</span></code> 函数来扩大/缩小网络数据包的 buffer 的大小。</p>
-<dl class="function">
-<dt id="c.bpf_xdp_adjust_head">
-long <code class="descname">bpf_xdp_adjust_head</code><span class="sig-paren">(</span>struct xdp_buff<em>&nbsp;*xdp_md</em>, int<em>&nbsp;delta</em><span class="sig-paren">)</span><a class="headerlink" href="#c.bpf_xdp_adjust_head" title="Permalink to this definition">¶</a></dt>
-<dd><p>将 <code class="docutils literal"><span class="pre">xdp_md-&gt;data</span></code> 指针移动 <code class="docutils literal"><span class="pre">delta</span></code> 个字节，delta 为正的时候是缩小网络包的 buffer（可以用在解包场景下），如果为负，相当于在 buffer 的前面新申请了一段 buffer 空间（可以用来封包），返回 0 成功或者一个负的错误码。</p>
+<p>xdp 程序可以直接修改 [ctx-&gt;data, ctx-&gt;data_end] 之间的数据，并且可以通过 <code class="docutils literal notranslate"><span class="pre">bpf_xdp_adjust_head</span></code> 函数来扩大/缩小网络数据包的 buffer 的大小。</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.bpf_xdp_adjust_head">
+<span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">bpf_xdp_adjust_head</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">xdp_buff</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">xdp_md</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">delta</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.bpf_xdp_adjust_head" title="Permalink to this definition">¶</a><br /></dt>
+<dd><p>将 <code class="docutils literal notranslate"><span class="pre">xdp_md-&gt;data</span></code> 指针移动 <code class="docutils literal notranslate"><span class="pre">delta</span></code> 个字节，delta 为正的时候是缩小网络包的 buffer（可以用在解包场景下），如果为负，相当于在 buffer 的前面新申请了一段 buffer 空间（可以用来封包），返回 0 成功或者一个负的错误码。</p>
 </dd></dl>
 
-<p>改包的内容后，比如修改了 IPv4 包的 header 之后，要更新其 checksum 字段。这个可以使用 <code class="docutils literal"><span class="pre">bpf_csum_diff</span></code> 来增量计算 checksum，而不是重新计算。</p>
+<p>改包的内容后，比如修改了 IPv4 包的 header 之后，要更新其 checksum 字段。这个可以使用 <code class="docutils literal notranslate"><span class="pre">bpf_csum_diff</span></code> 来增量计算 checksum，而不是重新计算。</p>
 <p><a class="reference external" href="https://en.wikipedia.org/wiki/IPv4_header_checksum">https://en.wikipedia.org/wiki/IPv4_header_checksum</a></p>
-</div>
-<div class="section" id="shi-yong-bpf-csum-diff-geng-xin-checksum">
+</section>
+<section id="shi-yong-bpf-csum-diff-geng-xin-checksum">
 <h2>使用 bpf_csum_diff 更新 checksum<a class="headerlink" href="#shi-yong-bpf-csum-diff-geng-xin-checksum" title="Permalink to this headline">¶</a></h2>
 <p>以更新 icmp 包的 checksum 为例：</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="n">icmphdr_common</span> <span class="o">*</span><span class="n">icmphdr</span><span class="p">;</span>
-<span class="k">struct</span> <span class="n">icmphdr_common</span> <span class="n">icmphdr_old</span><span class="p">;</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">icmphdr_common</span><span class="w"> </span><span class="o">*</span><span class="n">icmphdr</span><span class="p">;</span><span class="w"></span>
+<span class="k">struct</span> <span class="nc">icmphdr_common</span><span class="w"> </span><span class="n">icmphdr_old</span><span class="p">;</span><span class="w"></span>
 <span class="c1">// 保存当前的 checksum</span>
-<span class="n">__u16</span> <span class="n">old_csum</span> <span class="o">=</span> <span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span><span class="p">;</span>
+<span class="n">__u16</span><span class="w"> </span><span class="n">old_csum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span><span class="p">;</span><span class="w"></span>
 <span class="c1">// 将 checksum 字段清零</span>
-<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
 <span class="c1">// 保存当前的 icmphdr</span>
-<span class="n">icmphdr_old</span> <span class="o">=</span> <span class="o">*</span><span class="n">icmphdr</span><span class="p">;</span>
+<span class="n">icmphdr_old</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">icmphdr</span><span class="p">;</span><span class="w"></span>
 <span class="c1">// 修改 icmphdr 中的字段，修改之后 checksum 就需要更新</span>
-<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">type</span> <span class="o">=</span> <span class="n">ICMP_ECHOREPLY</span><span class="p">;</span>
-<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span> <span class="o">=</span> <span class="n">icmp_checksum_diff</span><span class="p">(</span><span class="o">~</span><span class="n">old_csum</span><span class="p">,</span> <span class="n">icmphdr</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">icmphdr_old</span><span class="p">);</span>
+<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ICMP_ECHOREPLY</span><span class="p">;</span><span class="w"></span>
+<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">icmp_checksum_diff</span><span class="p">(</span><span class="o">~</span><span class="n">old_csum</span><span class="p">,</span><span class="w"> </span><span class="n">icmphdr</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">icmphdr_old</span><span class="p">);</span><span class="w"></span>
 
 <span class="c1">// 计算新的 checksum</span>
-<span class="n">__u32</span> <span class="n">size</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">icmphdr_common</span><span class="p">);</span>
-<span class="n">__u32</span> <span class="n">csum</span> <span class="o">=</span> <span class="n">bpf_csum_diff</span><span class="p">((</span><span class="n">__be32</span> <span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">icmphdr_old</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="p">(</span><span class="n">__be32</span> <span class="o">*</span><span class="p">)</span><span class="n">icmphdr</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="o">~</span><span class="n">old_csum</span><span class="p">);</span>
+<span class="n">__u32</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">icmphdr_common</span><span class="p">);</span><span class="w"></span>
+<span class="n">__u32</span><span class="w"> </span><span class="n">csum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_csum_diff</span><span class="p">((</span><span class="n">__be32</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">icmphdr_old</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">__be32</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">icmphdr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="o">~</span><span class="n">old_csum</span><span class="p">);</span><span class="w"></span>
 <span class="c1">// 将 checksum 从 __u32 转成 __u16</span>
-<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span> <span class="o">=</span> <span class="n">csum_fold_helper</span><span class="p">(</span><span class="n">csum</span><span class="p">);</span>
+<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">csum_fold_helper</span><span class="p">(</span><span class="n">csum</span><span class="p">);</span><span class="w"></span>
 
-<span class="k">static</span> <span class="n">__always_inline</span> <span class="n">__u16</span> <span class="nf">csum_fold_helper</span><span class="p">(</span><span class="n">__u32</span> <span class="n">csum</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">__u32</span> <span class="n">sum</span><span class="p">;</span>
-    <span class="n">sum</span> <span class="o">=</span> <span class="p">(</span><span class="n">csum</span> <span class="o">&gt;&gt;</span> <span class="mi">16</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">csum</span> <span class="o">&amp;</span> <span class="mh">0xffff</span><span class="p">);</span>
-    <span class="n">sum</span> <span class="o">+=</span> <span class="p">(</span><span class="n">sum</span> <span class="o">&gt;&gt;</span> <span class="mi">16</span><span class="p">);</span>
-    <span class="k">return</span> <span class="o">~</span><span class="n">sum</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="k">static</span><span class="w"> </span><span class="n">__always_inline</span><span class="w"> </span><span class="n">__u16</span><span class="w"> </span><span class="n">csum_fold_helper</span><span class="p">(</span><span class="n">__u32</span><span class="w"> </span><span class="n">csum</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">__u32</span><span class="w"> </span><span class="n">sum</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">csum</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">16</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">csum</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xffff</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="p">(</span><span class="n">sum</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">16</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">~</span><span class="n">sum</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="wang-luo-bao-redirect">
+</section>
+<section id="wang-luo-bao-redirect">
 <h2>网络包 Redirect<a class="headerlink" href="#wang-luo-bao-redirect" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="c.bpf_redirect">
-long <code class="descname">bpf_redirect</code><span class="sig-paren">(</span>u32<em>&nbsp;ifindex</em>, u64<em>&nbsp;flags</em><span class="sig-paren">)</span><a class="headerlink" href="#c.bpf_redirect" title="Permalink to this definition">¶</a></dt>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.bpf_redirect">
+<span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">bpf_redirect</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">u32</span></span><span class="w"> </span><span class="n"><span class="pre">ifindex</span></span>, <span class="n"><span class="pre">u64</span></span><span class="w"> </span><span class="n"><span class="pre">flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.bpf_redirect" title="Permalink to this definition">¶</a><br /></dt>
 <dd></dd></dl>
 
-<p>直接在处理函数的最后调用 <code class="docutils literal"><span class="pre">return</span> <span class="pre">bpf_redirect(ifindex,</span> <span class="pre">0)</span></code> redirect 网络包。</p>
-<dl class="function">
-<dt id="c.bpf_redirect_map">
-long <code class="descname">bpf_redirect_map</code><span class="sig-paren">(</span>struct bpf_map<em>&nbsp;*map</em>, u32<em>&nbsp;key</em>, u64<em>&nbsp;flags</em><span class="sig-paren">)</span><a class="headerlink" href="#c.bpf_redirect_map" title="Permalink to this definition">¶</a></dt>
+<p>直接在处理函数的最后调用 <code class="docutils literal notranslate"><span class="pre">return</span> <span class="pre">bpf_redirect(ifindex,</span> <span class="pre">0)</span></code> redirect 网络包。</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.bpf_redirect_map">
+<span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">bpf_redirect_map</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">bpf_map</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">map</span></span>, <span class="n"><span class="pre">u32</span></span><span class="w"> </span><span class="n"><span class="pre">key</span></span>, <span class="n"><span class="pre">u64</span></span><span class="w"> </span><span class="n"><span class="pre">flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.bpf_redirect_map" title="Permalink to this definition">¶</a><br /></dt>
 <dd></dd></dl>
 
 <p>bpf_redirect_map 的使用稍微复杂一点，首先在 _kern.c 程序中：</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="c1">// 定义一个 map 用于存储 key-&gt;ifindex 这个映射关系</span>
-<span class="k">struct</span> <span class="p">{</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span> <span class="n">BPF_MAP_TYPE_DEVMAP</span><span class="p">);</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">key_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">value_size</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
-    <span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-<span class="p">}</span> <span class="n">tx_port</span> <span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// 定义一个 map 用于存储 key-&gt;ifindex 这个映射关系</span>
+<span class="k">struct</span> <span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_MAP_TYPE_DEVMAP</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">key_size</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">value_size</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"> </span><span class="n">tx_port</span><span class="w"> </span><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span><span class="w"></span>
 
 <span class="c1">// 然后在 xdp 程序中，引用该 map 和 key 来 redirect。</span>
-<span class="k">return</span> <span class="nf">bpf_redirect_map</span><span class="p">(</span><span class="o">&amp;</span><span class="n">tx_port</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="k">return</span><span class="w"> </span><span class="n">bpf_redirect_map</span><span class="p">(</span><span class="o">&amp;</span><span class="n">tx_port</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
 <p>在 _user.c 程序中，设置转发的 ifindex。</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="kt">int</span> <span class="n">map_fd</span> <span class="o">=</span> <span class="n">bpf_obj_get</span><span class="p">(</span><span class="n">pinned_file</span><span class="p">);</span>
-<span class="kt">int</span> <span class="n">map_key</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-<span class="n">bpf_map_update_elem</span><span class="p">(</span><span class="n">map_fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">map_key</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ifindex</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">map_fd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_obj_get</span><span class="p">(</span><span class="n">pinned_file</span><span class="p">);</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">map_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="n">bpf_map_update_elem</span><span class="p">(</span><span class="n">map_fd</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">map_key</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ifindex</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
 </pre></div>
 </div>
 <p>linux 5.6 之前 bpf_redirect 的性能不如 bpf_redirect_map，<a class="reference external" href="https://github.com/xdp-project/xdp-tutorial/issues/104#issuecomment-591302134">https://github.com/xdp-project/xdp-tutorial/issues/104#issuecomment-591302134</a>，另外 hard code 没法更新等问题，一般不要直接使用 bpf_redirect 。</p>
-</div>
-<div class="section" id="python-bpf-cao-zuo-ku">
+</section>
+<section id="python-bpf-cao-zuo-ku">
 <h2>Python BPF 操作库<a class="headerlink" href="#python-bpf-cao-zuo-ku" title="Permalink to this headline">¶</a></h2>
 <p>iovisor/bcc 封装了一个 python BPF 操作库 <a class="reference external" href="https://github.com/iovisor/bcc">https://github.com/iovisor/bcc</a></p>
-</div>
-<div class="section" id="tiao-shi-ri-zhi">
+</section>
+<section id="tiao-shi-ri-zhi">
 <h2>调试日志<a class="headerlink" href="#tiao-shi-ri-zhi" title="Permalink to this headline">¶</a></h2>
 <p>bpf_printk 跟 printf 一个样</p>
 <p><a class="reference external" href="https://www.kernel.org/doc/html/latest/core-api/printk-formats.html">https://www.kernel.org/doc/html/latest/core-api/printk-formats.html</a></p>
 <p>日志查看方式：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> cat  /sys/kernel/debug/tracing/trace_pipe
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cat  /sys/kernel/debug/tracing/trace_pipe
 </pre></div>
 </div>
-</div>
-<div class="section" id="ru-he-jie-jue-bpf-verifier-bao-cuo">
+</section>
+<section id="ru-he-jie-jue-bpf-verifier-bao-cuo">
 <h2>如何解决 BPF Verifier 报错<a class="headerlink" href="#ru-he-jie-jue-bpf-verifier-bao-cuo" title="Permalink to this headline">¶</a></h2>
-<p>编译 bpf 的时候带上 <code class="docutils literal"><span class="pre">-g</span></code> 选项。</p>
+<p>编译 bpf 的时候带上 <code class="docutils literal notranslate"><span class="pre">-g</span></code> 选项。</p>
 <p>使用下面的命令可以 dump 出带源码注释的 BPF 字节码，结合错误信息可以大致定位错误的位置。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> llvm-objdump -S -no-show-raw-insn program.o
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>llvm-objdump -S -no-show-raw-insn program.o
 <span class="go">program.o: file format ELF64-BPF</span>
 
 <span class="go">Disassembly of section program_handle_egress:</span>
@@ -388,12 +378,12 @@ long <code class="descname">bpf_redirect_map</code><span class="sig-paren">(</sp
 </pre></div>
 </div>
 <ul class="simple">
-<li><a class="reference external" href="https://blogs.oracle.com/linux/notes-on-bpf-5">BPF In Depth: The BPF Bytecode and the BPF Verifier</a></li>
-<li><a class="reference external" href="https://www.kernel.org/doc/html/latest/networking/filter.html#bpf-kernel-internals">https://www.kernel.org/doc/html/latest/networking/filter.html#bpf-kernel-internals</a></li>
-<li><a class="reference external" href="https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c">https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c</a></li>
+<li><p><a class="reference external" href="https://blogs.oracle.com/linux/notes-on-bpf-5">BPF In Depth: The BPF Bytecode and the BPF Verifier</a></p></li>
+<li><p><a class="reference external" href="https://www.kernel.org/doc/html/latest/networking/filter.html#bpf-kernel-internals">https://www.kernel.org/doc/html/latest/networking/filter.html#bpf-kernel-internals</a></p></li>
+<li><p><a class="reference external" href="https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c">https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c</a></p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -402,7 +392,7 @@ long <code class="descname">bpf_redirect_map</code><span class="sig-paren">(</sp
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">#1201 xdp</a><ul>
 <li><a class="reference internal" href="#da-jian-kai-fa-huan-jing">搭建开发环境</a></li>
@@ -422,17 +412,7 @@ long <code class="descname">bpf_redirect_map</code><span class="sig-paren">(</sp
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">基于 xdp 的 L4LB 开发笔记</a><ul>
-      <li>Previous: <a href="1125.html" title="previous chapter">#1125 Stateless Datacenter Load-balancing with Beamer</a></li>
-      <li>Next: <a href="1207.html" title="next chapter">#1207 Maglev</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -441,15 +421,15 @@ long <code class="descname">bpf_redirect_map</code><span class="sig-paren">(</sp
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -458,7 +438,7 @@ long <code class="descname">bpf_redirect_map</code><span class="sig-paren">(</sp
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

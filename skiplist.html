@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>跳表 Skiplist &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Go 语言实现——同步原语" href="golang-internals-mutex.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,9 +33,9 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="tiao-biao-skiplist">
+  <section id="tiao-biao-skiplist">
 <h1>跳表 Skiplist<a class="headerlink" href="#tiao-biao-skiplist" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="gai-shu">
+<section id="gai-shu">
 <h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
 <p>跳表是一种数据结构，用于解决算法中的查找问题，即根据给定的 Key，快速查找到其位置（或对应的 Value）。</p>
 <p>原始论文： <a class="reference external" href="ftp://ftp.cs.umd.edu/pub/skipLists/skiplists.pdf">Skip Lists: A Probabilistic Alternative to Balanced Trees</a> （从标题可以看出，跳表是一个对标各种平衡树的数据结构）。</p>
@@ -59,7 +49,7 @@
 <p>跳表由上面的多层链表启发而来，为了解决上述问题，跳表引入了随机过程，为每个节点随机一个层数（level），避免了上述的指针调整。下图为一个跳表的构建过程。</p>
 <img alt="_images/skiplist-build.png" src="_images/skiplist-build.png" />
 <p>节点层数的随机生成算法如下（并不是普通的服从均匀分布的随机数）：</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">randomLevel</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">randomLevel</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
     <span class="nx">level</span> <span class="o">:=</span> <span class="mi">1</span>
     <span class="c1">// rand.Float32() 返回一个 [0.0, 1.0) 区间的随机数</span>
     <span class="k">for</span> <span class="nx">rand</span><span class="p">.</span><span class="nx">Float32</span><span class="p">()</span> <span class="p">&lt;</span> <span class="nx">p</span> <span class="o">&amp;&amp;</span> <span class="nx">level</span> <span class="p">&lt;</span> <span class="nx">maxLevel</span> <span class="p">{</span>
@@ -69,12 +59,12 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>随机数包含两个参数，<code class="docutils literal"><span class="pre">p</span></code> 和 <code class="docutils literal"><span class="pre">maxLevel</span></code> ，节点数 小于 2<sup>16</sup> 的时候 <code class="docutils literal"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">1/2,</span> <span class="pre">maxLevel</span> <span class="pre">=</span> <span class="pre">16</span></code> 即可（来自原始论文）。</p>
-</div>
-<div class="section" id="cha-zhao">
+<p>随机数包含两个参数，<code class="docutils literal notranslate"><span class="pre">p</span></code> 和 <code class="docutils literal notranslate"><span class="pre">maxLevel</span></code> ，节点数 小于 2<sup>16</sup> 的时候 <code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">=</span> <span class="pre">1/2,</span> <span class="pre">maxLevel</span> <span class="pre">=</span> <span class="pre">16</span></code> 即可（来自原始论文）。</p>
+</section>
+<section id="cha-zhao">
 <h2>查找<a class="headerlink" href="#cha-zhao" title="Permalink to this headline">¶</a></h2>
 <p>定义跳表结构体：</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">SkipList</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">SkipList</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">header</span> <span class="nx">node</span>
     <span class="nx">level</span>  <span class="kt">int</span>  <span class="c1">// 跳表中最大的节点层数</span>
 <span class="p">}</span>
@@ -94,7 +84,7 @@
 </div>
 <p>查找的过程如图所示：</p>
 <img alt="_images/skiplist-search.png" src="_images/skiplist-search.png" />
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">SkipList</span><span class="p">)</span> <span class="nx">Search</span><span class="p">(</span><span class="nx">searchKey</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">SkipList</span><span class="p">)</span> <span class="nx">Search</span><span class="p">(</span><span class="nx">searchKey</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">x</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">header</span>
     <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">level</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span><span class="o">--</span> <span class="p">{</span>
         <span class="k">for</span> <span class="nx">x</span><span class="p">.</span><span class="nx">forward</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">x</span><span class="p">.</span><span class="nx">forward</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">key</span> <span class="p">&lt;</span> <span class="nx">searchKey</span> <span class="p">{</span>
@@ -111,17 +101,17 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="cha-ru">
+</section>
+<section id="cha-ru">
 <h2>插入<a class="headerlink" href="#cha-ru" title="Permalink to this headline">¶</a></h2>
 <p>插入过程的第一步同查找，查找的途中记录下插入点在每一层的前一个节点：</p>
 <ul class="simple">
-<li>上层链表的前一个节点是 <em>上层往下层跃迁的节点</em> 。</li>
-<li>最下层链表的前一个节点即查找终止点。</li>
+<li><p>上层链表的前一个节点是 <em>上层往下层跃迁的节点</em> 。</p></li>
+<li><p>最下层链表的前一个节点即查找终止点。</p></li>
 </ul>
 <p>然后和普通链表一样新建一个节点并插入到各层中去即可。</p>
 <img alt="_images/skiplist-insert.png" src="_images/skiplist-insert.png" />
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">SkipList</span><span class="p">)</span> <span class="nx">Insert</span><span class="p">(</span><span class="nx">searchKey</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">newValue</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">SkipList</span><span class="p">)</span> <span class="nx">Insert</span><span class="p">(</span><span class="nx">searchKey</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">newValue</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="nx">update</span> <span class="p">[</span><span class="nx">maxLevel</span><span class="p">]</span><span class="o">*</span><span class="nx">node</span>
 
     <span class="nx">x</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">header</span>
@@ -167,8 +157,8 @@
 <p>删除的过程同理。</p>
 <p>完整代码： <a class="reference external" href="https://gist.github.com/chanfung032/66c3ae0ca85f314e9b08a9aafc109fc3">https://gist.github.com/chanfung032/66c3ae0ca85f314e9b08a9aafc109fc3</a></p>
 <p>参考以及本文图来自： <a class="reference external" href="http://zhangtielei.com/posts/blog-redis-skiplist.html">http://zhangtielei.com/posts/blog-redis-skiplist.html</a></p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -177,7 +167,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">跳表 Skiplist</a><ul>
 <li><a class="reference internal" href="#gai-shu">概述</a></li>
@@ -186,15 +176,7 @@
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="user-experience-design-for-apis.html" title="previous chapter">User experience design for APIs</a></li>
-      <li>Next: <a href="golang-internals-mutex.html" title="next chapter">Go 语言实现——同步原语</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -203,15 +185,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -220,7 +202,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

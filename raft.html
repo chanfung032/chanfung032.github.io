@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Raft 共识算法 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Android 无 ROOT 导出微信聊天记录" href="android-wexin-export-with-no-root.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,40 +33,40 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="raft-gong-shi-suan-fa">
+  <section id="raft-gong-shi-suan-fa">
 <h1>Raft 共识算法<a class="headerlink" href="#raft-gong-shi-suan-fa" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li>Raft 论文： <a class="reference external" href="https://raft.github.io/raft.pdf">https://raft.github.io/raft.pdf</a></li>
-<li>MIT 6.824 课 <a class="reference external" href="http://nil.csail.mit.edu/6.824/2017/notes/l-raft.txt">讲义</a> <a class="reference external" href="http://nil.csail.mit.edu/6.824/2017/labs/lab-raft.html">labs</a></li>
+<li><p>Raft 论文： <a class="reference external" href="https://raft.github.io/raft.pdf">https://raft.github.io/raft.pdf</a></p></li>
+<li><p>MIT 6.824 课 <a class="reference external" href="http://nil.csail.mit.edu/6.824/2017/notes/l-raft.txt">讲义</a> <a class="reference external" href="http://nil.csail.mit.edu/6.824/2017/labs/lab-raft.html">labs</a></p></li>
 </ul>
-<div class="section" id="leader-xuan-ju">
+<section id="leader-xuan-ju">
 <h2>Leader 选举<a class="headerlink" href="#leader-xuan-ju" title="Permalink to this headline">¶</a></h2>
 <p>Raft 集群中的节点分成以下三种角色：</p>
 <ul class="simple">
-<li>Leader <em>主</em> 接受客户端请求，写入日志，并将日志同步给 Follower，当日志已经同步给大多数节点后，提交日志并告诉 Follower 提交日志。</li>
-<li>Follower <em>从</em> 接收 Leader 的日志同步，在 Leader 告知日志可以提交之后，提交日志。</li>
-<li>Candidate <em>候选主</em> Leader 选举过程中的临时角色，候选的下一任主。</li>
+<li><p>Leader <em>主</em> 接受客户端请求，写入日志，并将日志同步给 Follower，当日志已经同步给大多数节点后，提交日志并告诉 Follower 提交日志。</p></li>
+<li><p>Follower <em>从</em> 接收 Leader 的日志同步，在 Leader 告知日志可以提交之后，提交日志。</p></li>
+<li><p>Candidate <em>候选主</em> Leader 选举过程中的临时角色，候选的下一任主。</p></li>
 </ul>
 <p>Raft 将时间划分成一段一段的 Term（任期），每次选举开始一个新的 Term，如果选举出了主，那么其将作为该 Term 的主一直处理客户端的请求直到有节点发起新的选举（新选举，新 Term）。如果没有选出主，则开始新的选举（新选举，新 Term）。</p>
 <a class="reference internal image-reference" href="_images/raft-term.png"><img alt="_images/raft-term.png" src="_images/raft-term.png" style="width: 450px;" /></a>
 <p>Raft 算法中节点之间通过 RPC 通信：</p>
 <ul class="simple">
-<li>RequestVote RPC： Candidate 在选举期间发起。</li>
-<li>AppendEntries RPC： 复制日志 RPC，Leader 也用其发送心跳消息（不带日志）。</li>
-<li>InstallSnapshot RPC: Leader 使用该 RPC 来发送快照给太落后的 Follower。</li>
+<li><p>RequestVote RPC： Candidate 在选举期间发起。</p></li>
+<li><p>AppendEntries RPC： 复制日志 RPC，Leader 也用其发送心跳消息（不带日志）。</p></li>
+<li><p>InstallSnapshot RPC: Leader 使用该 RPC 来发送快照给太落后的 Follower。</p></li>
 </ul>
 <p>基本的一致性算法只需要前两种类型的 RPC。</p>
 <p>Raft 的主会周期性的广播心跳消息来维系其地位。节点在启动的时候处于 Follower 角色并且会随机设定一个选举超时时间 electionTimeout。</p>
 <p>如果选举超时时间内没有收到来自 Leader 的心跳消息，那么 Follower 就转换为 Candidate 角色，开始一次新的选举，通过 RequestVote RPC 要求其它节点投票，如果其赢得了多数选票，那么它就成为新的 Leader。Leader 会立刻发出心跳消息，其它角色的节点收到新 Leader 的消息后切换为 Follower 角色。</p>
 <a class="reference internal image-reference" href="_images/raft-states.png"><img alt="_images/raft-states.png" src="_images/raft-states.png" style="width: 450px;" /></a>
-</div>
-<div class="section" id="ri-zhi-fu-zhi">
+</section>
+<section id="ri-zhi-fu-zhi">
 <h2>日志复制<a class="headerlink" href="#ri-zhi-fu-zhi" title="Permalink to this headline">¶</a></h2>
 <p>Leader 选出后，就开始接收客户端的请求。Leader 把请求作为日志条目（Log entries）加入到它的日志中，然后并行的向其他服务器发起 AppendEntries RPC 复制日志条目。当这条日志被复制到大多数服务器上，Leader 将这条日志应用到它的状态机并向客户端返回执行结果。</p>
 <a class="reference internal image-reference" href="_images/raft-log-replication.png"><img alt="_images/raft-log-replication.png" src="_images/raft-log-replication.png" style="width: 450px;" /></a>
 <p>不写了，看代码吧🤦： <a class="reference external" href="https://github.com/chanfung032/6.824/tree/master/src/raft">https://github.com/chanfung032/6.824/tree/master/src/raft</a></p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -85,7 +75,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Raft 共识算法</a><ul>
 <li><a class="reference internal" href="#leader-xuan-ju">Leader 选举</a></li>
@@ -93,15 +83,7 @@
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="regexp.html" title="previous chapter">Regular Expression Matching Can Be Simple And Fast</a></li>
-      <li>Next: <a href="android-wexin-export-with-no-root.html" title="next chapter">Android 无 ROOT 导出微信聊天记录</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -110,15 +92,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -127,7 +109,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

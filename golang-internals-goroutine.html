@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Go 语言实现——goroutine &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Go 语言实现——启动过程" href="golang-internals-bootstrap.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,15 +33,15 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="go-yu-yan-shi-xian-goroutine">
+  <section id="go-yu-yan-shi-xian-goroutine">
 <h1>Go 语言实现——goroutine<a class="headerlink" href="#go-yu-yan-shi-xian-goroutine" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="gai-shu">
+<section id="gai-shu">
 <h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
 <p>goroutine 是对线程的进一步抽象，就像操作系统的进程调度会将 CPU 时间分配给一个个的进程 or 线程去运行一样，goroutine 的调度器会将操作系统分配给 Go 程序各个线程的 CPU 时间再进一步的细分给一个个的 goroutine 去运行，实现了线程的 multiplexing。</p>
 <p>和操作系统的进程调度对 CPU 有完全的控制不一样，goroutine 的调度器调度的线程还受到操作系统的限制：</p>
 <ul class="simple">
-<li>线程上运行的代码如果调用了系统调用，那么这个线程会被操作系统挂起直到系统调用返回。</li>
-<li>线程运行的时间片到了之后，操作系统可能会暂时挂起线程一段时间直到线程下次再被调度到。</li>
+<li><p>线程上运行的代码如果调用了系统调用，那么这个线程会被操作系统挂起直到系统调用返回。</p></li>
+<li><p>线程运行的时间片到了之后，操作系统可能会暂时挂起线程一段时间直到线程下次再被调度到。</p></li>
 </ul>
 <p>Go 是怎么解决这些问题并实现一个高性能的 goroutine 调度器的呢？</p>
 <p>首先，为了充分利用多核 CPU，Go 程序会同时有 N（N=CPU 数）个线程在同时运行 goroutine，每个线程有自己的 goroutine 队列，还有一个全局的 goroutine 队列。线程循环的执行自己本地队列里的各个 goroutine，只有本地队列里没有 goroutine 可以执行的时候，才会从全局的 goroutine 队列里取 goroutine，避免每次调度都要加全局锁。</p>
@@ -69,19 +59,19 @@
 <img alt="_images/go-scheduler-stealing.png" src="_images/go-scheduler-stealing.png" />
 <p>参考：</p>
 <ul class="simple">
-<li>Scalable Go Scheduler Design Doc: <a class="reference external" href="https://golang.org/s/go11sched">https://golang.org/s/go11sched</a></li>
-<li>Go’s work-stealing scheduler: <a class="reference external" href="https://rakyll.org/scheduler/">https://rakyll.org/scheduler/</a></li>
+<li><p>Scalable Go Scheduler Design Doc: <a class="reference external" href="https://golang.org/s/go11sched">https://golang.org/s/go11sched</a></p></li>
+<li><p>Go’s work-stealing scheduler: <a class="reference external" href="https://rakyll.org/scheduler/">https://rakyll.org/scheduler/</a></p></li>
 </ul>
-</div>
-<div class="section" id="chuang-jian">
+</section>
+<section id="chuang-jian">
 <h2>创建<a class="headerlink" href="#chuang-jian" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
     <span class="nb">print</span><span class="p">(</span><span class="s">&quot;hello world&quot;</span><span class="p">)</span>
 <span class="p">}()</span>
 </pre></div>
 </div>
 <p>编译成汇编代码后：</p>
-<div class="highlight-asm"><div class="highlight"><pre><span></span>$ go tool compile -l -S test.go
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>$ go tool compile -l -S test.go
 ...
 // func newproc(siz int32, fn *funcval)
 0x001d 00029 (test.go:8)    MOVL    $0, (SP)
@@ -93,17 +83,17 @@
 </pre></div>
 </div>
 <p>从汇编代码可以看出，go 语句会被转换成下面的函数调用：</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">runtime</span><span class="p">.</span><span class="nx">newproc</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">runtime</span><span class="p">.</span><span class="nx">newproc</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
     <span class="nb">print</span><span class="p">(</span><span class="s">&quot;hello world&quot;</span><span class="p">)</span>
 <span class="p">})</span>
 </pre></div>
 </div>
 <p><em>runtime.newproc</em> 主要做的就是：</p>
 <ol class="arabic simple">
-<li>准备好新 goroutine 的 g 结构体，将其加入到当前 goroutine 运行在的线程的本地运行队列里去。</li>
-<li>因为 goroutine 多了，看看是否还能够再召唤新的虚拟线程 p 出来执行 goroutine，已经饱和了就算了。</li>
+<li><p>准备好新 goroutine 的 g 结构体，将其加入到当前 goroutine 运行在的线程的本地运行队列里去。</p></li>
+<li><p>因为 goroutine 多了，看看是否还能够再召唤新的虚拟线程 p 出来执行 goroutine，已经饱和了就算了。</p></li>
 </ol>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// proc.go</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="c1">// proc.go</span>
 <span class="kd">func</span> <span class="nx">newproc</span><span class="p">(</span><span class="nx">siz</span> <span class="kt">int32</span><span class="p">,</span> <span class="nx">fn</span> <span class="o">*</span><span class="nx">funcval</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">argp</span> <span class="o">:=</span> <span class="nx">add</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">fn</span><span class="p">),</span> <span class="nx">sys</span><span class="p">.</span><span class="nx">PtrSize</span><span class="p">)</span>
     <span class="nx">pc</span> <span class="o">:=</span> <span class="nx">getcallerpc</span><span class="p">()</span>
@@ -164,11 +154,11 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="zhi-xing">
+</section>
+<section id="zhi-xing">
 <h2>执行<a class="headerlink" href="#zhi-xing" title="Permalink to this headline">¶</a></h2>
 <p>在 <a class="reference internal" href="golang-internals-bootstrap.html"><span class="doc">Go 语言实现——启动过程</span></a> 中可以看到主线程最后调用了 <em>mstart</em> 函数，这个函数会调度第一个 goroutine 上来执行，也就是 <em>runtime.main</em> 。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">mstart</span><span class="p">()</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">mstart</span><span class="p">()</span> <span class="p">{</span>
     <span class="nx">mstart1</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 <span class="p">}</span>
 
@@ -211,7 +201,7 @@
 </pre></div>
 </div>
 <p>在 runtime.main 中 <em>mainStarted</em> 这个变量会设置为 true，告诉 runtime.newproc，之后再创建新 goroutine 的时候，如果虚拟线程未饱和，尝试唤醒，也就是调用 <em>wakep</em> 函数。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">wakep</span><span class="p">()</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">wakep</span><span class="p">()</span> <span class="p">{</span>
     <span class="nx">startm</span><span class="p">(</span><span class="kc">nil</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
 <span class="p">}</span>
 
@@ -260,17 +250,17 @@
 </div>
 <p>wakep 最终可能会创建新的线程出来执行 goroutine，这些新线程的入口函数就是上面主线程最后调用的 <em>mstart</em> 函数。</p>
 <p>线程上执行的第一个 goroutine 阻塞、运行时间太长或者退出后会触发 Go 系统代码，从而调度第二个 goroutine 上来运行，如此往复，直到终结。</p>
-</div>
-<div class="section" id="qie-huan">
+</section>
+<section id="qie-huan">
 <span id="golang-goroutine-schedule"></span><h2>切换<a class="headerlink" href="#qie-huan" title="Permalink to this headline">¶</a></h2>
 <p>以下条件下 Go 调度器会切换 goroutine：</p>
 <ul class="simple">
-<li>系统调用。</li>
-<li>goroutine 运行的时间太长了。</li>
-<li>channel/network/… 阻塞。</li>
+<li><p>系统调用。</p></li>
+<li><p>goroutine 运行的时间太长了。</p></li>
+<li><p>channel/network/… 阻塞。</p></li>
 </ul>
 <p>前面两个切换和启动过程中创建的 <em>sysmon</em> 这个独立线程执行的代码有关。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">sysmon</span><span class="p">()</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">sysmon</span><span class="p">()</span> <span class="p">{</span>
     <span class="k">for</span> <span class="p">{</span>
         <span class="nx">usleep</span><span class="p">(</span><span class="nx">delay</span><span class="p">)</span>
         <span class="nx">now</span> <span class="o">:=</span> <span class="nx">nanotime</span><span class="p">()</span>
@@ -303,7 +293,7 @@
 </pre></div>
 </div>
 <p>goroutine 在系统调用前会将运行 goroutine 的线程的状态标记为 _Psyscall ，系统调用返回后，如果线程没有被 retake，goroutine 会直接恢复执行（running），如果被 retake 了，goroutine 会被加入执行队列，等待调度器下次调度执行（runnable）。这些是在系统调用前后的 <em>runtime·entersyscall</em> 和 <em>runtime·exitsyscall</em> 中处理的。</p>
-<div class="highlight-asm"><div class="highlight"><pre><span></span>// src/syscall/asm_linux_amd64.s
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>// src/syscall/asm_linux_amd64.s
 TEXT    ·Syscall(SB),NOSPLIT,$0-56
     CALL    runtime·entersyscall(SB)
     ...
@@ -314,10 +304,10 @@ TEXT    ·Syscall(SB),NOSPLIT,$0-56
 </pre></div>
 </div>
 <p>channel/network 在阻塞的时候会调用调度器的接口挂起对应的 goroutine，跟操作系统的 IPC 类似。</p>
-</div>
-<div class="section" id="tui-chu">
+</section>
+<section id="tui-chu">
 <h2>退出<a class="headerlink" href="#tui-chu" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-asm"><div class="highlight"><pre><span></span>// asm_amd64.s
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>// asm_amd64.s
 TEXT runtime·goexit(SB),NOSPLIT,$0-0
     BYTE    $0x90   // &lt;- goroutine 会伪装成插入到这里被调用的样子
     CALL    runtime·goexit1(SB) // does not return
@@ -326,7 +316,7 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
 </pre></div>
 </div>
 <p>goroutine 执行完 return 会回到 <em>runtime·goexit</em> 函数中，从 <em>CALL runtime.goexit1(SB)</em> 处继续开始执行，goexit1 中会调用 <em>schedule</em> 函数调度下一个 goroutine 过来执行。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">goexit1</span><span class="p">()</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">goexit1</span><span class="p">()</span> <span class="p">{</span>
     <span class="nx">mcall</span><span class="p">(</span><span class="nx">goexit0</span><span class="p">)</span>
 <span class="p">}</span>
 
@@ -346,12 +336,12 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="goroutine-zhan-he-xi-tong-zhan">
+</section>
+<section id="goroutine-zhan-he-xi-tong-zhan">
 <h2>goroutine 栈和系统栈<a class="headerlink" href="#goroutine-zhan-he-xi-tong-zhan" title="Permalink to this headline">¶</a></h2>
 <p>每个 goroutine 都会有自己的代码执行栈 <em>g.stack</em> ，这个栈开始的时候只有 2k ，如果栈空间不够了，Go 会申请一段更大的栈空间，然后将现在的栈的内容拷贝过去，如果堆上有指针指向旧栈上的变量，那么修改这个指针指向新栈，然后继续在新栈中执行，realloc stack 的操作叫做 split stack。</p>
 <p>Go 函数一开始一般都会有一段检测是否要 split stack 的代码，如果需要的话会先 split stack 然后再执行函数。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span>&quot;&quot;.main t=1 size=78 args=0x0 locals=0x18
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span>&quot;&quot;.main t=1 size=78 args=0x0 locals=0x18
     0x0000 00000 (test.go:3)    TEXT    &quot;&quot;.main(SB), $24-0
     0x0000 00000 (test.go:3)    MOVQ    (TLS), CX
     // if SP &lt; g.stackguard0 跳转到 0071 去执行
@@ -368,14 +358,14 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
 </div>
 <p>split stack 这个操作本身也需要 Go 代码去完成，这个时候 goroutine 的栈上已经没有栈空间去执行这个函数了，为了解决这个问题，split stack 的代码会切换到线程的系统栈去执行。也就是 <em>g.g0.stack</em> 。同样的为了防止调度之类的系统代码执行的时候 split stack，这些系统代码也是切换到系统栈去执行的。</p>
 <ul class="simple">
-<li><a class="reference external" href="https://docs.google.com/document/d/1wAaf1rYoM4S4gtnPh0zOlGzWtrZFQ5suE8qr2sD8uWQ/pub">Contiguous Stacks</a></li>
-<li><a class="reference external" href="https://groups.google.com/forum/#!msg/golang-nuts/JCKWH8fap9o/MBrs2FCnAgAJ">https://groups.google.com/forum/#!msg/golang-nuts/JCKWH8fap9o/MBrs2FCnAgAJ</a></li>
+<li><p><a class="reference external" href="https://docs.google.com/document/d/1wAaf1rYoM4S4gtnPh0zOlGzWtrZFQ5suE8qr2sD8uWQ/pub">Contiguous Stacks</a></p></li>
+<li><p><a class="reference external" href="https://groups.google.com/forum/#!msg/golang-nuts/JCKWH8fap9o/MBrs2FCnAgAJ">https://groups.google.com/forum/#!msg/golang-nuts/JCKWH8fap9o/MBrs2FCnAgAJ</a></p></li>
 </ul>
-</div>
-<div class="section" id="runtime-gosched">
+</section>
+<section id="runtime-gosched">
 <h2>runtime.Gosched()<a class="headerlink" href="#runtime-gosched" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://golang.org/src/runtime/proc.go?s=8739:8753#L248">runtime.Gosched()</a> 做的就是主动放弃 goroutine 本次的运行机会，将自己放到队列后面去，等待下次再被调度到。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// proc.go</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="c1">// proc.go</span>
 <span class="kd">func</span> <span class="nx">Gosched</span><span class="p">()</span> <span class="p">{</span>
     <span class="c1">// mcall 会将当前函数的 pc（mcall 的返回地址）, sp 指针保存到 g.sched 中</span>
     <span class="c1">// 然后执行 gosched_m 函数</span>
@@ -400,8 +390,8 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -410,7 +400,7 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Go 语言实现——goroutine</a><ul>
 <li><a class="reference internal" href="#gai-shu">概述</a></li>
@@ -423,15 +413,7 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="golang-internals-io.html" title="previous chapter">Go 语言实现——网络 IO</a></li>
-      <li>Next: <a href="golang-internals-bootstrap.html" title="next chapter">Go 语言实现——启动过程</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -440,15 +422,15 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -457,7 +439,7 @@ TEXT runtime·goexit(SB),NOSPLIT,$0-0
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

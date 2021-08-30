@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Go 语言实现——同步原语 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Go 语言实现——Context" href="golang-internals-context.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,23 +33,23 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="go-yu-yan-shi-xian-tong-bu-yuan-yu">
+  <section id="go-yu-yan-shi-xian-tong-bu-yuan-yu">
 <h1>Go 语言实现——同步原语<a class="headerlink" href="#go-yu-yan-shi-xian-tong-bu-yuan-yu" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="mutex">
+<section id="mutex">
 <h2>Mutex<a class="headerlink" href="#mutex" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="zheng-chang-mo-shi">
+<section id="zheng-chang-mo-shi">
 <h3>正常模式<a class="headerlink" href="#zheng-chang-mo-shi" title="Permalink to this headline">¶</a></h3>
 <p>先看 Go1.8 的 Mutex 实现，这个版本的 Mutex 实现还比较简单，1.9 开始 Mutex 加入了一个饥饿模式的优化，这个后面再说。</p>
 <p>Mutex 定义如下：</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Mutex</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Mutex</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">state</span> <span class="kt">int32</span>
     <span class="nx">sema</span>  <span class="kt">uint32</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>其中 <code class="docutils literal"><span class="pre">state</span></code> 为当前 Mutex 的状态，<code class="docutils literal"><span class="pre">sema</span></code> 是解锁信号量。</p>
-<p><code class="docutils literal"><span class="pre">state</span></code> 的状态位定义如下：</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="p">(</span>
+<p>其中 <code class="docutils literal notranslate"><span class="pre">state</span></code> 为当前 Mutex 的状态，<code class="docutils literal notranslate"><span class="pre">sema</span></code> 是解锁信号量。</p>
+<p><code class="docutils literal notranslate"><span class="pre">state</span></code> 的状态位定义如下：</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="p">(</span>
     <span class="nx">mutexLocked</span> <span class="p">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="kc">iota</span> <span class="c1">// mutex is locked</span>
     <span class="nx">mutexWoken</span>
     <span class="nx">mutexWaiterShift</span> <span class="p">=</span> <span class="kc">iota</span>
@@ -69,17 +59,17 @@
 <p>从最低位开始：</p>
 <img alt="_images/go-mutex-state.png" src="_images/go-mutex-state.png" />
 <ul class="simple">
-<li>第一个比特位表示“当前 Mutex 是不是已经上锁”。</li>
-<li>第二个比特位表示“当前有 goroutine 处于自旋或者收到解锁信号目前处于运行状态”。</li>
-<li>剩余的位用作计数器，存当前有多少 goroutine 正在等待解锁的信号量。</li>
+<li><p>第一个比特位表示“当前 Mutex 是不是已经上锁”。</p></li>
+<li><p>第二个比特位表示“当前有 goroutine 处于自旋或者收到解锁信号目前处于运行状态”。</p></li>
+<li><p>剩余的位用作计数器，存当前有多少 goroutine 正在等待解锁的信号量。</p></li>
 </ul>
 <p>Mutex 上锁的逻辑如下：</p>
 <ol class="arabic simple">
-<li>首先使用 CAS 尝试上锁，如果成功直接返回。</li>
-<li>如果失败，自旋几次等待解锁并重新尝试上锁。</li>
-<li>自旋次数太多后，将 goroutine 睡眠，等待 Unlock 发信号唤醒。</li>
+<li><p>首先使用 CAS 尝试上锁，如果成功直接返回。</p></li>
+<li><p>如果失败，自旋几次等待解锁并重新尝试上锁。</p></li>
+<li><p>自旋次数太多后，将 goroutine 睡眠，等待 Unlock 发信号唤醒。</p></li>
 </ol>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nx">Lock</span><span class="p">()</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nx">Lock</span><span class="p">()</span> <span class="p">{</span>
     <span class="c1">// CAS 尝试上锁，成功直接返回</span>
     <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nx">CompareAndSwapInt32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">state</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">mutexLocked</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">return</span>
@@ -131,12 +121,12 @@
 </div>
 <p>要进入自旋也是有条件限制的：</p>
 <ol class="arabic simple">
-<li>自旋的次数小于 4（别一直自旋，浪费 CPU）。</li>
-<li>运行在多核机器上（单核机器自旋没有意义）。</li>
-<li>其它逻辑线程 P 至少得有一个处在工作状态，而不是都在无所事事（加上下面的条件 4，如果都在无所事事，那么自旋等也等来不来解锁的，除非有新的 goroutine 进来，所以这种情况下还是睡眠等信号吧）。</li>
-<li>当前 goroutine 归属的逻辑线程 P 上只有当前 goroutine 一个，没有其它了。</li>
+<li><p>自旋的次数小于 4（别一直自旋，浪费 CPU）。</p></li>
+<li><p>运行在多核机器上（单核机器自旋没有意义）。</p></li>
+<li><p>其它逻辑线程 P 至少得有一个处在工作状态，而不是都在无所事事（加上下面的条件 4，如果都在无所事事，那么自旋等也等来不来解锁的，除非有新的 goroutine 进来，所以这种情况下还是睡眠等信号吧）。</p></li>
+<li><p>当前 goroutine 归属的逻辑线程 P 上只有当前 goroutine 一个，没有其它了。</p></li>
 </ol>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">sync_runtime_canSpin</span><span class="p">(</span><span class="nx">i</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">bool</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">sync_runtime_canSpin</span><span class="p">(</span><span class="nx">i</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">bool</span> <span class="p">{</span>
     <span class="k">if</span> <span class="nx">i</span> <span class="o">&gt;=</span> <span class="mi">4</span> <span class="o">||</span> <span class="nx">ncpu</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="o">||</span> <span class="nb">int32</span><span class="p">(</span><span class="nx">sched</span><span class="p">.</span><span class="nx">npidle</span><span class="o">+</span><span class="nx">sched</span><span class="p">.</span><span class="nx">nmspinning</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span> <span class="o">&gt;=</span> <span class="nx">gomaxprocs</span> <span class="p">{</span>
         <span class="k">return</span> <span class="kc">false</span>
     <span class="p">}</span>
@@ -148,7 +138,7 @@
 </pre></div>
 </div>
 <p>自旋就是执行 30 次 PAUSE 指令。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span>func sync_runtime_doSpin() {
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span>func sync_runtime_doSpin() {
     procyield(30)
 }
 
@@ -163,10 +153,10 @@ again:
 </div>
 <p>而解锁的逻辑就是：</p>
 <ol class="arabic simple">
-<li>首先解锁。如果等待锁的 goroutine 有在运行状态的，直接返回就行。</li>
-<li>如果没有，那么使用信号量给等待的 goroutine 发送个信号。</li>
+<li><p>首先解锁。如果等待锁的 goroutine 有在运行状态的，直接返回就行。</p></li>
+<li><p>如果没有，那么使用信号量给等待的 goroutine 发送个信号。</p></li>
 </ol>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nx">Unlock</span><span class="p">()</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Mutex</span><span class="p">)</span> <span class="nx">Unlock</span><span class="p">()</span> <span class="p">{</span>
     <span class="c1">// 解锁</span>
     <span class="nx">new</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nx">AddInt32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">m</span><span class="p">.</span><span class="nx">state</span><span class="p">,</span> <span class="o">-</span><span class="nx">mutexLocked</span><span class="p">)</span>
 
@@ -190,21 +180,21 @@ again:
 </pre></div>
 </div>
 <p><a class="reference external" href="https://github.com/golang/go/blob/release-branch.go1.8/src/sync/mutex.go">https://github.com/golang/go/blob/release-branch.go1.8/src/sync/mutex.go</a></p>
-</div>
-<div class="section" id="ji-e-mo-shi">
+</section>
+<section id="ji-e-mo-shi">
 <h3>饥饿模式<a class="headerlink" href="#ji-e-mo-shi" title="Permalink to this headline">¶</a></h3>
-<p>上面正常模式运行下的 Mutex 有一个问题，就是通过 <code class="docutils literal"><span class="pre">runtime_Semrelease</span></code> 信号通知的等待锁的 goroutine 相比于自旋正在等待锁或者运行中的等待锁的 goroutine 有点弱势，因为收到信号后 goroutine 并不是立刻运行，只是被加入了可运行队列，抢锁就很容易抢不过正在 CPU 上运行着的 goroutine，因此 Go1.9 之后 Go 新加了一个饥饿模式，在这个模式下，通过 <code class="docutils literal"><span class="pre">runtime_SemacquireMutex</span></code> 唤醒的 goroutine 会检查自己等待锁的时间是不是太长了，如果是那么就将锁的争抢模式改为“饥饿模式”，禁止自旋，所有等待锁的进程都排排坐吃果果。另外，<code class="docutils literal"><span class="pre">runtime_SemacquireMutex</span></code> 的时候将自己直接加到等待队列的前面，优先获取锁。</p>
+<p>上面正常模式运行下的 Mutex 有一个问题，就是通过 <code class="docutils literal notranslate"><span class="pre">runtime_Semrelease</span></code> 信号通知的等待锁的 goroutine 相比于自旋正在等待锁或者运行中的等待锁的 goroutine 有点弱势，因为收到信号后 goroutine 并不是立刻运行，只是被加入了可运行队列，抢锁就很容易抢不过正在 CPU 上运行着的 goroutine，因此 Go1.9 之后 Go 新加了一个饥饿模式，在这个模式下，通过 <code class="docutils literal notranslate"><span class="pre">runtime_SemacquireMutex</span></code> 唤醒的 goroutine 会检查自己等待锁的时间是不是太长了，如果是那么就将锁的争抢模式改为“饥饿模式”，禁止自旋，所有等待锁的进程都排排坐吃果果。另外，<code class="docutils literal notranslate"><span class="pre">runtime_SemacquireMutex</span></code> 的时候将自己直接加到等待队列的前面，优先获取锁。</p>
 <p>详细参见：</p>
 <ul class="simple">
-<li><a class="reference external" href="https://github.com/golang/go/issues/13086">https://github.com/golang/go/issues/13086</a></li>
-<li><a class="reference external" href="https://github.com/golang/go/commit/0556e26273f704db73df9e7c4c3d2e8434dec7be#diff-f6dc3e83d9b4548fbba149aca4d4307b8d4551951978fd9c1b98dff9c1ada149">https://github.com/golang/go/commit/0556e26273f704db73df9e7c4c3d2e8434dec7be#diff-f6dc3e83d9b4548fbba149aca4d4307b8d4551951978fd9c1b98dff9c1ada149</a></li>
+<li><p><a class="reference external" href="https://github.com/golang/go/issues/13086">https://github.com/golang/go/issues/13086</a></p></li>
+<li><p><a class="reference external" href="https://github.com/golang/go/commit/0556e26273f704db73df9e7c4c3d2e8434dec7be#diff-f6dc3e83d9b4548fbba149aca4d4307b8d4551951978fd9c1b98dff9c1ada149">https://github.com/golang/go/commit/0556e26273f704db73df9e7c4c3d2e8434dec7be#diff-f6dc3e83d9b4548fbba149aca4d4307b8d4551951978fd9c1b98dff9c1ada149</a></p></li>
 </ul>
-</div>
-</div>
-<div class="section" id="rwmutex">
+</section>
+</section>
+<section id="rwmutex">
 <h2>RWMutex<a class="headerlink" href="#rwmutex" title="Permalink to this headline">¶</a></h2>
 <p>RWMutex 结构体如下：</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">RWMutex</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">RWMutex</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">w</span>           <span class="nx">Mutex</span>  <span class="c1">// 写锁</span>
     <span class="nx">writerSem</span>   <span class="kt">uint32</span> <span class="c1">// 读锁释放信号量</span>
     <span class="nx">readerSem</span>   <span class="kt">uint32</span> <span class="c1">// 写锁释放信号量</span>
@@ -217,7 +207,7 @@ again:
 </div>
 <p>上读锁比较简单，就是给读锁计数器加一，如果计数器的值为负数，说明 RWMutex 当前已上写锁，此时需要等写锁释放，才算上锁完成。</p>
 <p>释放读锁的时候计数器减一，同时需要判断当前是不是有写锁，如果有写锁的话，判断写锁等待的那些读锁是不是全部释放完毕，是的话通知写锁“所有读锁已经释放，可以返回进行写操作了”。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">rw</span> <span class="o">*</span><span class="nx">RWMutex</span><span class="p">)</span> <span class="nx">RLock</span><span class="p">()</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">rw</span> <span class="o">*</span><span class="nx">RWMutex</span><span class="p">)</span> <span class="nx">RLock</span><span class="p">()</span> <span class="p">{</span>
     <span class="c1">// 更新读操作计数器，如果值为负，说明有写锁</span>
     <span class="c1">// 直接等待写锁释放信号，否则返回上读锁成功。</span>
     <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nx">AddInt32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">rw</span><span class="p">.</span><span class="nx">readerCount</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="p">&lt;</span> <span class="mi">0</span> <span class="p">{</span>
@@ -238,7 +228,7 @@ again:
 </pre></div>
 </div>
 <p>写锁就是 RWMutex 中的 w 这个 Mutex 排他锁，加写锁的第一件事就是上这个排他锁，保证只能有一个写操作在执行，然后修改 readerCount 为负数，这个主要是通知读锁操作，我这边已经加了写锁了，后续上读锁直接等我 <em>写锁释放信号</em> 就行。将此时的 readerCount 快照下来，等待这些读锁释放后，就可以返回进行写操作了。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">rwmutexMaxReaders</span> <span class="p">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">30</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">const</span> <span class="nx">rwmutexMaxReaders</span> <span class="p">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">30</span>
 
 <span class="kd">func</span> <span class="p">(</span><span class="nx">rw</span> <span class="o">*</span><span class="nx">RWMutex</span><span class="p">)</span> <span class="nx">Lock</span><span class="p">()</span> <span class="p">{</span>
     <span class="c1">// 加写锁</span>
@@ -267,16 +257,16 @@ again:
 <hr class="docutils" />
 <blockquote>
 <div><p>If a goroutine holds a RWMutex for reading and another goroutine might call Lock, no goroutine should expect to be able to acquire a read lock until the initial read lock is released. In particular, this prohibits recursive read locking. This is to ensure that the lock eventually becomes available; a blocked Lock call excludes new readers from acquiring the lock.</p>
-<p class="attribution">&mdash;<a class="reference external" href="https://pkg.go.dev/sync#RWMutex">https://pkg.go.dev/sync#RWMutex</a></p>
+<p class="attribution">—<a class="reference external" href="https://pkg.go.dev/sync#RWMutex">https://pkg.go.dev/sync#RWMutex</a></p>
 </div></blockquote>
 <p>因为加写锁：</p>
 <ol class="arabic simple">
-<li>需要等待 <em>加锁前所有的读锁</em> 释放才算整个加锁过程完成。</li>
-<li>加锁后 <em>后续的读锁操作</em> 直接阻塞并等待写锁释放信号才能上锁。</li>
+<li><p>需要等待 <em>加锁前所有的读锁</em> 释放才算整个加锁过程完成。</p></li>
+<li><p>加锁后 <em>后续的读锁操作</em> 直接阻塞并等待写锁释放信号才能上锁。</p></li>
 </ol>
 <p>就造成了上面引用的官方文档里说的现象。</p>
 <p>这个用 <a class="reference external" href="https://www.zenlife.tk/go-read-mutex-block.md">https://www.zenlife.tk/go-read-mutex-block.md</a> 中的一段代码来说明。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kn">package</span> <span class="nx">main</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kn">import</span> <span class="p">(</span>
     <span class="s">&quot;fmt&quot;</span>
@@ -316,13 +306,13 @@ again:
 </div>
 <p>我们以 g1, g2, g3 分别标示上面代码中的几个 goroutine，g1 最后的 RLock 会被 g2 的 RLock 阻塞。整个逻辑链条如下：</p>
 <ol class="arabic simple">
-<li>g2 中给 RWMutex 上了一个读锁。</li>
-<li>g3 中尝试给 RWMutex 上写锁，写锁需要等待 g2 中加的读锁完成才算加锁完成。</li>
-<li>g1 中上读锁时，发现有写锁，直接阻塞等待写锁释放的信号。</li>
-<li>10 秒之后，g2 中的读锁释放，写锁等到释放信号，完成加锁，然后写锁释放，g1 等到释放信号，继续上读锁操作。</li>
+<li><p>g2 中给 RWMutex 上了一个读锁。</p></li>
+<li><p>g3 中尝试给 RWMutex 上写锁，写锁需要等待 g2 中加的读锁完成才算加锁完成。</p></li>
+<li><p>g1 中上读锁时，发现有写锁，直接阻塞等待写锁释放的信号。</p></li>
+<li><p>10 秒之后，g2 中的读锁释放，写锁等到释放信号，完成加锁，然后写锁释放，g1 等到释放信号，继续上读锁操作。</p></li>
 </ol>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -331,7 +321,7 @@ again:
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Go 语言实现——同步原语</a><ul>
 <li><a class="reference internal" href="#mutex">Mutex</a><ul>
@@ -343,15 +333,7 @@ again:
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="skiplist.html" title="previous chapter">跳表 Skiplist</a></li>
-      <li>Next: <a href="golang-internals-context.html" title="next chapter">Go 语言实现——Context</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -360,15 +342,15 @@ again:
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -377,7 +359,7 @@ again:
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

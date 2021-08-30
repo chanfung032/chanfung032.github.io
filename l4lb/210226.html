@@ -1,39 +1,29 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>#0226 性能 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#0305 大包模式（Jumbo Frame）" href="210305.html" />
-    <link rel="prev" title="#0220 性能" href="210220.html" />
+    <link rel="next" title="#0220 性能" href="210220.html" />
+    <link rel="prev" title="#0305 大包模式（Jumbo Frame）" href="210305.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,12 +33,12 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="xing-neng">
+  <section id="xing-neng">
 <h1>#0226 性能<a class="headerlink" href="#xing-neng" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="ru-he-huo-qu-wang-qia-di-xing-hao">
-<h2>如何获取网卡的型号<a class="headerlink" href="#ru-he-huo-qu-wang-qia-di-xing-hao" title="Permalink to this headline">¶</a></h2>
+<section id="ru-he-huo-qu-wang-ka-de-xing-hao">
+<h2>如何获取网卡的型号<a class="headerlink" href="#ru-he-huo-qu-wang-ka-de-xing-hao" title="Permalink to this headline">¶</a></h2>
 <p>基本信息：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> lspci<span class="p">|</span>grep -i ethernet
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>lspci<span class="p">|</span>grep -i ethernet
 <span class="go">...</span>
 <span class="go">04:00.0 Ethernet controller: Intel Corporation 82599ES 10-Gigabit SFI/SFP+ Network Connection (rev 01)</span>
 <span class="go">04:00.1 Ethernet controller: Intel Corporation 82599ES 10-Gigabit SFI/SFP+ Network Connection (rev 01)</span>
@@ -57,7 +47,7 @@
 </pre></div>
 </div>
 <p>更详细的信息：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> lspci -v<span class="p">|</span>grep -i ethernet -A20
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>lspci -v<span class="p">|</span>grep -i ethernet -A20
 <span class="go">...</span>
 <span class="go">05:00.1 Ethernet controller: Intel Corporation 82599ES 10-Gigabit SFI/SFP+ Network Connection (rev 01)</span>
 <span class="go">    Subsystem: Inspur Electronic Information Industry Co., Ltd. 10G SFP+ DP EP102Fi4 Adapter</span>
@@ -80,18 +70,18 @@
 <span class="go">...</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="intel-82599-wang-qia-ru-he-shi-xian-rss">
-<h2>Intel 82599 网卡如何实现 RSS<a class="headerlink" href="#intel-82599-wang-qia-ru-he-shi-xian-rss" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="intel-82599-wang-ka-ru-he-shi-xian-rss">
+<h2>Intel 82599 网卡如何实现 RSS<a class="headerlink" href="#intel-82599-wang-ka-ru-he-shi-xian-rss" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://www.intel.com/content/www/us/en/embedded/products/networking/82599-10-gbe-controller-datasheet.html?asset=2377">Intel 82599 datasheet.pdf/7.1.2.8 小节 Receive-Side Scaling(RSS)</a></p>
 <img alt="../_images/rss.png" src="../_images/rss.png" />
 <ol class="arabic simple">
-<li>对于 IPv4 协议的 TCP/UDP 包， 计算 <code class="docutils literal"><span class="pre">RSS</span> <span class="pre">Hash</span> <span class="pre">=</span> <span class="pre">Hash(src</span> <span class="pre">ip,</span> <span class="pre">src</span> <span class="pre">port,</span> <span class="pre">dst</span> <span class="pre">ip,</span> <span class="pre">dst</span> <span class="pre">port)</span></code> 。</li>
-<li>取哈希低位的 7 bit，将其映射到一个 Redirection Table 中，这个表一共 128 个槽位，每个槽位 4 bit。</li>
-<li>输出槽位的值（4 bit）作为 RSS Index。</li>
+<li><p>对于 IPv4 协议的 TCP/UDP 包， 计算 <code class="docutils literal notranslate"><span class="pre">RSS</span> <span class="pre">Hash</span> <span class="pre">=</span> <span class="pre">Hash(src</span> <span class="pre">ip,</span> <span class="pre">src</span> <span class="pre">port,</span> <span class="pre">dst</span> <span class="pre">ip,</span> <span class="pre">dst</span> <span class="pre">port)</span></code> 。</p></li>
+<li><p>取哈希低位的 7 bit，将其映射到一个 Redirection Table 中，这个表一共 128 个槽位，每个槽位 4 bit。</p></li>
+<li><p>输出槽位的值（4 bit）作为 RSS Index。</p></li>
 </ol>
 <p>获取 RSS 配置信息：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> ethtool -x p1p1
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ethtool -x p1p1
 <span class="go">RX flow hash indirection table for p1p1 with 24 RX ring(s):</span>
 <span class="go">0:       0     1     2     3     4     5     6     7</span>
 <span class="go">8:       8     9    10    11    12    13    14    15</span>
@@ -118,8 +108,8 @@
 </pre></div>
 </div>
 <p>输出的 RSS Index 最多为 4 bit，所以 RSS 最多支持 16 个队列。因此当机器的 CPU 数目大于 16，如果绑定网卡和 CPU，那么有一部分 CPU 会空闲不处理任何流量。</p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -128,25 +118,15 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">#0226 性能</a><ul>
-<li><a class="reference internal" href="#ru-he-huo-qu-wang-qia-di-xing-hao">如何获取网卡的型号</a></li>
-<li><a class="reference internal" href="#intel-82599-wang-qia-ru-he-shi-xian-rss">Intel 82599 网卡如何实现 RSS</a></li>
+<li><a class="reference internal" href="#ru-he-huo-qu-wang-ka-de-xing-hao">如何获取网卡的型号</a></li>
+<li><a class="reference internal" href="#intel-82599-wang-ka-ru-he-shi-xian-rss">Intel 82599 网卡如何实现 RSS</a></li>
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">基于 xdp 的 L4LB 开发笔记</a><ul>
-      <li>Previous: <a href="210220.html" title="previous chapter">#0220 性能</a></li>
-      <li>Next: <a href="210305.html" title="next chapter">#0305 大包模式（Jumbo Frame）</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -155,15 +135,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -172,7 +152,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

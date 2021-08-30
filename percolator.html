@@ -1,27 +1,20 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Percolator 的事务模型 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Elliptic Curve Cryptography" href="elliptic-curve-cryptography.html" />
@@ -32,8 +25,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,69 +35,67 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="percolator-di-shi-wu-mo-xing">
-<h1>Percolator 的事务模型<a class="headerlink" href="#percolator-di-shi-wu-mo-xing" title="Permalink to this headline">¶</a></h1>
+  <section id="percolator-de-shi-wu-mo-xing">
+<h1>Percolator 的事务模型<a class="headerlink" href="#percolator-de-shi-wu-mo-xing" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li>原文：<a class="reference external" href="https://research.google.com/pubs/pub36726.html">https://research.google.com/pubs/pub36726.html</a></li>
-<li>论文中的伪代码： <a class="reference external" href="https://gist.github.com/chanfung032/bbc6f753cefe25656839e12ad71b31f5">https://gist.github.com/chanfung032/bbc6f753cefe25656839e12ad71b31f5</a></li>
+<li><p>原文：<a class="reference external" href="https://research.google.com/pubs/pub36726.html">https://research.google.com/pubs/pub36726.html</a></p></li>
+<li><p>论文中的伪代码： <a class="reference external" href="https://gist.github.com/chanfung032/bbc6f753cefe25656839e12ad71b31f5">https://gist.github.com/chanfung032/bbc6f753cefe25656839e12ad71b31f5</a></p></li>
 </ul>
-<div class="section" id="gai-shu">
+<section id="gai-shu">
 <h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
 <ol class="arabic">
-<li><p class="first">Bigtable 可以看作一个分布式、持久化存储的有序大 map。key-value 映射关系如下：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="n">value</span>
+<li><p>Bigtable 可以看作一个分布式、持久化存储的有序大 map。key-value 映射关系如下：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="n">value</span>
 </pre></div>
 </div>
 </li>
-<li><p class="first">Bigtable 支持单行事务，也就是说支持同一个 row 下数据 read-modify-write 的原子操作。</p>
-</li>
-<li><p class="first">Percolator 基于 Bigtable 构建，通过 <em>snapshot-isolation</em> + <em>两阶段提交</em> 提供跨行、跨表的事务。</p>
-</li>
+<li><p>Bigtable 支持单行事务，也就是说支持同一个 row 下数据 read-modify-write 的原子操作。</p></li>
+<li><p>Percolator 基于 Bigtable 构建，通过 <em>snapshot-isolation</em> + <em>两阶段提交</em> 提供跨行、跨表的事务。</p></li>
 </ol>
-</div>
-<div class="section" id="snapshot-isolation">
+</section>
+<section id="snapshot-isolation">
 <h2>Snapshot-Isolation<a class="headerlink" href="#snapshot-isolation" title="Permalink to this headline">¶</a></h2>
 <p>Percolator 使用 Bigtable 的 timestamp 维度记录数据的多个版本，多个版本提供 <em>snapshot-isolation</em> ，使得每个事务的读仿佛都是读事务开始时间点上的 snapshot 一样。</p>
 <img alt="_images/percolator-si.png" src="_images/percolator-si.png" />
 <p>如上图中的 3 个事务（空心方框处读、实心圆圈处写／提交）：</p>
 <ul class="simple">
-<li>事务 2 看不到 事务 1 写的数据，因为其开始时间在事务 1 的提交时间之前。</li>
-<li>事务 3 可以看到事务 1 和事务 2 提交的数据。</li>
-<li>事务 1 和事务 2 并行运行。如果两个事务有写同一行的话，那么两个事务中有一个会失败。</li>
+<li><p>事务 2 看不到 事务 1 写的数据，因为其开始时间在事务 1 的提交时间之前。</p></li>
+<li><p>事务 3 可以看到事务 1 和事务 2 提交的数据。</p></li>
+<li><p>事务 1 和事务 2 并行运行。如果两个事务有写同一行的话，那么两个事务中有一个会失败。</p></li>
 </ul>
 <p><em>snapshot isolation</em> 的优点是读性能高，可以无锁读，只需要使用 timestamp 查找即可获取数据在某一时间点上的 snapshot。</p>
 <p>Percolator 中的一个 column <em>c</em> 由 5 个 Bigtable column 组成，其中和事务相关的是以下 3 个：</p>
 <ul class="simple">
-<li>(row, <em>c:data</em>, start_ts) =&gt; value ，</li>
-<li>(row, <em>c:lock</em>, start_ts) =&gt; (primary.row,…)</li>
-<li>(row, <em>c:write</em>, commit_ts) =&gt; start_ts</li>
+<li><p>(row, <em>c:data</em>, start_ts) =&gt; value ，</p></li>
+<li><p>(row, <em>c:lock</em>, start_ts) =&gt; (primary.row,…)</p></li>
+<li><p>(row, <em>c:write</em>, commit_ts) =&gt; start_ts</p></li>
 </ul>
 <p>其中 <em>start_ts</em> 是事务开始的时间， <em>commit_ts</em> 是事务提交的时间。</p>
-</div>
-<div class="section" id="er-jie-duan-ti-jiao">
+</section>
+<section id="er-jie-duan-ti-jiao">
 <h2>二阶段提交<a class="headerlink" href="#er-jie-duan-ti-jiao" title="Permalink to this headline">¶</a></h2>
 <p><strong>Prewrite阶段</strong></p>
 <p>对于事务中所有更新的 row，选择其中一行作为 primary row，其余作为 secondary row，对于每一行：</p>
 <ol class="arabic simple">
-<li>检查 write-write 冲突，即 c:write 在 [start_ts, ∞] 区间上是否有数据，如果有，说明该行被其它已经提交的事务更改过，失败返回。</li>
-<li>检查行是否已经上锁（有并行事务），如果有，失败返回。</li>
-<li>将要写入的数据写入 c:data。</li>
-<li>给行加锁，即写入 (row, c:lock, start_ts) =&gt; (primary.row,…) 。</li>
+<li><p>检查 write-write 冲突，即 c:write 在 [start_ts, ∞] 区间上是否有数据，如果有，说明该行被其它已经提交的事务更改过，失败返回。</p></li>
+<li><p>检查行是否已经上锁（有并行事务），如果有，失败返回。</p></li>
+<li><p>将要写入的数据写入 c:data。</p></li>
+<li><p>给行加锁，即写入 (row, c:lock, start_ts) =&gt; (primary.row,…) 。</p></li>
 </ol>
 <p><strong>Commit阶段</strong></p>
 <ol class="arabic simple">
-<li>检查 primary row 的 lock 是否还在，如果不在，失败返回。</li>
-<li>提交 primary row，即写入 (row, c:write, commit_ts) =&gt; start_ts 并删除 c:lock 的锁。primary row 提交成功即是整个事务成功。</li>
-<li>提交 secondary rows.</li>
+<li><p>检查 primary row 的 lock 是否还在，如果不在，失败返回。</p></li>
+<li><p>提交 primary row，即写入 (row, c:write, commit_ts) =&gt; start_ts 并删除 c:lock 的锁。primary row 提交成功即是整个事务成功。</p></li>
+<li><p>提交 secondary rows.</p></li>
 </ol>
-</div>
-<div class="section" id="get">
+</section>
+<section id="get">
 <h2>Get()<a class="headerlink" href="#get" title="Permalink to this headline">¶</a></h2>
 <p>事务中的 Get() 操作会检查 Get 的 row 在 [0, start_ts] 时间区间上是否有锁，如果有等待，直到锁释放（或者清理锁），然后返回数据。</p>
-<p>假设有事务 W 在 <span class="math">\(commit\_ts_w\)</span> 提交，<span class="math">\(commit\_ts_w &lt; start\_ts\)</span> ，因为事务在提交前必然要先给所有提交的 row 加锁，所以在 <span class="math">\(commit\_ts_w\)</span> 之后，事务 W 写的 row 要么已经是提交后的数据，要么是被锁，所以只要等待这个锁释放，start_ts 开始的事务就可以读到事务 W 的提交了。</p>
+<p>假设有事务 W 在 <span class="math notranslate nohighlight">\(commit\_ts_w\)</span> 提交，<span class="math notranslate nohighlight">\(commit\_ts_w &lt; start\_ts\)</span> ，因为事务在提交前必然要先给所有提交的 row 加锁，所以在 <span class="math notranslate nohighlight">\(commit\_ts_w\)</span> 之后，事务 W 写的 row 要么已经是提交后的数据，要么是被锁，所以只要等待这个锁释放，start_ts 开始的事务就可以读到事务 W 的提交了。</p>
 <p>如果锁是其它失败的事务留下来的，Get() 中会根据锁对应的 primary row 是否已经提交决定是 roll back 还是 roll forward。如果 primary row 还没有提交，那么直接删除 primary row 的 lock，roll back，反之提交该锁对应的事务，roll forward。</p>
-</div>
-<div class="section" id="shi-li">
+</section>
+<section id="shi-li">
 <h2>示例<a class="headerlink" href="#shi-li" title="Permalink to this headline">¶</a></h2>
 <p>以 Bob 给 Joe 转账 $7 为例：</p>
 <p>初始状态下，Joe 的账户下有 $2，Bob $10 。</p>
@@ -118,8 +108,8 @@
 <img alt="_images/percolator-4.png" src="_images/percolator-4.png" />
 <p>最后，删除 Joe 账户记录上的 lock 并替换为 write 中的一条记录，记录指向 start_ts = 7 的 data 数据，事务完成。</p>
 <img alt="_images/percolator-5.png" src="_images/percolator-5.png" />
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -128,7 +118,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Percolator 的事务模型</a><ul>
 <li><a class="reference internal" href="#gai-shu">概述</a></li>
@@ -139,15 +129,7 @@
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="spanner.html" title="previous chapter">Spanner 概要（K-V 部分）</a></li>
-      <li>Next: <a href="elliptic-curve-cryptography.html" title="next chapter">Elliptic Curve Cryptography</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -156,15 +138,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -173,7 +155,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

@@ -1,27 +1,20 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Elliptic Curve Cryptography &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="比特币的工作原理" href="bitcoin-explained.html" />
@@ -32,8 +25,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,100 +35,100 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="elliptic-curve-cryptography">
+  <section id="elliptic-curve-cryptography">
 <h1>Elliptic Curve Cryptography<a class="headerlink" href="#elliptic-curve-cryptography" title="Permalink to this headline">¶</a></h1>
 <p>原文：</p>
 <ul class="simple">
-<li><a class="reference external" href="http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/">Elliptic curves over real numbers and the group law</a></li>
-<li><a class="reference external" href="http://andrea.corbellini.name/2015/05/23/elliptic-curve-cryptography-finite-fields-and-discrete-logarithms/">Elliptic Curve Cryptography: finite fields and discrete logarithms</a></li>
-<li><a class="reference external" href="http://andrea.corbellini.name/2015/05/30/elliptic-curve-cryptography-ecdh-and-ecdsa/">Key pair generation and two ECC algorithms: ECDH and ECDSA</a></li>
+<li><p><a class="reference external" href="http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/">Elliptic curves over real numbers and the group law</a></p></li>
+<li><p><a class="reference external" href="http://andrea.corbellini.name/2015/05/23/elliptic-curve-cryptography-finite-fields-and-discrete-logarithms/">Elliptic Curve Cryptography: finite fields and discrete logarithms</a></p></li>
+<li><p><a class="reference external" href="http://andrea.corbellini.name/2015/05/30/elliptic-curve-cryptography-ecdh-and-ecdsa/">Key pair generation and two ECC algorithms: ECDH and ECDSA</a></p></li>
 </ul>
-<div class="section" id="shi-shu-yu-shang-di-tuo-yuan-qu-xian-yu-qun">
-<h2>实数域上的椭圆曲线与群<a class="headerlink" href="#shi-shu-yu-shang-di-tuo-yuan-qu-xian-yu-qun" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="tuo-yuan-qu-xian-elliptic-curves">
+<section id="shi-shu-yu-shang-de-tuo-yuan-qu-xian-yu-qun">
+<h2>实数域上的椭圆曲线与群<a class="headerlink" href="#shi-shu-yu-shang-de-tuo-yuan-qu-xian-yu-qun" title="Permalink to this headline">¶</a></h2>
+<section id="tuo-yuan-qu-xian-elliptic-curves">
 <h3>椭圆曲线（Elliptic Curves）<a class="headerlink" href="#tuo-yuan-qu-xian-elliptic-curves" title="Permalink to this headline">¶</a></h3>
 <p>首先，什么是椭圆曲线，简单来说，椭圆曲线就是满足以下公式的点的集合：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[y^2 = x^3 + ax + b\]</div>
-<p>其中 <span class="math">\(4a^3 + 27b^2 \ne 0\)</span> （排除掉奇异曲线 singular curves）。</p>
-<div class="figure" id="id1">
+<p>其中 <span class="math notranslate nohighlight">\(4a^3 + 27b^2 \ne 0\)</span> （排除掉奇异曲线 singular curves）。</p>
+<figure class="align-default" id="id1">
 <img alt="_images/curves.png" src="_images/curves.png" />
-<p class="caption"><span class="caption-text">不同形状的椭圆曲线，<span class="math">\(b = 1\)</span>, <span class="math">\(a\)</span> 从 2 到 -3。</span></p>
-</div>
+<figcaption>
+<p><span class="caption-text">不同形状的椭圆曲线，<span class="math notranslate nohighlight">\(b = 1\)</span>, <span class="math notranslate nohighlight">\(a\)</span> 从 2 到 -3。</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
 <p><em>a</em> 和 <em>b</em> 的值不一样，曲线在平面上的形状也不一样。显而易见并且容易证明的是：椭圆曲线都是相对于 x 轴对称的。</p>
-<p>另外，我们定义无穷远点（point at infinity）为椭圆曲线上的一点，这个点我们用符号 <span class="math">\(0\)</span> 来表示。</p>
+<p>另外，我们定义无穷远点（point at infinity）为椭圆曲线上的一点，这个点我们用符号 <span class="math notranslate nohighlight">\(0\)</span> 来表示。</p>
 <p>加上无穷远点，完善后的椭圆曲线公式如下：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[\left\{ (x, y) \in \mathbb{R}^2\ |\ y^2 = x^3 + ax + b,\ 4 a^3 + 27 b^2 \ne 0 \right\}\ \cup\ \left\{ 0 \right\}\]</div>
-</div>
-<div class="section" id="qun-groups">
+</section>
+<section id="qun-groups">
 <h3>群（Groups）<a class="headerlink" href="#qun-groups" title="Permalink to this headline">¶</a></h3>
-<p>在数学中，群是一个集合 <span class="math">\(\mathbb{G}\)</span> ，连同其上定义的二元运算 <em>加</em> （使用符号 + 表示）。要具备成为群的资格，这个集合和运算 <span class="math">\((\mathbb{G}, +)\)</span> 还必须满足叫做群公理的四个要求：</p>
+<p>在数学中，群是一个集合 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> ，连同其上定义的二元运算 <em>加</em> （使用符号 + 表示）。要具备成为群的资格，这个集合和运算 <span class="math notranslate nohighlight">\((\mathbb{G}, +)\)</span> 还必须满足叫做群公理的四个要求：</p>
 <ol class="arabic simple">
-<li>封闭性（closure）：对于所有 <span class="math">\(\mathbb{G}\)</span> 中 a, b，运算 a + b 的结果也在 <span class="math">\(\mathbb{G}\)</span> 中。</li>
-<li>结合性（associativity）：对于所有 <span class="math">\(\mathbb{G}\)</span> 中的 a, b 和 c，等式 (a + b) + c = a + (b + c) 成立。</li>
-<li>单位元（identity element）：存在 <span class="math">\(\mathbb{G}\)</span> 中的一个元素 <span class="math">\(0\)</span>，使得对于所有 <span class="math">\(\mathbb{G}\)</span> 中的元素 a，等式 <span class="math">\(a + 0 = 0 + a = a\)</span> 成立。</li>
-<li>逆元（inverse）：对于每个 <span class="math">\(\mathbb{G}\)</span> 中的 a，存在 <span class="math">\(\mathbb{G}\)</span> 中的一个元素 b 使得 <span class="math">\(a + b = 0\)</span>。</li>
+<li><p>封闭性（closure）：对于所有 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中 a, b，运算 a + b 的结果也在 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中。</p></li>
+<li><p>结合性（associativity）：对于所有 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中的 a, b 和 c，等式 (a + b) + c = a + (b + c) 成立。</p></li>
+<li><p>单位元（identity element）：存在 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中的一个元素 <span class="math notranslate nohighlight">\(0\)</span>，使得对于所有 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中的元素 a，等式 <span class="math notranslate nohighlight">\(a + 0 = 0 + a = a\)</span> 成立。</p></li>
+<li><p>逆元（inverse）：对于每个 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中的 a，存在 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中的一个元素 b 使得 <span class="math notranslate nohighlight">\(a + b = 0\)</span>。</p></li>
 </ol>
 <p>如果再加上第 5 个条件：</p>
 <ol class="arabic simple" start="5">
-<li>交换性（commutativity）: a + b = b + a 。</li>
+<li><p>交换性（commutativity）: a + b = b + a 。</p></li>
 </ol>
 <p>那么这个群又叫做阿贝尔群（abelian group）。</p>
-<p>整数集合 <span class="math">\(\mathbb{Z}\)</span> 连同我们日常使用的整数加法构成一个群（还是一个阿贝尔群）。自然数集合 <span class="math">\(\mathbb{N}\)</span> 不是群，因为不满足第 4 个要求。</p>
+<p>整数集合 <span class="math notranslate nohighlight">\(\mathbb{Z}\)</span> 连同我们日常使用的整数加法构成一个群（还是一个阿贝尔群）。自然数集合 <span class="math notranslate nohighlight">\(\mathbb{N}\)</span> 不是群，因为不满足第 4 个要求。</p>
 <p>在以上特性成立的基础上，我们可以继续推导出群的一些其它特性，比如：单位元是唯一的，并且逆元也是唯一的，也就是说：对于任意 a，只存在唯一的 b 使得 a + b = 0（我们可以将 b 写做 -a）。这些特性在后文中会直接或间接的派上重要用场。</p>
-</div>
-<div class="section" id="zai-tuo-yuan-qu-xian-shang-ding-yi-yi-ge-qun-the-group-law-for-elliptic-curves">
+</section>
+<section id="zai-tuo-yuan-qu-xian-shang-ding-yi-yi-ge-qun-the-group-law-for-elliptic-curves">
 <h3>在椭圆曲线上定义一个群（The group law for elliptic curves）<a class="headerlink" href="#zai-tuo-yuan-qu-xian-shang-ding-yi-yi-ge-qun-the-group-law-for-elliptic-curves" title="Permalink to this headline">¶</a></h3>
 <p>我们可以如下定义一个椭圆曲线上的群：</p>
 <ul class="simple">
-<li>群里的元素为曲线上的点。</li>
-<li><em>单位元</em> 为无穷远点 <span class="math">\(0\)</span>。</li>
-<li>曲线上任意一点 <span class="math">\(P\)</span> 的 <em>逆元</em> 是其相对于 x 轴的对称点。</li>
-<li><em>加</em> 法规定如下：曲线上任意的 3 点 <span class="math">\(P\)</span>，<span class="math">\(Q\)</span>，<span class="math">\(R\)</span>，如果 3 点在一条直线上（aligned）并且都不是无穷远点（nonzero），那么它们的和 <span class="math">\(P + Q + R = 0\)</span> 。</li>
+<li><p>群里的元素为曲线上的点。</p></li>
+<li><p><em>单位元</em> 为无穷远点 <span class="math notranslate nohighlight">\(0\)</span>。</p></li>
+<li><p>曲线上任意一点 <span class="math notranslate nohighlight">\(P\)</span> 的 <em>逆元</em> 是其相对于 x 轴的对称点。</p></li>
+<li><p><em>加</em> 法规定如下：曲线上任意的 3 点 <span class="math notranslate nohighlight">\(P\)</span>，<span class="math notranslate nohighlight">\(Q\)</span>，<span class="math notranslate nohighlight">\(R\)</span>，如果 3 点在一条直线上（aligned）并且都不是无穷远点（nonzero），那么它们的和 <span class="math notranslate nohighlight">\(P + Q + R = 0\)</span> 。</p></li>
 </ul>
 <img alt="_images/three-aligned-points.png" src="_images/three-aligned-points.png" />
-<p>注意最后一条规则，我们只要求 3 个点在一条直线上，并不要求其顺序，也就是说 <span class="math">\(P + (Q + R) = Q + (P + R) = R + (P + Q) = \cdots = 0\)</span>，因此定义的加法满足结合性和交换性，也就是说这是一个阿贝尔群。</p>
+<p>注意最后一条规则，我们只要求 3 个点在一条直线上，并不要求其顺序，也就是说 <span class="math notranslate nohighlight">\(P + (Q + R) = Q + (P + R) = R + (P + Q) = \cdots = 0\)</span>，因此定义的加法满足结合性和交换性，也就是说这是一个阿贝尔群。</p>
 <p>那么，我们如何计算任意两点相加的和呢？</p>
-</div>
-<div class="section" id="ji-he-jia-fa-geometric-addition">
+</section>
+<section id="ji-he-jia-fa-geometric-addition">
 <h3>几何加法（Geometric addition）<a class="headerlink" href="#ji-he-jia-fa-geometric-addition" title="Permalink to this headline">¶</a></h3>
-<p>上面定义的群是一个阿贝尔群，所以我们可以将 <span class="math">\(P + Q + R = 0\)</span> 改写成 <span class="math">\(P + Q = -R\)</span> 。从后面这个公式我们可以得出计算任意两点 <span class="math">\(P\)</span> 和 <span class="math">\(Q\)</span> 相加和的几何方法：过 <span class="math">\(P\)</span> 和 <span class="math">\(Q\)</span> 两点画一条直线，这条直线交曲线上第三点 <span class="math">\(R\)</span>，取其逆元 <span class="math">\(-R\)</span> 即是 <span class="math">\(P + Q\)</span> 的结果。</p>
+<p>上面定义的群是一个阿贝尔群，所以我们可以将 <span class="math notranslate nohighlight">\(P + Q + R = 0\)</span> 改写成 <span class="math notranslate nohighlight">\(P + Q = -R\)</span> 。从后面这个公式我们可以得出计算任意两点 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q\)</span> 相加和的几何方法：过 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q\)</span> 两点画一条直线，这条直线交曲线上第三点 <span class="math notranslate nohighlight">\(R\)</span>，取其逆元 <span class="math notranslate nohighlight">\(-R\)</span> 即是 <span class="math notranslate nohighlight">\(P + Q\)</span> 的结果。</p>
 <img alt="_images/point-addition.png" src="_images/point-addition.png" />
 <p>上面的几何计算方法可以工作但还需要几点补充，尤其是下面几个问题需要解决：</p>
 <ul>
-<li><p class="first"><strong>如果</strong> <span class="math">\(P = 0\)</span> <strong>或者</strong> <span class="math">\(Q = 0\)</span> <strong>怎么办？</strong>  此时无法画一条过两点的直线，但是前面我们已经定义了 <span class="math">\(0\)</span> 为单位元，所以 <span class="math">\(P + 0 = P\)</span> ，<span class="math">\(0 + Q = Q\)</span> 。</p>
-</li>
-<li><p class="first"><strong>如果</strong> <span class="math">\(P = -Q\)</span> <strong>呢？</strong> 此时过两点的直线是垂直的，和曲线没有第三个交点。但是因为 <span class="math">\(P\)</span> 是 <span class="math">\(Q\)</span> 的逆元，根据逆元的定义： <span class="math">\(P + Q = P + (-P) = 0\)</span> 。</p>
-</li>
-<li><p class="first"><strong>如果</strong> <span class="math">\(P = Q\)</span> <strong>呢？</strong> 过一点有无数条直线，这里问题变得有点复杂了。考虑曲线上的一点 <span class="math">\(Q' \ne P\)</span> ，如果我们让 <span class="math">\(Q'\)</span> 不断逼近 <span class="math">\(P\)</span>，此时过 <span class="math">\(P\)</span> 和 <span class="math">\(Q'\)</span> 的直线就变成了曲线的切线。基于此，我们可以定义 <span class="math">\(P + P = -R\)</span> ，这里 <span class="math">\(R\)</span> 是曲线在 <span class="math">\(P\)</span> 点的切线与曲线的另外一个交点。</p>
+<li><p><strong>如果</strong> <span class="math notranslate nohighlight">\(P = 0\)</span> <strong>或者</strong> <span class="math notranslate nohighlight">\(Q = 0\)</span> <strong>怎么办？</strong>  此时无法画一条过两点的直线，但是前面我们已经定义了 <span class="math notranslate nohighlight">\(0\)</span> 为单位元，所以 <span class="math notranslate nohighlight">\(P + 0 = P\)</span> ，<span class="math notranslate nohighlight">\(0 + Q = Q\)</span> 。</p></li>
+<li><p><strong>如果</strong> <span class="math notranslate nohighlight">\(P = -Q\)</span> <strong>呢？</strong> 此时过两点的直线是垂直的，和曲线没有第三个交点。但是因为 <span class="math notranslate nohighlight">\(P\)</span> 是 <span class="math notranslate nohighlight">\(Q\)</span> 的逆元，根据逆元的定义： <span class="math notranslate nohighlight">\(P + Q = P + (-P) = 0\)</span> 。</p></li>
+<li><p><strong>如果</strong> <span class="math notranslate nohighlight">\(P = Q\)</span> <strong>呢？</strong> 过一点有无数条直线，这里问题变得有点复杂了。考虑曲线上的一点 <span class="math notranslate nohighlight">\(Q' \ne P\)</span> ，如果我们让 <span class="math notranslate nohighlight">\(Q'\)</span> 不断逼近 <span class="math notranslate nohighlight">\(P\)</span>，此时过 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q'\)</span> 的直线就变成了曲线的切线。基于此，我们可以定义 <span class="math notranslate nohighlight">\(P + P = -R\)</span> ，这里 <span class="math notranslate nohighlight">\(R\)</span> 是曲线在 <span class="math notranslate nohighlight">\(P\)</span> 点的切线与曲线的另外一个交点。</p>
 <img alt="_images/animation-point-doubling.gif" src="_images/animation-point-doubling.gif" />
 </li>
-<li><p class="first"><strong>如果</strong> <span class="math">\(P \ne Q\)</span>，<strong>但是没有第三个交点</strong> <span class="math">\(R\)</span> <strong>呢？</strong> 这个和前面一个问题的情况类似，此时过 <span class="math">\(P\)</span> 和 <span class="math">\(Q\)</span> 的直线是曲线的切线。</p>
+<li><p><strong>如果</strong> <span class="math notranslate nohighlight">\(P \ne Q\)</span>，<strong>但是没有第三个交点</strong> <span class="math notranslate nohighlight">\(R\)</span> <strong>呢？</strong> 这个和前面一个问题的情况类似，此时过 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q\)</span> 的直线是曲线的切线。</p>
 <img alt="_images/animation-tangent-line.gif" src="_images/animation-tangent-line.gif" />
-<p>假设 <span class="math">\(P\)</span> 是切点，那么 <span class="math">\(P + P = -Q\)</span>，所以 <span class="math">\(P + Q = -P\)</span>，同理，如果 <span class="math">\(Q\)</span> 是切点，<span class="math">\(P + Q = -Q\)</span> 。</p>
+<p>假设 <span class="math notranslate nohighlight">\(P\)</span> 是切点，那么 <span class="math notranslate nohighlight">\(P + P = -Q\)</span>，所以 <span class="math notranslate nohighlight">\(P + Q = -P\)</span>，同理，如果 <span class="math notranslate nohighlight">\(Q\)</span> 是切点，<span class="math notranslate nohighlight">\(P + Q = -Q\)</span> 。</p>
 </li>
 </ul>
 <p>以上就是几何加法的完整步骤，使用笔和尺子我们就可以完成椭圆曲线上任意两点的加法（或者可以使用这个 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=-1&amp;py=4&amp;qx=1&amp;qy=2">可视化工具</a> ）。</p>
-</div>
-<div class="section" id="dai-shu-jia-fa-algebraic-addition">
+</section>
+<section id="dai-shu-jia-fa-algebraic-addition">
 <h3>代数加法（Algebraic addition）<a class="headerlink" href="#dai-shu-jia-fa-algebraic-addition" title="Permalink to this headline">¶</a></h3>
 <p>为了使用计算机来计算椭圆曲线上点的加法，我们需要将上面的几何方法转换为代数方法。将上面的规则转化为公式涉及到解三次方程，比较繁琐，所以这里我们省略过程直接给出结果。</p>
-<p>首先，我们先去掉一些极限情况，我们知道 <span class="math">\(P + (-P) = 0\)</span>，也知道 <span class="math">\(P + 0 = 0 + P = P\)</span>，所以下面的公式中我们排除这两种情况，只考虑 <span class="math">\(P = (x_P, y_p)\)</span> 和 <span class="math">\(Q = (x_Q, y_Q)\)</span> 为非对称点、非无穷远点的情况。</p>
-<p>因为 <span class="math">\(P\)</span> 和 <span class="math">\(Q\)</span> 非对称（<span class="math">\(x_P \ne x_Q\)</span>），所以过两点的直线有斜率（slope），斜率为：</p>
-<div class="math">
+<p>首先，我们先去掉一些极限情况，我们知道 <span class="math notranslate nohighlight">\(P + (-P) = 0\)</span>，也知道 <span class="math notranslate nohighlight">\(P + 0 = 0 + P = P\)</span>，所以下面的公式中我们排除这两种情况，只考虑 <span class="math notranslate nohighlight">\(P = (x_P, y_p)\)</span> 和 <span class="math notranslate nohighlight">\(Q = (x_Q, y_Q)\)</span> 为非对称点、非无穷远点的情况。</p>
+<p>因为 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q\)</span> 非对称（<span class="math notranslate nohighlight">\(x_P \ne x_Q\)</span>），所以过两点的直线有斜率（slope），斜率为：</p>
+<div class="math notranslate nohighlight">
 \[m = \frac{y_P - y_Q}{x_P - x_Q}\]</div>
-<p>设直线与椭圆曲线的第三个交点为 <span class="math">\(R = (x_R, y_R)\)</span>，则：</p>
-<div class="math">
+<p>设直线与椭圆曲线的第三个交点为 <span class="math notranslate nohighlight">\(R = (x_R, y_R)\)</span>，则：</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rcl}
     x_R &amp; = &amp; m^2 - x_P - x_Q \\
     y_R &amp; = &amp; y_P + m(x_R - x_P)
 \end{array}\end{split}\]</div>
 <p>或者：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[y_R = y_Q + m(x_R - x_Q)\]</div>
-<p>我们使用一个例子来验证以下以上公式的正确性：根据我们的 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=-1&amp;py=4&amp;qx=1&amp;qy=2">可视化工具</a> ，给定曲线 <span class="math">\(y^2 = x^3 - 7x + 10\)</span> ，<span class="math">\(P = (1, 2)\)</span> 和 <span class="math">\(Q = (3, 4)\)</span> ，两点的和 <span class="math">\(P + Q = -R = (-3, 2)\)</span> 。我们来看下和我们上面的公式计算的结果是否吻合：</p>
-<div class="math">
+<p>我们使用一个例子来验证以下以上公式的正确性：根据我们的 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=-1&amp;py=4&amp;qx=1&amp;qy=2">可视化工具</a> ，给定曲线 <span class="math notranslate nohighlight">\(y^2 = x^3 - 7x + 10\)</span> ，<span class="math notranslate nohighlight">\(P = (1, 2)\)</span> 和 <span class="math notranslate nohighlight">\(Q = (3, 4)\)</span> ，两点的和 <span class="math notranslate nohighlight">\(P + Q = -R = (-3, 2)\)</span> 。我们来看下和我们上面的公式计算的结果是否吻合：</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rcl}
     m &amp; = &amp; \frac{y_P - y_Q}{x_P - x_Q} = \frac{2 - 4}{1 - 3} = 1 \\
     x_R &amp; = &amp; m^2 - x_P - x_Q = 1^2 - 1 - 3 = -3 \\
@@ -144,60 +136,60 @@
     &amp; = &amp; y_Q + m(x_R - x_Q) = 4 + 1 \cdot (-3 - 3) = -2
 \end{array}\end{split}\]</div>
 <p>结果一致！</p>
-<p>即使 <span class="math">\(P\)</span> <strong>或者</strong> <span class="math">\(Q\)</span> <strong>中的一点是切点</strong>，上面的公式依然可以得出正确的结果。例如： <span class="math">\(P = (-1, 4)\)</span> 和 <span class="math">\(Q = (1, 2)\)</span> 。</p>
-<div class="math">
+<p>即使 <span class="math notranslate nohighlight">\(P\)</span> <strong>或者</strong> <span class="math notranslate nohighlight">\(Q\)</span> <strong>中的一点是切点</strong>，上面的公式依然可以得出正确的结果。例如： <span class="math notranslate nohighlight">\(P = (-1, 4)\)</span> 和 <span class="math notranslate nohighlight">\(Q = (1, 2)\)</span> 。</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rcl}
     m &amp; = &amp; \frac{y_P - y_Q}{x_P - x_Q} = \frac{4 - 2}{-1 - 1} = -1 \\
     x_R &amp; = &amp; m^2 - x_P - x_Q = (-1)^2 - (-1) - 1 = 1 \\
     y_R &amp; = &amp; y_P + m(x_R - x_P) = 4 + -1 \cdot (1 - (-1)) = 2
 \end{array}\end{split}\]</div>
-<p>结果 <span class="math">\(P + Q = (1, -2)\)</span> ，和 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=-1&amp;py=4&amp;qx=1&amp;qy=2">可视化工具</a> 给出的一样。</p>
-<p><span class="math">\(P = Q\)</span> <strong>的情况需要特殊处理：</strong> 计算 <span class="math">\(x_R\)</span> 和 <span class="math">\(y_R\)</span> 的公式不变，但是斜率的公式需要修改使用以下公式（因为 <span class="math">\(x_P = x_Q\)</span>）：</p>
-<div class="math">
+<p>结果 <span class="math notranslate nohighlight">\(P + Q = (1, -2)\)</span> ，和 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=-1&amp;py=4&amp;qx=1&amp;qy=2">可视化工具</a> 给出的一样。</p>
+<p><span class="math notranslate nohighlight">\(P = Q\)</span> <strong>的情况需要特殊处理：</strong> 计算 <span class="math notranslate nohighlight">\(x_R\)</span> 和 <span class="math notranslate nohighlight">\(y_R\)</span> 的公式不变，但是斜率的公式需要修改使用以下公式（因为 <span class="math notranslate nohighlight">\(x_P = x_Q\)</span>）：</p>
+<div class="math notranslate nohighlight">
 \[m = \frac{3x_P^2 + a}{2y_P}\]</div>
 <p>此时，斜率 m 是下面这个公式的一阶导数：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[y_P = \pm \sqrt{x_P^3 + ax_P + b}\]</div>
-<p>使用 <span class="math">\(P = Q = (1, 2)\)</span> 验证一下：</p>
-<div class="math">
+<p>使用 <span class="math notranslate nohighlight">\(P = Q = (1, 2)\)</span> 验证一下：</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rcl}
     m &amp; = &amp; \frac{3x_P^2 + a}{2 y_P} = \frac{3 \cdot 1^2 - 7}{2 \cdot 2} = -1 \\
     x_R &amp; = &amp; m^2 - x_P - x_Q = (-1)^2 - 1 - 1 = -1 \\
     y_R &amp; = &amp; y_P + m(x_R - x_P) = 2 + (-1) \cdot (-1 - 1) = 4
 \end{array}\end{split}\]</div>
-<p>结果： <span class="math">\(P + P = -R = (-1,-4)\)</span> ，<a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=1&amp;py=2&amp;qx=1&amp;qy=2">正确</a> ！</p>
-</div>
-<div class="section" id="cheng-fa-scalar-multiplication">
+<p>结果： <span class="math notranslate nohighlight">\(P + P = -R = (-1,-4)\)</span> ，<a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=1&amp;py=2&amp;qx=1&amp;qy=2">正确</a> ！</p>
+</section>
+<section id="cheng-fa-scalar-multiplication">
 <h3>乘法（Scalar multiplication）<a class="headerlink" href="#cheng-fa-scalar-multiplication" title="Permalink to this headline">¶</a></h3>
 <p>除了加法之外，我们可以再定义一个运算：乘法。</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[nP = \underbrace{P + P + \cdots + P}_{n\ \text{times}}\]</div>
-<p>这里，<span class="math">\(n\)</span> 是一个自然数。 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-mul.html">乘法可视化计算工具</a> 。</p>
-<p>从乘法定义来看，计算 <span class="math">\(nP\)</span> 需要进行 <span class="math">\(n\)</span> 次加法运算。假如 <span class="math">\(n\)</span> 为 <span class="math">\(k\)</span> bit，则计算复杂度为： <span class="math">\(O(2^k)\)</span> ，性能不好，还好乘法存在不少快速算法。</p>
-<p><strong>double and add</strong> 就是其中算法之一。这个算法的原理可以用一个例子来解释清楚。令 <span class="math">\(n = 151\)</span> ，它的二进制表达形式为： <span class="math">\(10010111_2\)</span> ，这个二进制形式可以进一步用一系列 <em>2的幂(powers of two)</em> 的和来表示：</p>
-<div class="math">
+<p>这里，<span class="math notranslate nohighlight">\(n\)</span> 是一个自然数。 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-mul.html">乘法可视化计算工具</a> 。</p>
+<p>从乘法定义来看，计算 <span class="math notranslate nohighlight">\(nP\)</span> 需要进行 <span class="math notranslate nohighlight">\(n\)</span> 次加法运算。假如 <span class="math notranslate nohighlight">\(n\)</span> 为 <span class="math notranslate nohighlight">\(k\)</span> bit，则计算复杂度为： <span class="math notranslate nohighlight">\(O(2^k)\)</span> ，性能不好，还好乘法存在不少快速算法。</p>
+<p><strong>double and add</strong> 就是其中算法之一。这个算法的原理可以用一个例子来解释清楚。令 <span class="math notranslate nohighlight">\(n = 151\)</span> ，它的二进制表达形式为： <span class="math notranslate nohighlight">\(10010111_2\)</span> ，这个二进制形式可以进一步用一系列 <em>2的幂(powers of two)</em> 的和来表示：</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rcl}
     151 &amp; = &amp; 1 \cdot 2^7 + 0 \cdot 2^6 + 0 \cdot 2^5 + 1 \cdot 2^4 + 0 \cdot 2^3 + 1 \cdot 2^2 + 1 \cdot 2^1 + 1 \cdot 2^0 \\
     &amp; = &amp; 2^7 + 2^4 + 2^2 + 2^1 + 2^0
 \end{array}\end{split}\]</div>
-<p>因此 <span class="math">\(151 \cdot P\)</span> 可以写成：</p>
-<div class="math">
+<p>因此 <span class="math notranslate nohighlight">\(151 \cdot P\)</span> 可以写成：</p>
+<div class="math notranslate nohighlight">
 \[151 \cdot P = 2^7 P + 2^4 P + 2^2 P + 2^1 P + 2^0 P\]</div>
 <p>最后，double and add 算法的计算步骤如下：</p>
 <ul class="simple">
-<li>取 <span class="math">\(P\)</span> 。</li>
-<li>计算（Double） <span class="math">\(2P = P + P\)</span> 。</li>
-<li>将 <span class="math">\(2P\)</span> 和 <span class="math">\(P\)</span> 相加得到 <span class="math">\(2^1P + 2^0P\)</span> 的结果。</li>
-<li>计算 <span class="math">\(2^2P = 2P + 2P\)</span> 。</li>
-<li>将 <span class="math">\(2^2P\)</span> 和前面的结果相加得到 <span class="math">\(2^2P + 2^1P + 2^0P\)</span> 的结果。</li>
-<li>计算 <span class="math">\(2^3P = 2^2P + 2^2P\)</span> 。</li>
-<li>计算 <span class="math">\(2^4P = 2^3P + 2^3P\)</span> 。</li>
-<li>将 <span class="math">\(2^4P\)</span> 和前面的结果相加得到 <span class="math">\(2^4P + 2^2P + 21^P + 2^0P\)</span> 的结果。</li>
-<li>……</li>
+<li><p>取 <span class="math notranslate nohighlight">\(P\)</span> 。</p></li>
+<li><p>计算（Double） <span class="math notranslate nohighlight">\(2P = P + P\)</span> 。</p></li>
+<li><p>将 <span class="math notranslate nohighlight">\(2P\)</span> 和 <span class="math notranslate nohighlight">\(P\)</span> 相加得到 <span class="math notranslate nohighlight">\(2^1P + 2^0P\)</span> 的结果。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(2^2P = 2P + 2P\)</span> 。</p></li>
+<li><p>将 <span class="math notranslate nohighlight">\(2^2P\)</span> 和前面的结果相加得到 <span class="math notranslate nohighlight">\(2^2P + 2^1P + 2^0P\)</span> 的结果。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(2^3P = 2^2P + 2^2P\)</span> 。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(2^4P = 2^3P + 2^3P\)</span> 。</p></li>
+<li><p>将 <span class="math notranslate nohighlight">\(2^4P\)</span> 和前面的结果相加得到 <span class="math notranslate nohighlight">\(2^4P + 2^2P + 21^P + 2^0P\)</span> 的结果。</p></li>
+<li><p>……</p></li>
 </ul>
-<p>最终我们通过 7 次 Double 和 4 次加运算就得到了 <span class="math">\(151 \cdot P\)</span> 的结果。</p>
+<p>最终我们通过 7 次 Double 和 4 次加运算就得到了 <span class="math notranslate nohighlight">\(151 \cdot P\)</span> 的结果。</p>
 <p>如果上面的描述不够清晰，下面是该算法的 Python 代码实现：</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">bits</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">bits</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Generates the binary digits of n, starting</span>
 <span class="sd">    from the least significant bit.</span>
@@ -224,45 +216,42 @@
     <span class="k">return</span> <span class="n">result</span>
 </pre></div>
 </div>
-<p>如果 Double 和加法的复杂度是 <span class="math">\(O(1)\)</span> ，那么本算法的复杂度就是 <span class="math">\(O(\log n)\)</span> （或者用 n 的 bit 长度表示的话： <span class="math">\(O(k)\)</span> ），性能很不错，比一开始 <span class="math">\(O(n)\)</span> 的复杂度好多了。</p>
-</div>
-<div class="section" id="dui-shu-logarithm">
+<p>如果 Double 和加法的复杂度是 <span class="math notranslate nohighlight">\(O(1)\)</span> ，那么本算法的复杂度就是 <span class="math notranslate nohighlight">\(O(\log n)\)</span> （或者用 n 的 bit 长度表示的话： <span class="math notranslate nohighlight">\(O(k)\)</span> ），性能很不错，比一开始 <span class="math notranslate nohighlight">\(O(n)\)</span> 的复杂度好多了。</p>
+</section>
+<section id="dui-shu-logarithm">
 <h3>对数（Logarithm）<a class="headerlink" href="#dui-shu-logarithm" title="Permalink to this headline">¶</a></h3>
-<p>给定 <span class="math">\(n\)</span> 和 <span class="math">\(P\)</span> ，我们有了一个算法可以在多项式时间内计算得到 <span class="math">\(Q = nP\)</span> 。那么反过来，如果我们知道 <span class="math">\(Q\)</span> 和 <span class="math">\(P\)</span> 需要计算出 <span class="math">\(n\)</span> 呢？这个问题被称作 <strong>对数问题</strong> ，称其为“对数”而不是“除”主要是为了和其它加密系统一致（这些系统里乘法对应的是幂 exponentiation）。</p>
-<p>对数问题目前没有比较高效（easy）的解决算法，当然通过 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-mul.html?a=-3&amp;b=1&amp;px=0&amp;py=1">摸索</a> 我们也能看到一些模式（pattern）。比如，曲线 <span class="math">\(y^2 = x^3 - 3x +1\)</span> 和点 <span class="math">\(P = (0, 1)\)</span> ，可以看到，当 <span class="math">\(n\)</span> 是奇数时，<span class="math">\(nP\)</span> 总是落在左边的曲线上，当 <span class="math">\(n\)</span> 是偶数时，<span class="math">\(nP\)</span> 落在右边的曲线上。通过不断的实验，我们也许可以发现更多的模式，这些模式可能最终可以帮我们找到一个解决对数问题的高效算法。</p>
+<p>给定 <span class="math notranslate nohighlight">\(n\)</span> 和 <span class="math notranslate nohighlight">\(P\)</span> ，我们有了一个算法可以在多项式时间内计算得到 <span class="math notranslate nohighlight">\(Q = nP\)</span> 。那么反过来，如果我们知道 <span class="math notranslate nohighlight">\(Q\)</span> 和 <span class="math notranslate nohighlight">\(P\)</span> 需要计算出 <span class="math notranslate nohighlight">\(n\)</span> 呢？这个问题被称作 <strong>对数问题</strong> ，称其为“对数”而不是“除”主要是为了和其它加密系统一致（这些系统里乘法对应的是幂 exponentiation）。</p>
+<p>对数问题目前没有比较高效（easy）的解决算法，当然通过 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-mul.html?a=-3&amp;b=1&amp;px=0&amp;py=1">摸索</a> 我们也能看到一些模式（pattern）。比如，曲线 <span class="math notranslate nohighlight">\(y^2 = x^3 - 3x +1\)</span> 和点 <span class="math notranslate nohighlight">\(P = (0, 1)\)</span> ，可以看到，当 <span class="math notranslate nohighlight">\(n\)</span> 是奇数时，<span class="math notranslate nohighlight">\(nP\)</span> 总是落在左边的曲线上，当 <span class="math notranslate nohighlight">\(n\)</span> 是偶数时，<span class="math notranslate nohighlight">\(nP\)</span> 落在右边的曲线上。通过不断的实验，我们也许可以发现更多的模式，这些模式可能最终可以帮我们找到一个解决对数问题的高效算法。</p>
 <p>但是，对数问题中有一类 <em>离散</em> 对数问题，我们将在下文中看到，当我们缩小曲线的值域， <strong>曲线上的乘法还是可以高效运算，但是其逆运算，也就是离散对数运算变得非常的困难（hard）</strong>。这种不对称（duality）即椭圆曲线加密的核心。</p>
-</div>
-</div>
-<div class="section" id="you-xian-yu-yu-li-san-dui-shu-wen-ti">
+</section>
+</section>
+<section id="you-xian-yu-yu-li-san-dui-shu-wen-ti">
 <h2>有限域与离散对数问题<a class="headerlink" href="#you-xian-yu-yu-li-san-dui-shu-wen-ti" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="zheng-shu-dui-p-qu-mo-you-xian-yu-the-field-of-integers-modulo-p">
+<section id="zheng-shu-dui-p-qu-mo-you-xian-yu-the-field-of-integers-modulo-p">
 <h3>“整数对 p 取模“有限域（The field of integers modulo p）<a class="headerlink" href="#zheng-shu-dui-p-qu-mo-you-xian-yu-the-field-of-integers-modulo-p" title="Permalink to this headline">¶</a></h3>
-<p>有限域是什么？首先，它是一个包含有限个元素的集合。有限域最常见的例子是当 p 为素数时，整数对 p 取模，一般使用 <span class="math">\(\mathbb{Z}/p\)</span>, <span class="math">\(GF(p)\)</span> 或者 <span class="math">\(\mathbb{F}_p\)</span> 表示，下文中我们使用最后一种表示这个有限域。</p>
-<p>有限域上定义了加法（+）和乘法（·）两种运算，运算满足封闭性、结合性和交换性。存在唯一的单位元（identity element），域中的每个元素存在唯一的逆元（inverse element）。最后，乘法对加法满足分配律（distributive）： <span class="math">\(x \cdot (y + z) = x \cdot y + x \cdot z\)</span> 。</p>
-<p>整数对 p 取模有限域中包含了从 <span class="math">\(0\)</span> 到 <span class="math">\(p - 1\)</span> 的所有整数，加法和乘法同 <a class="reference external" href="http://en.wikipedia.org/wiki/Modular_arithmetic">模运算（modular arithmetic）</a> ，下面是 <span class="math">\(\mathbb{F}_{23}\)</span> 的运算示例：</p>
+<p>有限域是什么？首先，它是一个包含有限个元素的集合。有限域最常见的例子是当 p 为素数时，整数对 p 取模，一般使用 <span class="math notranslate nohighlight">\(\mathbb{Z}/p\)</span>, <span class="math notranslate nohighlight">\(GF(p)\)</span> 或者 <span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 表示，下文中我们使用最后一种表示这个有限域。</p>
+<p>有限域上定义了加法（+）和乘法（·）两种运算，运算满足封闭性、结合性和交换性。存在唯一的单位元（identity element），域中的每个元素存在唯一的逆元（inverse element）。最后，乘法对加法满足分配律（distributive）： <span class="math notranslate nohighlight">\(x \cdot (y + z) = x \cdot y + x \cdot z\)</span> 。</p>
+<p>整数对 p 取模有限域中包含了从 <span class="math notranslate nohighlight">\(0\)</span> 到 <span class="math notranslate nohighlight">\(p - 1\)</span> 的所有整数，加法和乘法同 <a class="reference external" href="http://en.wikipedia.org/wiki/Modular_arithmetic">模运算（modular arithmetic）</a> ，下面是 <span class="math notranslate nohighlight">\(\mathbb{F}_{23}\)</span> 的运算示例：</p>
 <ul>
-<li><p class="first">加： <span class="math">\((18 + 9) \bmod 23 = 4\)</span></p>
+<li><p>加： <span class="math notranslate nohighlight">\((18 + 9) \bmod 23 = 4\)</span></p></li>
+<li><p>减： <span class="math notranslate nohighlight">\((7 - 14) \bmod 23 = 16\)</span></p></li>
+<li><p>乘： <span class="math notranslate nohighlight">\((4 \cdot 7) \bmod 23 = 5\)</span></p></li>
+<li><p>加法逆元（Additive inverse）： <span class="math notranslate nohighlight">\(-5 \bmod 23 = 18\)</span></p>
+<p><span class="math notranslate nohighlight">\((5 + (-5)) \bmod 23 = (5 + 18) \bmod 23 = 0\)</span> ，正确。</p>
 </li>
-<li><p class="first">减： <span class="math">\((7 - 14) \bmod 23 = 16\)</span></p>
-</li>
-<li><p class="first">乘： <span class="math">\((4 \cdot 7) \bmod 23 = 5\)</span></p>
-</li>
-<li><p class="first">加法逆元（Additive inverse）： <span class="math">\(-5 \bmod 23 = 18\)</span></p>
-<p><span class="math">\((5 + (-5)) \bmod 23 = (5 + 18) \bmod 23 = 0\)</span> ，正确。</p>
-</li>
-<li><p class="first">乘法逆元（Multiplicative inverse）： <span class="math">\(9^{-1} \bmod 23 = 18\)</span></p>
-<p><span class="math">\(9 \cdot 9^{-1} \bmod 23 = 9 \cdot 18 \bmod 23 = 1\)</span> ，正确。</p>
+<li><p>乘法逆元（Multiplicative inverse）： <span class="math notranslate nohighlight">\(9^{-1} \bmod 23 = 18\)</span></p>
+<p><span class="math notranslate nohighlight">\(9 \cdot 9^{-1} \bmod 23 = 9 \cdot 18 \bmod 23 = 1\)</span> ，正确。</p>
 </li>
 </ul>
 <p>如果上面的公式看不太明白，可以看下可汗学院的这个教程： <a class="reference external" href="https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/what-is-modular-arithmetic">What is Modular Arithmetic</a> 。</p>
-<p>注意： <span class="math">\(p\)</span> 必须是一个素数。比如整数对 4 取模构成的集合就不是一个域：因为集合里的元素 2 没有乘法逆元，也就是说 <span class="math">\(2 \cdot x \bmod 4 = 1\)</span> 无解。</p>
-</div>
-<div class="section" id="mo-chu-division-modulo-p">
+<p>注意： <span class="math notranslate nohighlight">\(p\)</span> 必须是一个素数。比如整数对 4 取模构成的集合就不是一个域：因为集合里的元素 2 没有乘法逆元，也就是说 <span class="math notranslate nohighlight">\(2 \cdot x \bmod 4 = 1\)</span> 无解。</p>
+</section>
+<section id="mo-chu-division-modulo-p">
 <h3>模除(Division modulo p)<a class="headerlink" href="#mo-chu-division-modulo-p" title="Permalink to this headline">¶</a></h3>
-<p>在 <span class="math">\(\mathbb{F}_p\)</span> 中 <span class="math">\(x/y = x \cdot y^{-1}\)</span> ，也就是说，<span class="math">\(x\)</span> 除 <span class="math">\(y\)</span> 等价于 <span class="math">\(x\)</span> 乘上 <span class="math">\(y\)</span> 的乘法逆元。</p>
-<p>乘法逆元可以使用 <a class="reference external" href="http://en.wikipedia.org/wiki/Extended_Euclidean_algorithm">扩展欧几里得算法（extended Euclidean algorithm）</a> 很容易的计算得出，复杂度最差为 <span class="math">\(O(\log p)\)</span>，用 p 的 bit 长度表示的话为 <span class="math">\(O(k)\)</span> 。</p>
+<p>在 <span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 中 <span class="math notranslate nohighlight">\(x/y = x \cdot y^{-1}\)</span> ，也就是说，<span class="math notranslate nohighlight">\(x\)</span> 除 <span class="math notranslate nohighlight">\(y\)</span> 等价于 <span class="math notranslate nohighlight">\(x\)</span> 乘上 <span class="math notranslate nohighlight">\(y\)</span> 的乘法逆元。</p>
+<p>乘法逆元可以使用 <a class="reference external" href="http://en.wikipedia.org/wiki/Extended_Euclidean_algorithm">扩展欧几里得算法（extended Euclidean algorithm）</a> 很容易的计算得出，复杂度最差为 <span class="math notranslate nohighlight">\(O(\log p)\)</span>，用 p 的 bit 长度表示的话为 <span class="math notranslate nohighlight">\(O(k)\)</span> 。</p>
 <p>这个算法的细节跟本文主题无关，这里就不展开叙述了，下面是这个算法的 Python 语言实现，有兴趣的可以看看：</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">extended_euclidean_algorithm</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">extended_euclidean_algorithm</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns a three-tuple (gcd, x, y) such that</span>
 <span class="sd">    a * x + b * y == gcd, where gcd is the greatest</span>
@@ -304,258 +293,262 @@
         <span class="k">return</span> <span class="n">x</span> <span class="o">%</span> <span class="n">p</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="shang-di-tuo-yuan-qu-xian-elliptic-curves-in">
-<h3><span class="math">\(\mathbb{F}_p\)</span> 上的椭圆曲线（Elliptic curves in <span class="math">\(\mathbb{F}_p\)</span>）<a class="headerlink" href="#shang-di-tuo-yuan-qu-xian-elliptic-curves-in" title="Permalink to this headline">¶</a></h3>
-<p>下面我们将椭圆曲线限定在 <span class="math">\(\mathbb{F}_p\)</span> 上，前文提到实数域上的椭圆曲线公式如下：</p>
-<div class="math">
+</section>
+<section id="mathbb-f-p-shang-de-tuo-yuan-qu-xian-elliptic-curves-in-mathbb-f-p">
+<h3><span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 上的椭圆曲线（Elliptic curves in <span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span>）<a class="headerlink" href="#mathbb-f-p-shang-de-tuo-yuan-qu-xian-elliptic-curves-in-mathbb-f-p" title="Permalink to this headline">¶</a></h3>
+<p>下面我们将椭圆曲线限定在 <span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 上，前文提到实数域上的椭圆曲线公式如下：</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rcl}
 \left\{(x, y) \in \mathbb{R}^2 \right. &amp; \left. | \right. &amp; \left. y^2 = x^3 + ax + b, \right. \\
 &amp; &amp; \left. 4a^3 + 27b^2 \ne 0\right\}\ \cup\ \left\{0\right\}
 \end{array}\end{split}\]</div>
 <p>限定之后，公式变为：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rcl}
 \left\{(x, y) \in (\mathbb{F}_p)^2 \right. &amp; \left. | \right. &amp; \left. y^2 \equiv x^3 + ax + b \bmod p, \right. \\
 &amp; &amp; \left. 4a^3 + 27b^2 \not\equiv 0 \bmod p \right\}\ \cup\ \left\{0\right\}
 \end{array}\end{split}\]</div>
-<p>其中 <span class="math">\(0\)</span> 依然是无穷远点，<span class="math">\(a\)</span> 和 <span class="math">\(b\)</span> 是 <span class="math">\(\mathbb{F}_p\)</span> 上的整数。</p>
-<div class="figure" id="id2">
+<p>其中 <span class="math notranslate nohighlight">\(0\)</span> 依然是无穷远点，<span class="math notranslate nohighlight">\(a\)</span> 和 <span class="math notranslate nohighlight">\(b\)</span> 是 <span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 上的整数。</p>
+<figure class="align-default" id="id2">
 <img alt="_images/elliptic-curves-mod-p.png" src="_images/elliptic-curves-mod-p.png" />
-<p class="caption"><span class="caption-text">曲线 <span class="math">\(y^2 \equiv x^3 - 7x + 10 (\bmod p)\)</span> ，<span class="math">\(p = 19, 97, 127, 487\)</span> 。每一个 x 对应两个点，并相对于 <span class="math">\(y = p/2\)</span> 对称。</span></p>
-</div>
-<p>之前连续的曲线现在变成了 <span class="math">\(xy\)</span> 平面上的离散点。我们可以证明，限定之后， <span class="math">\(\mathbb{F}_p\)</span> <strong>上的椭圆曲线依然构成一个阿贝尔群</strong>。</p>
-</div>
-<div class="section" id="qu-xian-shang-dian-di-jia-fa-point-addition">
-<h3>曲线上点的加法（Point addition）<a class="headerlink" href="#qu-xian-shang-dian-di-jia-fa-point-addition" title="Permalink to this headline">¶</a></h3>
-<p>我们需要稍微修改一下加法的定义，让其在 <span class="math">\(\mathbb{F}_p\)</span> 上可以正常工作。在实数域上，我们说三个在一条直线上的点的和为零（<span class="math">\(P + Q + R = 0\)</span>）。在 <span class="math">\(\mathbb{F}_p\)</span> 上同理，只是这里的直线和实数域上的直线不太一样。<span class="math">\(\mathbb{F}_p\)</span> 上的直线指的是满足 <span class="math">\(ax + by + c \equiv 0 (\bmod p)\)</span> 的所有点 <span class="math">\((x, y)\)</span> 的集合。</p>
+<figcaption>
+<p><span class="caption-text">曲线 <span class="math notranslate nohighlight">\(y^2 \equiv x^3 - 7x + 10 (\bmod p)\)</span> ，<span class="math notranslate nohighlight">\(p = 19, 97, 127, 487\)</span> 。每一个 x 对应两个点，并相对于 <span class="math notranslate nohighlight">\(y = p/2\)</span> 对称。</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>之前连续的曲线现在变成了 <span class="math notranslate nohighlight">\(xy\)</span> 平面上的离散点。我们可以证明，限定之后， <span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> <strong>上的椭圆曲线依然构成一个阿贝尔群</strong>。</p>
+</section>
+<section id="qu-xian-shang-dian-de-jia-fa-point-addition">
+<h3>曲线上点的加法（Point addition）<a class="headerlink" href="#qu-xian-shang-dian-de-jia-fa-point-addition" title="Permalink to this headline">¶</a></h3>
+<p>我们需要稍微修改一下加法的定义，让其在 <span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 上可以正常工作。在实数域上，我们说三个在一条直线上的点的和为零（<span class="math notranslate nohighlight">\(P + Q + R = 0\)</span>）。在 <span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 上同理，只是这里的直线和实数域上的直线不太一样。<span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 上的直线指的是满足 <span class="math notranslate nohighlight">\(ax + by + c \equiv 0 (\bmod p)\)</span> 的所有点 <span class="math notranslate nohighlight">\((x, y)\)</span> 的集合。</p>
 <img alt="_images/point-addition-mod-p.png" src="_images/point-addition-mod-p.png" />
 <p>曲线构成群，所以曲线上点的加法依然满足前面说的各种群特性。</p>
 <ul class="simple">
-<li><span class="math">\(Q + 0 = 0 + Q = Q\)</span> (根据单位元的定义）。</li>
-<li>非无穷元点 <span class="math">\(Q\)</span> 的逆元 <span class="math">\(-Q = (x_Q, -y_Q \bmod p)\)</span> 。比如， <span class="math">\(\mathbb{F}_{29}\)</span> 上的曲线上有一个点 <span class="math">\(Q = (2,5)\)</span> ，那么其逆元 <span class="math">\(-Q = (2, -5 \bmod 29) = (2,24)\)</span> 。</li>
-<li><span class="math">\(P + (-P) = 0\)</span> （根据逆元的定义）。</li>
+<li><p><span class="math notranslate nohighlight">\(Q + 0 = 0 + Q = Q\)</span> (根据单位元的定义）。</p></li>
+<li><p>非无穷元点 <span class="math notranslate nohighlight">\(Q\)</span> 的逆元 <span class="math notranslate nohighlight">\(-Q = (x_Q, -y_Q \bmod p)\)</span> 。比如， <span class="math notranslate nohighlight">\(\mathbb{F}_{29}\)</span> 上的曲线上有一个点 <span class="math notranslate nohighlight">\(Q = (2,5)\)</span> ，那么其逆元 <span class="math notranslate nohighlight">\(-Q = (2, -5 \bmod 29) = (2,24)\)</span> 。</p></li>
+<li><p><span class="math notranslate nohighlight">\(P + (-P) = 0\)</span> （根据逆元的定义）。</p></li>
 </ul>
-</div>
-<div class="section" id="dai-shu-jia-fa-algebraic-sum">
+</section>
+<section id="dai-shu-jia-fa-algebraic-sum">
 <h3>代数加法（Algebraic sum）<a class="headerlink" href="#dai-shu-jia-fa-algebraic-sum" title="Permalink to this headline">¶</a></h3>
-<p>公式和前面实数域上的代数加法一样，只是每个公式的最后需要追加一个“<span class="math">\(\bmod p\)</span>”。给定 <span class="math">\(P = (x_P, y_P)\)</span>, <span class="math">\(Q = (x_Q, y_Q)\)</span> 和 <span class="math">\(R = (x_R, y_R)\)</span> ，我们如下计算 <span class="math">\(P + Q = -R\)</span> ：</p>
-<div class="math">
+<p>公式和前面实数域上的代数加法一样，只是每个公式的最后需要追加一个“<span class="math notranslate nohighlight">\(\bmod p\)</span>”。给定 <span class="math notranslate nohighlight">\(P = (x_P, y_P)\)</span>, <span class="math notranslate nohighlight">\(Q = (x_Q, y_Q)\)</span> 和 <span class="math notranslate nohighlight">\(R = (x_R, y_R)\)</span> ，我们如下计算 <span class="math notranslate nohighlight">\(P + Q = -R\)</span> ：</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rcl}
 x_R &amp; = &amp; (m^2 - x_P - x_Q) \bmod{p} \\
 y_R &amp; = &amp; [y_P + m(x_R - x_P)] \bmod{p} \\
 &amp; = &amp; [y_Q + m(x_R - x_Q)] \bmod{p}
 \end{array}\end{split}\]</div>
-<p>如果 <span class="math">\(P \ne Q\)</span>，斜率 <span class="math">\(m\)</span> 为：</p>
-<div class="math">
+<p>如果 <span class="math notranslate nohighlight">\(P \ne Q\)</span>，斜率 <span class="math notranslate nohighlight">\(m\)</span> 为：</p>
+<div class="math notranslate nohighlight">
 \[m = (y_P - y_Q)(x_P - x_Q)^{-1} \bmod p\]</div>
 <p>否则：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[m = (3 x_P^2 + a)(2 y_P)^{-1} \bmod{p}\]</div>
 <p><a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/modk-add.html">离散点加法可视化工具</a></p>
-</div>
-<div class="section" id="tuo-yuan-qu-xian-qun-di-xu-the-order-of-an-elliptic-curve-group">
-<h3>椭圆曲线群的序（The order of an elliptic curve group）<a class="headerlink" href="#tuo-yuan-qu-xian-qun-di-xu-the-order-of-an-elliptic-curve-group" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="tuo-yuan-qu-xian-qun-de-xu-the-order-of-an-elliptic-curve-group">
+<h3>椭圆曲线群的序（The order of an elliptic curve group）<a class="headerlink" href="#tuo-yuan-qu-xian-qun-de-xu-the-order-of-an-elliptic-curve-group" title="Permalink to this headline">¶</a></h3>
 <p>有限域上的椭圆曲线群的集合中包含有限个数的点，这些点的个数称为该群的序（order）。</p>
-<p>我们可以从 <span class="math">\(0\)</span> 到 <span class="math">\(p - 1\)</span> 遍历 <span class="math">\(x\)</span> 的所有可能值来计算得到点的个数，计算复杂度为 <span class="math">\(O(p)\)</span> ，如果 <span class="math">\(p\)</span> 非常大的话，性能会很低下。</p>
+<p>我们可以从 <span class="math notranslate nohighlight">\(0\)</span> 到 <span class="math notranslate nohighlight">\(p - 1\)</span> 遍历 <span class="math notranslate nohighlight">\(x\)</span> 的所有可能值来计算得到点的个数，计算复杂度为 <span class="math notranslate nohighlight">\(O(p)\)</span> ，如果 <span class="math notranslate nohighlight">\(p\)</span> 非常大的话，性能会很低下。</p>
 <p>还好，存在高效算法 <a class="reference external" href="https://en.wikipedia.org/wiki/Schoof%27s_algorithm">Schoof’s algorithm</a> 可以快速计算一个群的序。具体细节我们可以不用关注，只需要知道其可以多项式时间内计算完成就行。</p>
-</div>
-<div class="section" id="cheng-fa-he-xun-huan-zi-qun-scalar-multiplication-and-cyclic-subgroups">
+</section>
+<section id="cheng-fa-he-xun-huan-zi-qun-scalar-multiplication-and-cyclic-subgroups">
 <h3>乘法和循环子群（Scalar multiplication and cyclic subgroups）<a class="headerlink" href="#cheng-fa-he-xun-huan-zi-qun-scalar-multiplication-and-cyclic-subgroups" title="Permalink to this headline">¶</a></h3>
 <p>有限域上的乘法和实数域上一样，还是：</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[nP = \underbrace{P + P + \cdots + P}_{n\ \text{times}}\]</div>
 <p>我们依然可以使用 double and add 算法来高效完成乘法运算。</p>
 <p><a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/modk-mul.html">乘法可视化演示工具</a></p>
-<p><span class="math">\(\mathbb{F}_p\)</span> 上的椭圆曲线上的点的乘法有一个非常有意思的特性。以曲线 <span class="math">\(y^2 \equiv x^3 + 2x + 3 (\bmod 97)\)</span> 和点 <span class="math">\(P = (3, 6)\)</span> 为例：</p>
+<p><span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 上的椭圆曲线上的点的乘法有一个非常有意思的特性。以曲线 <span class="math notranslate nohighlight">\(y^2 \equiv x^3 + 2x + 3 (\bmod 97)\)</span> 和点 <span class="math notranslate nohighlight">\(P = (3, 6)\)</span> 为例：</p>
 <img alt="_images/cyclic-subgroup.png" src="_images/cyclic-subgroup.png" />
 <ul class="simple">
-<li><span class="math">\(0P = 0\)</span></li>
-<li><span class="math">\(1P = (3, 6)\)</span></li>
-<li><span class="math">\(2P = (80, 10)\)</span></li>
-<li><span class="math">\(3P = (80, 87)\)</span></li>
-<li><span class="math">\(4P = (3, 91)\)</span></li>
-<li><span class="math">\(5P = 0\)</span></li>
-<li><span class="math">\(6P = (3, 6)\)</span></li>
-<li><span class="math">\(7P = (80, 10)\)</span></li>
-<li><span class="math">\(8P = (80, 87)\)</span></li>
-<li><span class="math">\(9P = (3, 91)\)</span></li>
-<li>……</li>
+<li><p><span class="math notranslate nohighlight">\(0P = 0\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(1P = (3, 6)\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(2P = (80, 10)\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(3P = (80, 87)\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(4P = (3, 91)\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(5P = 0\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(6P = (3, 6)\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(7P = (80, 10)\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(8P = (80, 87)\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(9P = (3, 91)\)</span></p></li>
+<li><p>……</p></li>
 </ul>
-<p>首先，<span class="math">\(nP\)</span> 所有可能的值只有 5 个。第二，这些值循环出现。所以，对于所有的整数 <span class="math">\(k\)</span> ：</p>
+<p>首先，<span class="math notranslate nohighlight">\(nP\)</span> 所有可能的值只有 5 个。第二，这些值循环出现。所以，对于所有的整数 <span class="math notranslate nohighlight">\(k\)</span> ：</p>
 <ul class="simple">
-<li><span class="math">\(5kP = 0\)</span></li>
-<li><span class="math">\((5k + 1)P = P\)</span></li>
-<li><span class="math">\((5k + 2)P = 2P\)</span></li>
-<li><span class="math">\((5k + 3)P = 3P\)</span></li>
-<li><span class="math">\((5k + 4)P = 4P\)</span></li>
+<li><p><span class="math notranslate nohighlight">\(5kP = 0\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\((5k + 1)P = P\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\((5k + 2)P = 2P\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\((5k + 3)P = 3P\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\((5k + 4)P = 4P\)</span></p></li>
 </ul>
-<p>使用取模运算我们可以将上面 5 个公式进一步简化为： <span class="math">\(kP = (k \bmod 5)P\)</span> 。</p>
-<p>不仅如此，我们还可以证明这 5 个点的加法是封闭的。也就是说 <span class="math">\(0\)</span> 、<span class="math">\(P\)</span>、<span class="math">\(2P\)</span>、<span class="math">\(3P\)</span>、<span class="math">\(4P\)</span> 任意相加，最终的结果还是这 5 个点之一。</p>
-<p>以上规律并不限于 <span class="math">\(P = (3, 6)\)</span> 这个点，而是对曲线上所有的点都成立。假设 <span class="math">\(P\)</span> 是曲线上任意一点：</p>
-<div class="math">
+<p>使用取模运算我们可以将上面 5 个公式进一步简化为： <span class="math notranslate nohighlight">\(kP = (k \bmod 5)P\)</span> 。</p>
+<p>不仅如此，我们还可以证明这 5 个点的加法是封闭的。也就是说 <span class="math notranslate nohighlight">\(0\)</span> 、<span class="math notranslate nohighlight">\(P\)</span>、<span class="math notranslate nohighlight">\(2P\)</span>、<span class="math notranslate nohighlight">\(3P\)</span>、<span class="math notranslate nohighlight">\(4P\)</span> 任意相加，最终的结果还是这 5 个点之一。</p>
+<p>以上规律并不限于 <span class="math notranslate nohighlight">\(P = (3, 6)\)</span> 这个点，而是对曲线上所有的点都成立。假设 <span class="math notranslate nohighlight">\(P\)</span> 是曲线上任意一点：</p>
+<div class="math notranslate nohighlight">
 \[nP + mP = \underbrace{P + \cdots + P}_{n\ \text{times}} + \underbrace{P + \cdots + P}_{m\ \text{times}} = (n + m)P\]</div>
-<p>也就是说：两个 <span class="math">\(P\)</span> 的倍乘数相加，它们的和还是 <span class="math">\(P\)</span> 的倍乘数。也就证明了 <span class="math">\(nP\)</span> 的可能值构成的集合是一个椭圆曲线的循环子群。</p>
-<p>通过点 <span class="math">\(P\)</span> 我们可以获得这个循环子群里的所有元素，所以 <span class="math">\(P\)</span> 又被称为这个循环子群的 <strong>生成元（generator）</strong>  或者 <strong>基点（base point）</strong> 。</p>
+<p>也就是说：两个 <span class="math notranslate nohighlight">\(P\)</span> 的倍乘数相加，它们的和还是 <span class="math notranslate nohighlight">\(P\)</span> 的倍乘数。也就证明了 <span class="math notranslate nohighlight">\(nP\)</span> 的可能值构成的集合是一个椭圆曲线的循环子群。</p>
+<p>通过点 <span class="math notranslate nohighlight">\(P\)</span> 我们可以获得这个循环子群里的所有元素，所以 <span class="math notranslate nohighlight">\(P\)</span> 又被称为这个循环子群的 <strong>生成元（generator）</strong>  或者 <strong>基点（base point）</strong> 。</p>
 <p>循环子群是椭圆曲线加密以及其它一些加密系统的基石。</p>
-</div>
-<div class="section" id="zi-qun-di-xu-subgroup-order">
-<h3>子群的序（Subgroup order）<a class="headerlink" href="#zi-qun-di-xu-subgroup-order" title="Permalink to this headline">¶</a></h3>
-<p>Schoof’s algorithm 只能计算椭圆曲线群的序，不能用于计算点 <span class="math">\(P\)</span> 生成的子群的序，那么这个子群的序怎么来计算呢？</p>
+</section>
+<section id="zi-qun-de-xu-subgroup-order">
+<h3>子群的序（Subgroup order）<a class="headerlink" href="#zi-qun-de-xu-subgroup-order" title="Permalink to this headline">¶</a></h3>
+<p>Schoof’s algorithm 只能计算椭圆曲线群的序，不能用于计算点 <span class="math notranslate nohighlight">\(P\)</span> 生成的子群的序，那么这个子群的序怎么来计算呢？</p>
 <p>在解决这个问题之前，我们先做一点铺垫：</p>
 <ul class="simple">
-<li>前面，我们定义一个群的序为这个群里元素的个数。不过对于循环子群，我们可以给出另外一个等价的定义：<span class="math">\(P\)</span> 的序为满足 <span class="math">\(nP = 0\)</span> 的最小正整数 <span class="math">\(n\)</span> 。例如前面包含 5 个点的子群，我们可以看到 <span class="math">\(5P = 0\)</span> 。</li>
-<li>根据 <a class="reference external" href="https://en.wikipedia.org/wiki/Lagrange%27s_theorem_(group_theory)">拉格朗日定理（Lagrange’s theorem）</a> ，子群的序是其父群的一个约数（divisor）。也就是说，如果椭圆曲线群的序为 <span class="math">\(N\)</span>，子群的序为 <span class="math">\(n\)</span>，那么 <span class="math">\(n\)</span> 是 <span class="math">\(N\)</span> 的一个约数。</li>
+<li><p>前面，我们定义一个群的序为这个群里元素的个数。不过对于循环子群，我们可以给出另外一个等价的定义：<span class="math notranslate nohighlight">\(P\)</span> 的序为满足 <span class="math notranslate nohighlight">\(nP = 0\)</span> 的最小正整数 <span class="math notranslate nohighlight">\(n\)</span> 。例如前面包含 5 个点的子群，我们可以看到 <span class="math notranslate nohighlight">\(5P = 0\)</span> 。</p></li>
+<li><p>根据 <a class="reference external" href="https://en.wikipedia.org/wiki/Lagrange%27s_theorem_(group_theory)">拉格朗日定理（Lagrange’s theorem）</a> ，子群的序是其父群的一个约数（divisor）。也就是说，如果椭圆曲线群的序为 <span class="math notranslate nohighlight">\(N\)</span>，子群的序为 <span class="math notranslate nohighlight">\(n\)</span>，那么 <span class="math notranslate nohighlight">\(n\)</span> 是 <span class="math notranslate nohighlight">\(N\)</span> 的一个约数。</p></li>
 </ul>
 <p>综上，我们可以得到如下计算子群的序的算法：</p>
 <ol class="arabic simple">
-<li>使用 Schoof’s algorithm 计算得到椭圆曲线群的序 <span class="math">\(N\)</span>。</li>
-<li>找出 <span class="math">\(N\)</span> 的所有约数。</li>
-<li>对于 <span class="math">\(N\)</span> 的每一个约数 <span class="math">\(n\)</span>，计算 <span class="math">\(nP\)</span> 。</li>
-<li>满足 <span class="math">\(nP = 0\)</span> 的最小 <span class="math">\(n\)</span> ，就是基点为 <span class="math">\(P\)</span> 的子群的序。</li>
+<li><p>使用 Schoof’s algorithm 计算得到椭圆曲线群的序 <span class="math notranslate nohighlight">\(N\)</span>。</p></li>
+<li><p>找出 <span class="math notranslate nohighlight">\(N\)</span> 的所有约数。</p></li>
+<li><p>对于 <span class="math notranslate nohighlight">\(N\)</span> 的每一个约数 <span class="math notranslate nohighlight">\(n\)</span>，计算 <span class="math notranslate nohighlight">\(nP\)</span> 。</p></li>
+<li><p>满足 <span class="math notranslate nohighlight">\(nP = 0\)</span> 的最小 <span class="math notranslate nohighlight">\(n\)</span> ，就是基点为 <span class="math notranslate nohighlight">\(P\)</span> 的子群的序。</p></li>
 </ol>
-<p>例如，<span class="math">\(\mathbb{F}_{37}\)</span> 上的椭圆曲线群 <span class="math">\(y^2 = x^3 - x + 3\)</span> 的序为 <span class="math">\(N = 42\)</span>。那么它的子群的序可能是 <span class="math">\(n =\)</span> 1, 2, 3, 6, 7, 14, 21 或者 42。对于点 <span class="math">\(P = (2, 3)\)</span>，我们可以计算得到 <span class="math">\(P \ne 0\)</span>，<span class="math">\(2P \ne 0\)</span>，……，<span class="math">\(7P = 0\)</span>，所以，<span class="math">\(P\)</span> 的序为 <span class="math">\(n = 7\)</span> 。</p>
-<p>另外一个例子：<span class="math">\(\mathbb{F}_{29}\)</span> 上的椭圆曲线群 <span class="math">\(y^2 = x^3 - x + 3\)</span> 的序为 <span class="math">\(N = 37\)</span>，是一个素数，所以它的子群的序 <span class="math">\(n\)</span> 只能为 1 或者 37。当 <span class="math">\(n = 1\)</span> 时，子群里只有无穷远点，当 <span class="math">\(n = N\)</span> 时，子群包含了椭圆曲线群里的所有点。</p>
-</div>
-<div class="section" id="xun-zhao-ji-dian-finding-a-base-point">
+<p>例如，<span class="math notranslate nohighlight">\(\mathbb{F}_{37}\)</span> 上的椭圆曲线群 <span class="math notranslate nohighlight">\(y^2 = x^3 - x + 3\)</span> 的序为 <span class="math notranslate nohighlight">\(N = 42\)</span>。那么它的子群的序可能是 <span class="math notranslate nohighlight">\(n =\)</span> 1, 2, 3, 6, 7, 14, 21 或者 42。对于点 <span class="math notranslate nohighlight">\(P = (2, 3)\)</span>，我们可以计算得到 <span class="math notranslate nohighlight">\(P \ne 0\)</span>，<span class="math notranslate nohighlight">\(2P \ne 0\)</span>，……，<span class="math notranslate nohighlight">\(7P = 0\)</span>，所以，<span class="math notranslate nohighlight">\(P\)</span> 的序为 <span class="math notranslate nohighlight">\(n = 7\)</span> 。</p>
+<p>另外一个例子：<span class="math notranslate nohighlight">\(\mathbb{F}_{29}\)</span> 上的椭圆曲线群 <span class="math notranslate nohighlight">\(y^2 = x^3 - x + 3\)</span> 的序为 <span class="math notranslate nohighlight">\(N = 37\)</span>，是一个素数，所以它的子群的序 <span class="math notranslate nohighlight">\(n\)</span> 只能为 1 或者 37。当 <span class="math notranslate nohighlight">\(n = 1\)</span> 时，子群里只有无穷远点，当 <span class="math notranslate nohighlight">\(n = N\)</span> 时，子群包含了椭圆曲线群里的所有点。</p>
+</section>
+<section id="xun-zhao-ji-dian-finding-a-base-point">
 <h3>寻找基点（Finding a base point）<a class="headerlink" href="#xun-zhao-ji-dian-finding-a-base-point" title="Permalink to this headline">¶</a></h3>
-<p>对于椭圆曲线加密算法，我们需要一个序比较高的子群。具体来说，我们需要选择一个椭圆曲线，计算它的序 <span class="math">\(N\)</span>，选择 <span class="math">\(N\)</span> 的一个比较大的约数作为子群的序 <span class="math">\(n\)</span>，最后找到这个序对应的基点。这里我们不是先选基点再计算它的序，而是反过来：先选定序再寻找其对应的基点。那么在知道序的情况下如何找到其对应的基点呢？</p>
-<p>我们需要再引入一个概念。根据拉格朗日定理可知 <span class="math">\(h = N/n\)</span> <strong>必然是一个整数</strong> （<span class="math">\(n\)</span> 是 <span class="math">\(N\)</span> 的约数）。这个 <span class="math">\(h\)</span> 叫做 <strong>子群的 cofactor</strong> 。</p>
-<p>对于椭圆曲线上的任意点，都有 <span class="math">\(NP = 0\)</span>，因为 <span class="math">\(N\)</span> 是所以 <span class="math">\(n\)</span> 的公倍数，根据 cofactor 的定义，我们可以得到：</p>
-<div class="math">
+<p>对于椭圆曲线加密算法，我们需要一个序比较高的子群。具体来说，我们需要选择一个椭圆曲线，计算它的序 <span class="math notranslate nohighlight">\(N\)</span>，选择 <span class="math notranslate nohighlight">\(N\)</span> 的一个比较大的约数作为子群的序 <span class="math notranslate nohighlight">\(n\)</span>，最后找到这个序对应的基点。这里我们不是先选基点再计算它的序，而是反过来：先选定序再寻找其对应的基点。那么在知道序的情况下如何找到其对应的基点呢？</p>
+<p>我们需要再引入一个概念。根据拉格朗日定理可知 <span class="math notranslate nohighlight">\(h = N/n\)</span> <strong>必然是一个整数</strong> （<span class="math notranslate nohighlight">\(n\)</span> 是 <span class="math notranslate nohighlight">\(N\)</span> 的约数）。这个 <span class="math notranslate nohighlight">\(h\)</span> 叫做 <strong>子群的 cofactor</strong> 。</p>
+<p>对于椭圆曲线上的任意点，都有 <span class="math notranslate nohighlight">\(NP = 0\)</span>，因为 <span class="math notranslate nohighlight">\(N\)</span> 是所以 <span class="math notranslate nohighlight">\(n\)</span> 的公倍数，根据 cofactor 的定义，我们可以得到：</p>
+<div class="math notranslate nohighlight">
 \[n(hP) = 0\]</div>
-<p>假设 <span class="math">\(n\)</span> 是一个素数（具体理由后面会解释）。从上面的公式我们可以知道：点 <span class="math">\(G = hP\)</span> 生成一个序为 <span class="math">\(n\)</span> 的子群（除非 <span class="math">\(G = hP = 0\)</span>，它生成的群的序为 1）。</p>
+<p>假设 <span class="math notranslate nohighlight">\(n\)</span> 是一个素数（具体理由后面会解释）。从上面的公式我们可以知道：点 <span class="math notranslate nohighlight">\(G = hP\)</span> 生成一个序为 <span class="math notranslate nohighlight">\(n\)</span> 的子群（除非 <span class="math notranslate nohighlight">\(G = hP = 0\)</span>，它生成的群的序为 1）。</p>
 <p>据此，我们得到以下算法：</p>
 <ol class="arabic simple">
-<li>计算椭圆曲线的序 <span class="math">\(N\)</span> 。</li>
-<li>选择子群的序 <span class="math">\(n\)</span>， <span class="math">\(n\)</span> 是素数并且是 <span class="math">\(N\)</span> 的约数。</li>
-<li>计算 cofactor <span class="math">\(h = N/n\)</span>。</li>
-<li>取曲线上随机一点 <span class="math">\(P\)</span> 。</li>
-<li>计算 <span class="math">\(G = hP\)</span> 。</li>
-<li>如果 <span class="math">\(G\)</span> 是 <span class="math">\(0\)</span>，回第 4 步，否则 <span class="math">\(G\)</span> 就是我们要找的基点（序为 <span class="math">\(n\)</span>，cofactor 为 <span class="math">\(h\)</span> ）。</li>
+<li><p>计算椭圆曲线的序 <span class="math notranslate nohighlight">\(N\)</span> 。</p></li>
+<li><p>选择子群的序 <span class="math notranslate nohighlight">\(n\)</span>， <span class="math notranslate nohighlight">\(n\)</span> 是素数并且是 <span class="math notranslate nohighlight">\(N\)</span> 的约数。</p></li>
+<li><p>计算 cofactor <span class="math notranslate nohighlight">\(h = N/n\)</span>。</p></li>
+<li><p>取曲线上随机一点 <span class="math notranslate nohighlight">\(P\)</span> 。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(G = hP\)</span> 。</p></li>
+<li><p>如果 <span class="math notranslate nohighlight">\(G\)</span> 是 <span class="math notranslate nohighlight">\(0\)</span>，回第 4 步，否则 <span class="math notranslate nohighlight">\(G\)</span> 就是我们要找的基点（序为 <span class="math notranslate nohighlight">\(n\)</span>，cofactor 为 <span class="math notranslate nohighlight">\(h\)</span> ）。</p></li>
 </ol>
-<p>注意，算法可以工作的前提是 <span class="math">\(n\)</span> 是一个素数，如果不是，<span class="math">\(G\)</span> 的序可能是 <span class="math">\(n\)</span> 的一个约数。</p>
-</div>
-<div class="section" id="li-san-dui-shu-discrete-logarithm">
+<p>注意，算法可以工作的前提是 <span class="math notranslate nohighlight">\(n\)</span> 是一个素数，如果不是，<span class="math notranslate nohighlight">\(G\)</span> 的序可能是 <span class="math notranslate nohighlight">\(n\)</span> 的一个约数。</p>
+</section>
+<section id="li-san-dui-shu-discrete-logarithm">
 <h3>离散对数（Discrete logarithm）<a class="headerlink" href="#li-san-dui-shu-discrete-logarithm" title="Permalink to this headline">¶</a></h3>
-<p>如果知道 <span class="math">\(P\)</span> 和 <span class="math">\(Q\)</span>，如何找到 <span class="math">\(k\)</span> 使得 <span class="math">\(Q = kP\)</span> 呢？</p>
+<p>如果知道 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q\)</span>，如何找到 <span class="math notranslate nohighlight">\(k\)</span> 使得 <span class="math notranslate nohighlight">\(Q = kP\)</span> 呢？</p>
 <p>这个问题前面已经说了，叫做 <strong>离散对数问题</strong> 。到目前为止，还没有一个算法可以在多项式时间内解决。</p>
-<p>这个问题同 DSA 算法、 Diffie-Hellman (D-H) 密钥交换以及 ElGamal 算法中使用的离散对数问题类似，区别只在于这些算法使用的是幂次而不是乘法运算，这些算法中的离散对数问题是这样的：如果知道 <span class="math">\(a\)</span> 和 <span class="math">\(b\)</span>，如何找到 <span class="math">\(k\)</span> 使得 <span class="math">\(b = a^k \bmod p\)</span> 。</p>
+<p>这个问题同 DSA 算法、 Diffie-Hellman (D-H) 密钥交换以及 ElGamal 算法中使用的离散对数问题类似，区别只在于这些算法使用的是幂次而不是乘法运算，这些算法中的离散对数问题是这样的：如果知道 <span class="math notranslate nohighlight">\(a\)</span> 和 <span class="math notranslate nohighlight">\(b\)</span>，如何找到 <span class="math notranslate nohighlight">\(k\)</span> 使得 <span class="math notranslate nohighlight">\(b = a^k \bmod p\)</span> 。</p>
 <p>因为这些问题都是限定在有限域上的，所以它们是“离散”的，因为它们和普通的对数运算类似，所以叫做对数问题。</p>
-<p>椭圆曲线有意思的地方在于：比起其它的加密算法，它的离散对数问题似乎更难解决。这意味着我们可以使用较少 bit 的 <span class="math">\(k\)</span> 就获得和其它加密系统同样的安全等级。</p>
-</div>
-</div>
-<div class="section" id="tuo-yuan-qu-xian-jia-mi-ecdh-he-ecdsa">
+<p>椭圆曲线有意思的地方在于：比起其它的加密算法，它的离散对数问题似乎更难解决。这意味着我们可以使用较少 bit 的 <span class="math notranslate nohighlight">\(k\)</span> 就获得和其它加密系统同样的安全等级。</p>
+</section>
+</section>
+<section id="tuo-yuan-qu-xian-jia-mi-ecdh-he-ecdsa">
 <h2>椭圆曲线加密：ECDH 和 ECDSA<a class="headerlink" href="#tuo-yuan-qu-xian-jia-mi-ecdh-he-ecdsa" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="tuo-yuan-qu-xian-can-shu-domain-parameters">
+<section id="tuo-yuan-qu-xian-can-shu-domain-parameters">
 <h3>椭圆曲线参数（Domain parameters）<a class="headerlink" href="#tuo-yuan-qu-xian-can-shu-domain-parameters" title="Permalink to this headline">¶</a></h3>
-<p>椭圆曲线加密算法工作在 <em>有限域上的椭圆曲线</em> 的循环子群上，曲线的参数可以用一个六元组 <span class="math">\((p, a, b, G, n, h)\)</span> 表示：</p>
+<p>椭圆曲线加密算法工作在 <em>有限域上的椭圆曲线</em> 的循环子群上，曲线的参数可以用一个六元组 <span class="math notranslate nohighlight">\((p, a, b, G, n, h)\)</span> 表示：</p>
 <ul class="simple">
-<li><strong>素数</strong> <span class="math">\(p\)</span> 指定有限域的大小。</li>
-<li><strong>椭圆曲线的系数</strong> <span class="math">\(a\)</span> 和 <span class="math">\(b\)</span> 。</li>
-<li>子群的 <strong>基点</strong> <span class="math">\(G\)</span> 。</li>
-<li>子群的 <strong>序</strong> <span class="math">\(n\)</span> 。</li>
-<li>子群的 <strong>cofactor</strong> <span class="math">\(h\)</span> 。</li>
+<li><p><strong>素数</strong> <span class="math notranslate nohighlight">\(p\)</span> 指定有限域的大小。</p></li>
+<li><p><strong>椭圆曲线的系数</strong> <span class="math notranslate nohighlight">\(a\)</span> 和 <span class="math notranslate nohighlight">\(b\)</span> 。</p></li>
+<li><p>子群的 <strong>基点</strong> <span class="math notranslate nohighlight">\(G\)</span> 。</p></li>
+<li><p>子群的 <strong>序</strong> <span class="math notranslate nohighlight">\(n\)</span> 。</p></li>
+<li><p>子群的 <strong>cofactor</strong> <span class="math notranslate nohighlight">\(h\)</span> 。</p></li>
 </ul>
-</div>
-<div class="section" id="tuo-yuan-qu-xian-jia-mi-elliptic-curve-cryptography">
+</section>
+<section id="tuo-yuan-qu-xian-jia-mi-elliptic-curve-cryptography">
 <h3>椭圆曲线加密（Elliptic Curve Cryptography）<a class="headerlink" href="#tuo-yuan-qu-xian-jia-mi-elliptic-curve-cryptography" title="Permalink to this headline">¶</a></h3>
 <p>椭圆曲线的核心原理如下：</p>
 <ol class="arabic simple">
-<li><strong>私钥（private key）</strong> 是从 <span class="math">\({1, \cdots, n - 1}\)</span> 中随机选择的一个数 <span class="math">\(d\)</span> （<span class="math">\(n\)</span> 是子群的序）。</li>
-<li><strong>公钥</strong> 是点 <span class="math">\(H = dG\)</span> （<span class="math">\(G\)</span> 是子群的基点）。</li>
+<li><p><strong>私钥（private key）</strong> 是从 <span class="math notranslate nohighlight">\({1, \cdots, n - 1}\)</span> 中随机选择的一个数 <span class="math notranslate nohighlight">\(d\)</span> （<span class="math notranslate nohighlight">\(n\)</span> 是子群的序）。</p></li>
+<li><p><strong>公钥</strong> 是点 <span class="math notranslate nohighlight">\(H = dG\)</span> （<span class="math notranslate nohighlight">\(G\)</span> 是子群的基点）。</p></li>
 </ol>
-<p>根据循环子群的特性，知道 <span class="math">\(d\)</span> 和 <span class="math">\(G\)</span> 可以很容易的计算得到 <span class="math">\(H\)</span>，相反，知道 <span class="math">\(H\)</span> 和 <span class="math">\(G\)</span> 想要得到私钥 <span class="math">\(d\)</span> 非常的困难，因为这是一个离散对数问题。</p>
+<p>根据循环子群的特性，知道 <span class="math notranslate nohighlight">\(d\)</span> 和 <span class="math notranslate nohighlight">\(G\)</span> 可以很容易的计算得到 <span class="math notranslate nohighlight">\(H\)</span>，相反，知道 <span class="math notranslate nohighlight">\(H\)</span> 和 <span class="math notranslate nohighlight">\(G\)</span> 想要得到私钥 <span class="math notranslate nohighlight">\(d\)</span> 非常的困难，因为这是一个离散对数问题。</p>
 <p>椭圆曲线常用的有以下两个算法：用于加密的 ECDH (Elliptic curve Diffie-Hellman) 算法，用于计算数字签名的 ECDSA (Elliptic Curve Digital Signature Algorithm) 算法。</p>
-<div class="section" id="ecdh-jia-mi-suan-fa">
+<section id="ecdh-jia-mi-suan-fa">
 <span id="ecdh"></span><h4>ECDH 加密算法<a class="headerlink" href="#ecdh-jia-mi-suan-fa" title="Permalink to this headline">¶</a></h4>
 <p>ECDH 是 <a class="reference external" href="https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange">Diffie-Hellman 算法</a> 的一个变种，它本质上是 <a class="reference external" href="https://en.wikipedia.org/wiki/Key-agreement_protocol">密钥协商算法</a> ，只负责通信双方密钥的生成和交换，如何使用这个密钥加密数据取决于用户，和 ECDH 算法无关。</p>
 <p>假设 Alice 和 Bob 想要交换信息，下面是使用 ECDH 交换密钥的过程：</p>
 <ol class="arabic simple">
-<li>首先，<strong>Alice 和 Bob 各自生成自己的公钥和私钥</strong>。设 Alice 的私钥为 <span class="math">\(d_A\)</span> ，公钥 <span class="math">\(H_A = d_AG\)</span>，Bob 的私钥 <span class="math">\(d_B\)</span>，公钥 <span class="math">\(H_B = d_BG\)</span> 。两人使用同样的曲线参数。</li>
-<li><strong>Alice 和 Bob 在不可靠的信道上交换它们的公钥</strong>。中间人即使监听获得了两人的公钥 <span class="math">\(H_A\)</span> 和 <span class="math">\(H_B\)</span> ，也没办法解出两人的私钥 <span class="math">\(d_A\)</span> 或 <span class="math">\(d_B\)</span> ，因为需要解离散对数问题。</li>
-<li>Alice 计算 <span class="math">\(S = d_AH_B\)</span> （使用自己的私钥和 Bob 的公钥），Bob 计算 <span class="math">\(S = d_BH_A\)</span> （使用自己的私钥和 Alice 的公钥）。这个 <span class="math">\(S\)</span> 是两人之间“共同的秘密（shared secret）”。</li>
+<li><p>首先，<strong>Alice 和 Bob 各自生成自己的公钥和私钥</strong>。设 Alice 的私钥为 <span class="math notranslate nohighlight">\(d_A\)</span> ，公钥 <span class="math notranslate nohighlight">\(H_A = d_AG\)</span>，Bob 的私钥 <span class="math notranslate nohighlight">\(d_B\)</span>，公钥 <span class="math notranslate nohighlight">\(H_B = d_BG\)</span> 。两人使用同样的曲线参数。</p></li>
+<li><p><strong>Alice 和 Bob 在不可靠的信道上交换它们的公钥</strong>。中间人即使监听获得了两人的公钥 <span class="math notranslate nohighlight">\(H_A\)</span> 和 <span class="math notranslate nohighlight">\(H_B\)</span> ，也没办法解出两人的私钥 <span class="math notranslate nohighlight">\(d_A\)</span> 或 <span class="math notranslate nohighlight">\(d_B\)</span> ，因为需要解离散对数问题。</p></li>
+<li><p>Alice 计算 <span class="math notranslate nohighlight">\(S = d_AH_B\)</span> （使用自己的私钥和 Bob 的公钥），Bob 计算 <span class="math notranslate nohighlight">\(S = d_BH_A\)</span> （使用自己的私钥和 Alice 的公钥）。这个 <span class="math notranslate nohighlight">\(S\)</span> 是两人之间“共同的秘密（shared secret）”。</p></li>
 </ol>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[S = d_AH_B = d_A(d_BG) = d_B(D_AG) = d_BH_A\]</div>
-<p>通过公钥 <span class="math">\(H_A\)</span> 和 <span class="math">\(H_B\)</span> 很难解出 <span class="math">\(S\)</span> 来，这个叫做 Diffie-Hellman 难题。即：</p>
+<p>通过公钥 <span class="math notranslate nohighlight">\(H_A\)</span> 和 <span class="math notranslate nohighlight">\(H_B\)</span> 很难解出 <span class="math notranslate nohighlight">\(S\)</span> 来，这个叫做 Diffie-Hellman 难题。即：</p>
 <blockquote>
-<div>给定三个点 <span class="math">\(P\)</span>， <span class="math">\(aP\)</span> 和 <span class="math">\(bP\)</span>，求 <span class="math">\(abP\)</span> 。</div></blockquote>
+<div><p>给定三个点 <span class="math notranslate nohighlight">\(P\)</span>， <span class="math notranslate nohighlight">\(aP\)</span> 和 <span class="math notranslate nohighlight">\(bP\)</span>，求 <span class="math notranslate nohighlight">\(abP\)</span> 。</p>
+</div></blockquote>
 <p>或者等价的（原始 Diffie-Hellman 算法里用的）：</p>
 <blockquote>
-<div>给定三个整数 <span class="math">\(k\)</span>， <span class="math">\(k^x\)</span> 和 <span class="math">\(k^y\)</span>，求 <span class="math">\(k^{xy}\)</span> 。</div></blockquote>
+<div><p>给定三个整数 <span class="math notranslate nohighlight">\(k\)</span>， <span class="math notranslate nohighlight">\(k^x\)</span> 和 <span class="math notranslate nohighlight">\(k^y\)</span>，求 <span class="math notranslate nohighlight">\(k^{xy}\)</span> 。</p>
+</div></blockquote>
 <img alt="_images/ecdh.png" src="_images/ecdh.png" />
 <p>Diffie-Hellman 难题更详细的可以参见可汗学院的这个视频： <a class="reference external" href="https://www.youtube.com/watch?v=YEBfamv-_do#t=02m37s">Public key cryptography - Diffie-Hellman Key Exchange (full version)</a></p>
 <p>解决椭圆曲线的 Diffie-Hellman 难题需要解决离散对数难题，所以很难求解。</p>
-<p><strong>Alice 和 Bob 获得共同的秘密</strong> <span class="math">\(S\)</span> <strong>后，就可以使用对称加密来交换数据了。</strong></p>
-<p>比如，可以使用 <span class="math">\(S\)</span> 的 <span class="math">\(x\)</span> 坐标作为密钥，使用 AES 或者 3DES 之类的算法来加密信息。TLS 的方式比这个稍微复杂一点，它用的是 <span class="math">\(x\)</span> 坐标再加上一些和连接相关的数值后计算的一个 hash。</p>
-</div>
-<div class="section" id="ecdhe-jia-mi-suan-fa">
+<p><strong>Alice 和 Bob 获得共同的秘密</strong> <span class="math notranslate nohighlight">\(S\)</span> <strong>后，就可以使用对称加密来交换数据了。</strong></p>
+<p>比如，可以使用 <span class="math notranslate nohighlight">\(S\)</span> 的 <span class="math notranslate nohighlight">\(x\)</span> 坐标作为密钥，使用 AES 或者 3DES 之类的算法来加密信息。TLS 的方式比这个稍微复杂一点，它用的是 <span class="math notranslate nohighlight">\(x\)</span> 坐标再加上一些和连接相关的数值后计算的一个 hash。</p>
+</section>
+<section id="ecdhe-jia-mi-suan-fa">
 <h4>ECDHE 加密算法<a class="headerlink" href="#ecdhe-jia-mi-suan-fa" title="Permalink to this headline">¶</a></h4>
 <p>ECDHE 指的是 Ephemeral（临时的） ECDH 算法，也就是说 ECDH 加密算法交换的密钥只是临时的，不是 <strong>静态</strong> 的。</p>
 <p>比如 TLS 就使用了 ECDHE 算法，客户端和服务端每次建立连接的时候都会生成并交换新的公私钥。</p>
-</div>
-<div class="section" id="ecdsa-qian-ming-suan-fa-signing-with-ecdsa">
+</section>
+<section id="ecdsa-qian-ming-suan-fa-signing-with-ecdsa">
 <h4>ECDSA 签名算法（Signing with ECDSA）<a class="headerlink" href="#ecdsa-qian-ming-suan-fa-signing-with-ecdsa" title="Permalink to this headline">¶</a></h4>
-<p>ECDSA 签名算法的使用场景是这样的：Alice 要发送一个消息给 Bob，为了让 Bob 相信这个信息确实是她发出的， Alice 使用自己的私钥 <span class="math">\(d_A\)</span> 给消息生成一个数字签名并和消息一起发给 Bob，Bob 收到后可以使用 Alice 的公钥 <span class="math">\(H_A\)</span> 验证这个消息是否确实是 Alice 所发。</p>
+<p>ECDSA 签名算法的使用场景是这样的：Alice 要发送一个消息给 Bob，为了让 Bob 相信这个信息确实是她发出的， Alice 使用自己的私钥 <span class="math notranslate nohighlight">\(d_A\)</span> 给消息生成一个数字签名并和消息一起发给 Bob，Bob 收到后可以使用 Alice 的公钥 <span class="math notranslate nohighlight">\(H_A\)</span> 验证这个消息是否确实是 Alice 所发。</p>
 <p>这里两人依然使用同样的椭圆曲线参数。ECDSA 是 Digital Signature Algorithm 在椭圆曲线上的应用。</p>
-<p>ECDSA 是用消息的 hash 来生成签名的，这个 hash 函数我们可以自己定（但最好使用一个 <a class="reference external" href="http://en.wikipedia.org/wiki/Cryptographic_hash_function">安全 hash 算法</a> ）。hash 值会被截断到和子群的序 <span class="math">\(n\)</span> 同样的 bit 长度。记这个截断后的整数值为 <span class="math">\(z\)</span> 。</p>
+<p>ECDSA 是用消息的 hash 来生成签名的，这个 hash 函数我们可以自己定（但最好使用一个 <a class="reference external" href="http://en.wikipedia.org/wiki/Cryptographic_hash_function">安全 hash 算法</a> ）。hash 值会被截断到和子群的序 <span class="math notranslate nohighlight">\(n\)</span> 同样的 bit 长度。记这个截断后的整数值为 <span class="math notranslate nohighlight">\(z\)</span> 。</p>
 <p>ECDSA 算法签名的过程如下：</p>
 <ol class="arabic simple">
-<li>从 <span class="math">\({1, \cdots, n - 1}\)</span> 随机取一个数 <span class="math">\(k\)</span> （<span class="math">\(n\)</span> 是子群的序）。</li>
-<li>计算点 <span class="math">\(P = kG\)</span> （<span class="math">\(G\)</span> 是子群的基点）。</li>
-<li>计算 <span class="math">\(r = x_P \bmod n\)</span> （<span class="math">\(x_P\)</span> 是 <span class="math">\(P\)</span> 点的 <span class="math">\(x\)</span> 坐标）。</li>
-<li>如果 <span class="math">\(r = 0\)</span> 换一个 <span class="math">\(k\)</span> 后重试。</li>
-<li>计算 <span class="math">\(s = k^{-1}(z + rd_A) \bmod n\)</span> （其中 <span class="math">\(d_A\)</span> 是 Alice 的私钥， <span class="math">\(k^{-1}\)</span> 是 <span class="math">\(k\)</span> 的乘法逆元。</li>
-<li>如果 <span class="math">\(s = 0\)</span>，换一个 <span class="math">\(k\)</span> 后重试。</li>
+<li><p>从 <span class="math notranslate nohighlight">\({1, \cdots, n - 1}\)</span> 随机取一个数 <span class="math notranslate nohighlight">\(k\)</span> （<span class="math notranslate nohighlight">\(n\)</span> 是子群的序）。</p></li>
+<li><p>计算点 <span class="math notranslate nohighlight">\(P = kG\)</span> （<span class="math notranslate nohighlight">\(G\)</span> 是子群的基点）。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(r = x_P \bmod n\)</span> （<span class="math notranslate nohighlight">\(x_P\)</span> 是 <span class="math notranslate nohighlight">\(P\)</span> 点的 <span class="math notranslate nohighlight">\(x\)</span> 坐标）。</p></li>
+<li><p>如果 <span class="math notranslate nohighlight">\(r = 0\)</span> 换一个 <span class="math notranslate nohighlight">\(k\)</span> 后重试。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(s = k^{-1}(z + rd_A) \bmod n\)</span> （其中 <span class="math notranslate nohighlight">\(d_A\)</span> 是 Alice 的私钥， <span class="math notranslate nohighlight">\(k^{-1}\)</span> 是 <span class="math notranslate nohighlight">\(k\)</span> 的乘法逆元。</p></li>
+<li><p>如果 <span class="math notranslate nohighlight">\(s = 0\)</span>，换一个 <span class="math notranslate nohighlight">\(k\)</span> 后重试。</p></li>
 </ol>
-<p><span class="math">\((r, s)\)</span> 对就是生成的数字签名。</p>
+<p><span class="math notranslate nohighlight">\((r, s)\)</span> 对就是生成的数字签名。</p>
 <img alt="_images/ecdsa.png" src="_images/ecdsa.png" />
-<p>简言之，这个算法生成一个密钥 <span class="math">\(k\)</span> ，然后使用点的乘法将其藏入 <span class="math">\(r\)</span> 中（乘法容易，反过来就是对数问题，求解很困难），最后使用公式 <span class="math">\(s = k^{-1}(z + rd_A) \bmod n\)</span> 将 <span class="math">\(r\)</span> 和消息的 hash <span class="math">\(z\)</span> 绑定。</p>
-</div>
-<div class="section" id="yan-zheng-qian-ming-verifying-signatures">
+<p>简言之，这个算法生成一个密钥 <span class="math notranslate nohighlight">\(k\)</span> ，然后使用点的乘法将其藏入 <span class="math notranslate nohighlight">\(r\)</span> 中（乘法容易，反过来就是对数问题，求解很困难），最后使用公式 <span class="math notranslate nohighlight">\(s = k^{-1}(z + rd_A) \bmod n\)</span> 将 <span class="math notranslate nohighlight">\(r\)</span> 和消息的 hash <span class="math notranslate nohighlight">\(z\)</span> 绑定。</p>
+</section>
+<section id="yan-zheng-qian-ming-verifying-signatures">
 <h4>验证签名（Verifying signatures）<a class="headerlink" href="#yan-zheng-qian-ming-verifying-signatures" title="Permalink to this headline">¶</a></h4>
-<p>Bob 收到消息后，同 Alice 计算签名时算消息的 hash 的方法一样计算收到的消息的 hash 值 <span class="math">\(z\)</span> 。然后：</p>
+<p>Bob 收到消息后，同 Alice 计算签名时算消息的 hash 的方法一样计算收到的消息的 hash 值 <span class="math notranslate nohighlight">\(z\)</span> 。然后：</p>
 <ol class="arabic simple">
-<li>计算 <span class="math">\(u_1 = s^{-1}z \bmod n\)</span> 。</li>
-<li>计算 <span class="math">\(u_2 = s^{-1}r \bmod n\)</span> 。</li>
-<li>计算点 <span class="math">\(P = u_1G + u_2H_A\)</span> 。</li>
+<li><p>计算 <span class="math notranslate nohighlight">\(u_1 = s^{-1}z \bmod n\)</span> 。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(u_2 = s^{-1}r \bmod n\)</span> 。</p></li>
+<li><p>计算点 <span class="math notranslate nohighlight">\(P = u_1G + u_2H_A\)</span> 。</p></li>
 </ol>
-<p>如果 <span class="math">\(r = x_P \bmod n\)</span> ，那么说明这条消息确实是 Alice 所发。</p>
-</div>
-<div class="section" id="suan-fa-zheng-ming-correctness-of-the-algorithm">
+<p>如果 <span class="math notranslate nohighlight">\(r = x_P \bmod n\)</span> ，那么说明这条消息确实是 Alice 所发。</p>
+</section>
+<section id="suan-fa-zheng-ming-correctness-of-the-algorithm">
 <h4>算法证明（Correctness of the algorithm）<a class="headerlink" href="#suan-fa-zheng-ming-correctness-of-the-algorithm" title="Permalink to this headline">¶</a></h4>
-<p>根据公钥定义 <span class="math">\(H_A = d_AG\)</span> （<span class="math">\(d_A\)</span> 是私钥），我们可以得到：</p>
-<div class="math">
+<p>根据公钥定义 <span class="math notranslate nohighlight">\(H_A = d_AG\)</span> （<span class="math notranslate nohighlight">\(d_A\)</span> 是私钥），我们可以得到：</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rl}
 P &amp; = u_1 G + u_2 H_A \\
 &amp; = u_1 G + u_2 d_A G \\
 &amp; = (u_1 + u_2 d_A) G
 \end{array}\end{split}\]</div>
-<p>根据上面 <span class="math">\(u_1\)</span> 和 <span class="math">\(u_2\)</span> 点定义：</p>
-<div class="math">
+<p>根据上面 <span class="math notranslate nohighlight">\(u_1\)</span> 和 <span class="math notranslate nohighlight">\(u_2\)</span> 点定义：</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rl}
 P &amp; = (u_1 + u_2 d_A) G \\
 &amp; = (s^{-1} z + s^{-1} r d_A) G \\
 &amp; = s^{-1} (z + r d_A) G
 \end{array}\end{split}\]</div>
-<p>为了简洁，上面的公式都省略了“ <span class="math">\(\bmod n\)</span>”。</p>
-<p>又： <span class="math">\(s = k^{-1}(z + rd_A) \bmod n\)</span> ，两边乘上 <span class="math">\(k\)</span> 再除 <span class="math">\(s\)</span> 得到： <span class="math">\(k = s^{-1}(z + rd_A) \bmod n\)</span> 。将上面 <span class="math">\(P\)</span> 公式里的 <span class="math">\(s^{-1}(z + rd_A)\)</span> 替换为 <span class="math">\(k\)</span> 得到：</p>
-<div class="math">
+<p>为了简洁，上面的公式都省略了“ <span class="math notranslate nohighlight">\(\bmod n\)</span>”。</p>
+<p>又： <span class="math notranslate nohighlight">\(s = k^{-1}(z + rd_A) \bmod n\)</span> ，两边乘上 <span class="math notranslate nohighlight">\(k\)</span> 再除 <span class="math notranslate nohighlight">\(s\)</span> 得到： <span class="math notranslate nohighlight">\(k = s^{-1}(z + rd_A) \bmod n\)</span> 。将上面 <span class="math notranslate nohighlight">\(P\)</span> 公式里的 <span class="math notranslate nohighlight">\(s^{-1}(z + rd_A)\)</span> 替换为 <span class="math notranslate nohighlight">\(k\)</span> 得到：</p>
+<div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{rl}
 P &amp; = s^{-1} (z + r d_A) G \\
 &amp; = k G
 \end{array}\end{split}\]</div>
-<p>这个公式和生成签名第 2 步里的公式一模一样，也就是生成和验证的时候我们可以计算得到相同的点 <span class="math">\(P\)</span>。证明完毕。</p>
-<p>ECDSA 使用的密钥 <span class="math">\(k\)</span> 应该不可预测，如果我们所有的签名使用同样的 <span class="math">\(k\)</span> 或者使用的随机数生成器可预测，攻击者可以有办法破解得到私钥。</p>
-</div>
-</div>
-</div>
-<div class="section" id="algorithms-for-breaking-ecc-security-and-a-comparison-with-rsa">
+<p>这个公式和生成签名第 2 步里的公式一模一样，也就是生成和验证的时候我们可以计算得到相同的点 <span class="math notranslate nohighlight">\(P\)</span>。证明完毕。</p>
+<p>ECDSA 使用的密钥 <span class="math notranslate nohighlight">\(k\)</span> 应该不可预测，如果我们所有的签名使用同样的 <span class="math notranslate nohighlight">\(k\)</span> 或者使用的随机数生成器可预测，攻击者可以有办法破解得到私钥。</p>
+</section>
+</section>
+</section>
+<section id="algorithms-for-breaking-ecc-security-and-a-comparison-with-rsa">
 <h2>Algorithms for breaking ECC security, and a comparison with RSA<a class="headerlink" href="#algorithms-for-breaking-ecc-security-and-a-comparison-with-rsa" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/">http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/</a></p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -564,10 +557,10 @@ P &amp; = s^{-1} (z + r d_A) G \\
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Elliptic Curve Cryptography</a><ul>
-<li><a class="reference internal" href="#shi-shu-yu-shang-di-tuo-yuan-qu-xian-yu-qun">实数域上的椭圆曲线与群</a><ul>
+<li><a class="reference internal" href="#shi-shu-yu-shang-de-tuo-yuan-qu-xian-yu-qun">实数域上的椭圆曲线与群</a><ul>
 <li><a class="reference internal" href="#tuo-yuan-qu-xian-elliptic-curves">椭圆曲线（Elliptic Curves）</a></li>
 <li><a class="reference internal" href="#qun-groups">群（Groups）</a></li>
 <li><a class="reference internal" href="#zai-tuo-yuan-qu-xian-shang-ding-yi-yi-ge-qun-the-group-law-for-elliptic-curves">在椭圆曲线上定义一个群（The group law for elliptic curves）</a></li>
@@ -580,12 +573,12 @@ P &amp; = s^{-1} (z + r d_A) G \\
 <li><a class="reference internal" href="#you-xian-yu-yu-li-san-dui-shu-wen-ti">有限域与离散对数问题</a><ul>
 <li><a class="reference internal" href="#zheng-shu-dui-p-qu-mo-you-xian-yu-the-field-of-integers-modulo-p">“整数对 p 取模“有限域（The field of integers modulo p）</a></li>
 <li><a class="reference internal" href="#mo-chu-division-modulo-p">模除(Division modulo p)</a></li>
-<li><a class="reference internal" href="#shang-di-tuo-yuan-qu-xian-elliptic-curves-in"><span class="math">\(\mathbb{F}_p\)</span> 上的椭圆曲线（Elliptic curves in <span class="math">\(\mathbb{F}_p\)</span>）</a></li>
-<li><a class="reference internal" href="#qu-xian-shang-dian-di-jia-fa-point-addition">曲线上点的加法（Point addition）</a></li>
+<li><a class="reference internal" href="#mathbb-f-p-shang-de-tuo-yuan-qu-xian-elliptic-curves-in-mathbb-f-p"><span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 上的椭圆曲线（Elliptic curves in <span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span>）</a></li>
+<li><a class="reference internal" href="#qu-xian-shang-dian-de-jia-fa-point-addition">曲线上点的加法（Point addition）</a></li>
 <li><a class="reference internal" href="#dai-shu-jia-fa-algebraic-sum">代数加法（Algebraic sum）</a></li>
-<li><a class="reference internal" href="#tuo-yuan-qu-xian-qun-di-xu-the-order-of-an-elliptic-curve-group">椭圆曲线群的序（The order of an elliptic curve group）</a></li>
+<li><a class="reference internal" href="#tuo-yuan-qu-xian-qun-de-xu-the-order-of-an-elliptic-curve-group">椭圆曲线群的序（The order of an elliptic curve group）</a></li>
 <li><a class="reference internal" href="#cheng-fa-he-xun-huan-zi-qun-scalar-multiplication-and-cyclic-subgroups">乘法和循环子群（Scalar multiplication and cyclic subgroups）</a></li>
-<li><a class="reference internal" href="#zi-qun-di-xu-subgroup-order">子群的序（Subgroup order）</a></li>
+<li><a class="reference internal" href="#zi-qun-de-xu-subgroup-order">子群的序（Subgroup order）</a></li>
 <li><a class="reference internal" href="#xun-zhao-ji-dian-finding-a-base-point">寻找基点（Finding a base point）</a></li>
 <li><a class="reference internal" href="#li-san-dui-shu-discrete-logarithm">离散对数（Discrete logarithm）</a></li>
 </ul>
@@ -606,15 +599,7 @@ P &amp; = s^{-1} (z + r d_A) G \\
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="percolator.html" title="previous chapter">Percolator 的事务模型</a></li>
-      <li>Next: <a href="bitcoin-explained.html" title="next chapter">比特币的工作原理</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -623,15 +608,15 @@ P &amp; = s^{-1} (z + r d_A) G \\
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -640,7 +625,7 @@ P &amp; = s^{-1} (z + r d_A) G \\
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

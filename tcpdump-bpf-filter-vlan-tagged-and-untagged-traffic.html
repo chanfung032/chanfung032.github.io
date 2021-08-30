@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>一次 tcpdump bpf filter “失效”的问题排查 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Imago Intentional Dialogue" href="imago-intentional-dialogue.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,10 +33,10 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="yi-ci-tcpdump-bpf-filter-shi-xiao-di-wen-ti-pai-cha">
-<h1>一次 tcpdump bpf filter “失效”的问题排查<a class="headerlink" href="#yi-ci-tcpdump-bpf-filter-shi-xiao-di-wen-ti-pai-cha" title="Permalink to this headline">¶</a></h1>
+  <section id="yi-ci-tcpdump-bpf-filter-shi-xiao-de-wen-ti-pai-cha">
+<h1>一次 tcpdump bpf filter “失效”的问题排查<a class="headerlink" href="#yi-ci-tcpdump-bpf-filter-shi-xiao-de-wen-ti-pai-cha" title="Permalink to this headline">¶</a></h1>
 <p>最近需要用到 bpf filter 来过滤并获取 pcap 文件中的部分流量记录，但测试的时候发现某些情况下，明明 tcpdump 出的流量中确定肯定以及一定包含某些流量，但是使用 bpf filter 就是过滤不出来。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> tcpdump -nn -r /data0/logs/suricata/log.pcap.1598593582 <span class="p">|</span>head -n3
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tcpdump -nn -r /data0/logs/suricata/log.pcap.1598593582 <span class="p">|</span>head -n3
 <span class="go">reading from file /data0/logs/suricata/log.pcap.1598593582, link-type EN10MB (Ethernet)</span>
 <span class="go">13:46:22.094881 IP 42.81.204.36.80 &gt; 192.168.8.22.49189: Flags [.], seq 3815694858:3815696198, ack 1160728615, win 70, length 1340: HTTP</span>
 <span class="go">13:46:22.097504 IP 39.82.42.178 &gt; 172.19.70.2: ICMP 39.82.42.178 udp port 9253 unreachable, length 56</span>
@@ -54,12 +44,12 @@
 </pre></div>
 </div>
 <p>比如上面第三行的流量，当用以下 filter 来过滤的时候就没有结果。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> tcpdump -nn -r /data0/logs/suricata/log.pcap.1598593582 <span class="se">\</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tcpdump -nn -r /data0/logs/suricata/log.pcap.1598593582 <span class="se">\</span>
     <span class="s1">&#39;src host 192.168.8.22 and src port 49189 and dst host 42.81.204.36 and dst port 80&#39;</span>
 </pre></div>
 </div>
 <p>打印出 bpf filter 翻译出的字节码：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> tcpdump -nn -d <span class="s1">&#39;src host 192.168.8.22 and src port 49189 and dst host 42.81.204.36 and dst port 80&#39;</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tcpdump -nn -d <span class="s1">&#39;src host 192.168.8.22 and src port 49189 and dst host 42.81.204.36 and dst port 80&#39;</span>
 <span class="gp gp-VirtualEnv">(000)</span> <span class="go">ldh      [12]</span>
 <span class="gp gp-VirtualEnv">(001)</span> <span class="go">jeq      #0x800           jt 2    jf 24</span>
 <span class="gp gp-VirtualEnv">(002)</span> <span class="go">ld       [26]</span>
@@ -88,109 +78,109 @@
 </pre></div>
 </div>
 <p>字节码解释：</p>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="50%" />
-<col width="50%" />
+<col style="width: 50%" />
+<col style="width: 50%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><ol class="first last arabic simple" start="0">
-<li>ldh [12]</li>
+<tbody>
+<tr class="row-odd"><td><ol class="arabic simple" start="0">
+<li><p>ldh [12]</p></li>
 </ol>
 </td>
-<td>加载第 12 个字节开始的 2 个字节（Ethertype）</td>
+<td><p>加载第 12 个字节开始的 2 个字节（Ethertype）</p></td>
 </tr>
-<tr class="row-even"><td><ol class="first last arabic simple">
-<li>jeq #0x800 jt 2 jf 24</li>
+<tr class="row-even"><td><ol class="arabic simple">
+<li><p>jeq #0x800 jt 2 jf 24</p></li>
 </ol>
 </td>
-<td>如果是 IPv4 的包，goto #2 else #24</td>
+<td><p>如果是 IPv4 的包，goto #2 else #24</p></td>
 </tr>
-<tr class="row-odd"><td><ol class="first last arabic simple" start="2">
-<li>ld [26]</li>
+<tr class="row-odd"><td><ol class="arabic simple" start="2">
+<li><p>ld [26]</p></li>
 </ol>
 </td>
-<td>加载第 26 个字节开始的 4 个字节（Src IP 地址）</td>
+<td><p>加载第 26 个字节开始的 4 个字节（Src IP 地址）</p></td>
 </tr>
-<tr class="row-even"><td><ol class="first last arabic simple" start="3">
-<li>jeq #0xc0a80816 jt 4 jf 24</li>
+<tr class="row-even"><td><ol class="arabic simple" start="3">
+<li><p>jeq #0xc0a80816 jt 4 jf 24</p></li>
 </ol>
 </td>
-<td>如果地址匹配，goto #4 else #24</td>
+<td><p>如果地址匹配，goto #4 else #24</p></td>
 </tr>
-<tr class="row-odd"><td><ol class="first last arabic simple" start="4">
-<li>ldb [23]</li>
+<tr class="row-odd"><td><ol class="arabic simple" start="4">
+<li><p>ldb [23]</p></li>
 </ol>
 </td>
-<td>加载第 13 个字节开始的 1 个字节（IPv4 协议）</td>
+<td><p>加载第 13 个字节开始的 1 个字节（IPv4 协议）</p></td>
 </tr>
-<tr class="row-even"><td><ol class="first last arabic simple" start="5">
-<li>jeq #0x84 jt 8 jf 6</li>
+<tr class="row-even"><td><ol class="arabic simple" start="5">
+<li><p>jeq #0x84 jt 8 jf 6</p></li>
 </ol>
 </td>
-<td>如果协议是 SCTP，goto #8 else #6</td>
+<td><p>如果协议是 SCTP，goto #8 else #6</p></td>
 </tr>
-<tr class="row-odd"><td><ol class="first last arabic simple" start="6">
-<li>jeq #0x6 jt 8 jf 7</li>
+<tr class="row-odd"><td><ol class="arabic simple" start="6">
+<li><p>jeq #0x6 jt 8 jf 7</p></li>
 </ol>
 </td>
-<td>如果协议是 TCP，goto #8 else #7</td>
+<td><p>如果协议是 TCP，goto #8 else #7</p></td>
 </tr>
-<tr class="row-even"><td><ol class="first last arabic simple" start="7">
-<li>jeq #0x11 jt 8 jf 24</li>
+<tr class="row-even"><td><ol class="arabic simple" start="7">
+<li><p>jeq #0x11 jt 8 jf 24</p></li>
 </ol>
 </td>
-<td>如果协议是 UDP，goto #8 else #24</td>
+<td><p>如果协议是 UDP，goto #8 else #24</p></td>
 </tr>
-<tr class="row-odd"><td><ol class="first last arabic simple" start="8">
-<li>ldh [20]</li>
+<tr class="row-odd"><td><ol class="arabic simple" start="8">
+<li><p>ldh [20]</p></li>
 </ol>
 </td>
-<td>加载第 20 个字节开始的 2 个字节（Fragment Offset）</td>
+<td><p>加载第 20 个字节开始的 2 个字节（Fragment Offset）</p></td>
 </tr>
-<tr class="row-even"><td><ol class="first last arabic simple" start="9">
-<li>jset #0x1fff jt 24 jf 10</li>
+<tr class="row-even"><td><ol class="arabic simple" start="9">
+<li><p>jset #0x1fff jt 24 jf 10</p></li>
 </ol>
 </td>
-<td>如果 fragment offset &amp; 0x1fff != 0, #24 else #10</td>
+<td><p>如果 fragment offset &amp; 0x1fff != 0, #24 else #10</p></td>
 </tr>
-<tr class="row-odd"><td><ol class="first last arabic simple" start="10">
-<li>ldxb 4*([14]&amp;0xf)</li>
+<tr class="row-odd"><td><ol class="arabic simple" start="10">
+<li><p>ldxb 4*([14]&amp;0xf)</p></li>
 </ol>
 </td>
-<td>x = IP header 长度</td>
+<td><p>x = IP header 长度</p></td>
 </tr>
-<tr class="row-even"><td><ol class="first last arabic simple" start="11">
-<li>ldh [x + 14]</li>
+<tr class="row-even"><td><ol class="arabic simple" start="11">
+<li><p>ldh [x + 14]</p></li>
 </ol>
 </td>
-<td>加载 x+14 处开始的 2 个字节（TCP Src Port）</td>
+<td><p>加载 x+14 处开始的 2 个字节（TCP Src Port）</p></td>
 </tr>
-<tr class="row-odd"><td><ol class="first last arabic simple" start="12">
-<li>jeq #0xc025 jt 13 jf 24</li>
+<tr class="row-odd"><td><ol class="arabic simple" start="12">
+<li><p>jeq #0xc025 jt 13 jf 24</p></li>
 </ol>
 </td>
-<td>如果端口匹配，goto #13 else #24</td>
+<td><p>如果端口匹配，goto #13 else #24</p></td>
 </tr>
-<tr class="row-even"><td>（目标IP 端口匹配）…</td>
-<td>…</td>
+<tr class="row-even"><td><p>（目标IP 端口匹配）…</p></td>
+<td><p>…</p></td>
 </tr>
-<tr class="row-odd"><td><ol class="first last arabic simple" start="23">
-<li>ret #262144</li>
+<tr class="row-odd"><td><ol class="arabic simple" start="23">
+<li><p>ret #262144</p></li>
 </ol>
 </td>
-<td>匹配</td>
+<td><p>匹配</p></td>
 </tr>
-<tr class="row-even"><td><ol class="first last arabic simple" start="24">
-<li>ret #0</li>
+<tr class="row-even"><td><ol class="arabic simple" start="24">
+<li><p>ret #0</p></li>
 </ol>
 </td>
-<td>不匹配</td>
+<td><p>不匹配</p></td>
 </tr>
 </tbody>
 </table>
 <p>从 pcap 文件中取出第三条流量日志的原始二进制数据：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mi">58</span> <span class="mi">69</span> <span class="mi">6</span><span class="n">c</span> <span class="mi">6</span><span class="n">a</span> <span class="n">e6</span> <span class="mi">17</span> <span class="mi">58</span> <span class="mi">69</span> <span class="mi">6</span><span class="n">c</span> <span class="mi">64</span> <span class="mi">47</span> <span class="n">a9</span> <span class="mi">81</span> <span class="mi">00</span> <span class="mi">0</span><span class="n">f</span> <span class="n">fe</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">58</span> <span class="mi">69</span> <span class="mi">6</span><span class="n">c</span> <span class="mi">6</span><span class="n">a</span> <span class="n">e6</span> <span class="mi">17</span> <span class="mi">58</span> <span class="mi">69</span> <span class="mi">6</span><span class="n">c</span> <span class="mi">64</span> <span class="mi">47</span> <span class="n">a9</span> <span class="mi">81</span> <span class="mi">00</span> <span class="mi">0</span><span class="n">f</span> <span class="n">fe</span>
 <span class="mi">08</span> <span class="mi">00</span> <span class="mi">45</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">28</span> <span class="mi">9</span><span class="n">f</span> <span class="mi">91</span> <span class="mi">40</span> <span class="mi">00</span> <span class="mi">3</span><span class="n">f</span> <span class="mi">06</span> <span class="n">dd</span> <span class="mi">0</span><span class="n">a</span> <span class="n">c0</span> <span class="n">a8</span>
 <span class="mi">08</span> <span class="mi">16</span> <span class="mi">2</span><span class="n">a</span> <span class="mi">51</span> <span class="n">cc</span> <span class="mi">24</span> <span class="n">c0</span> <span class="mi">25</span> <span class="mi">00</span> <span class="mi">50</span> <span class="mi">45</span> <span class="mi">2</span><span class="n">f</span> <span class="mi">50</span> <span class="mi">27</span> <span class="n">e3</span> <span class="mi">6</span><span class="n">e</span>
 <span class="n">e2</span> <span class="mi">0</span><span class="n">a</span> <span class="mi">50</span> <span class="mi">10</span> <span class="mi">06</span> <span class="mi">7</span><span class="n">a</span> <span class="n">ce</span> <span class="n">e0</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span>
@@ -198,28 +188,28 @@
 </div>
 <p>按照字节码手工执行发现，该流量数据的 Ethertype 并不是 0x800 IPv4 frame，而是 0x8100 VLAN-tagged frame (IEEE 802.1Q)，该格式比普通的 Ethernet frame 多了 4 个字节，因为 bpf 的匹配都是基于偏移量的，也就都匹配不上了。</p>
 <img alt="_images/Ethernet_802.1Q_Insert.png" src="_images/Ethernet_802.1Q_Insert.png" />
-<p>搜索可以发现，tcpdump 有一个 <code class="docutils literal"><span class="pre">-e</span></code> 选项可以打印出更详细的 ethernet header 信息 🤦 。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> tcpdump -nn -e -r /data0/logs/suricata/log.pcap.1598593582 <span class="p">|</span>head -n3
+<p>搜索可以发现，tcpdump 有一个 <code class="docutils literal notranslate"><span class="pre">-e</span></code> 选项可以打印出更详细的 ethernet header 信息 🤦 。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tcpdump -nn -e -r /data0/logs/suricata/log.pcap.1598593582 <span class="p">|</span>head -n3
 <span class="go">reading from file /data0/logs/suricata/log.pcap.1598593582, link-type EN10MB (Ethernet)</span>
 <span class="go">13:46:22.094881 58:69:6c:6a:e6:17 &gt; 58:69:6c:64:47:a9, ethertype IPv4 (0x0800), length 1394: 42.81.204.36.80 &gt; 192.168.8.22.49189: Flags [.], seq 3815694858:3815696198, ack 1160728615, win 70, length 1340: HTTP</span>
 <span class="go">13:46:22.097504 58:69:6c:6a:e6:17 &gt; 58:69:6c:64:47:a9, ethertype IPv4 (0x0800), length 90: 39.82.42.178 &gt; 172.19.70.2: ICMP 39.82.42.178 udp port 9253 unreachable, length 56</span>
 <span class="go">13:46:22.098363 58:69:6c:64:47:a9 &gt; 58:69:6c:6a:e6:17, ethertype 802.1Q (0x8100), length 64: vlan 4094, p 0, ethertype IPv4, 192.168.8.22.49189 &gt; 42.81.204.36.80: Flags [.], ack 0, win 1658, length 0</span>
 </pre></div>
 </div>
-<p>bpf filter 中有一个 <code class="docutils literal"><span class="pre">vlan</span> <span class="pre">[vlan_id]</span></code> filter 可以用来过滤带有 vlan tag 的流量（vlan 为 true 的情况下会自动修正偏移量）。如果需要同时过滤带和不带 vlan tag 的流量，可以使用类似下面这样的语法：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> tcpdump -nn <span class="s2">&quot;&lt;filter&gt; or (vlan and &lt;filter&gt;)&quot;</span>
+<p>bpf filter 中有一个 <code class="docutils literal notranslate"><span class="pre">vlan</span> <span class="pre">[vlan_id]</span></code> filter 可以用来过滤带有 vlan tag 的流量（vlan 为 true 的情况下会自动修正偏移量）。如果需要同时过滤带和不带 vlan tag 的流量，可以使用类似下面这样的语法：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tcpdump -nn <span class="s2">&quot;&lt;filter&gt; or (vlan and &lt;filter&gt;)&quot;</span>
 </pre></div>
 </div>
 <p>参考：</p>
 <ul class="simple">
-<li><a class="reference external" href="https://tshark.dev/packetcraft/arcana/bpf_instructions/#bpf-instructions-explained">https://tshark.dev/packetcraft/arcana/bpf_instructions/#bpf-instructions-explained</a></li>
-<li>EtherType 和协议对照表: <a class="reference external" href="https://en.wikipedia.org/wiki/EtherType#Examples">https://en.wikipedia.org/wiki/EtherType#Examples</a></li>
-<li>IPv4 Protocol numbers: <a class="reference external" href="https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers">https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers</a></li>
-<li><a class="reference external" href="https://christian-rossow.de/articles/tcpdump_filter_mixed_tagged_and_untagged_VLAN_traffic.php">https://christian-rossow.de/articles/tcpdump_filter_mixed_tagged_and_untagged_VLAN_traffic.php</a></li>
-<li><a class="reference external" href="https://wiki.wireshark.org/Development/LibpcapFileFormat">https://wiki.wireshark.org/Development/LibpcapFileFormat</a></li>
-<li><a class="reference external" href="https://en.wikipedia.org/wiki/IEEE_802.1Q#Frame_format">https://en.wikipedia.org/wiki/IEEE_802.1Q#Frame_format</a></li>
+<li><p><a class="reference external" href="https://tshark.dev/packetcraft/arcana/bpf_instructions/#bpf-instructions-explained">https://tshark.dev/packetcraft/arcana/bpf_instructions/#bpf-instructions-explained</a></p></li>
+<li><p>EtherType 和协议对照表: <a class="reference external" href="https://en.wikipedia.org/wiki/EtherType#Examples">https://en.wikipedia.org/wiki/EtherType#Examples</a></p></li>
+<li><p>IPv4 Protocol numbers: <a class="reference external" href="https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers">https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers</a></p></li>
+<li><p><a class="reference external" href="https://christian-rossow.de/articles/tcpdump_filter_mixed_tagged_and_untagged_VLAN_traffic.php">https://christian-rossow.de/articles/tcpdump_filter_mixed_tagged_and_untagged_VLAN_traffic.php</a></p></li>
+<li><p><a class="reference external" href="https://wiki.wireshark.org/Development/LibpcapFileFormat">https://wiki.wireshark.org/Development/LibpcapFileFormat</a></p></li>
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/IEEE_802.1Q#Frame_format">https://en.wikipedia.org/wiki/IEEE_802.1Q#Frame_format</a></p></li>
 </ul>
-</div>
+</section>
 
 
           </div>
@@ -227,15 +217,7 @@
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="aho-corasick-algo.html" title="previous chapter">AC 自动机</a></li>
-      <li>Next: <a href="imago-intentional-dialogue.html" title="next chapter">Imago Intentional Dialogue</a></li>
-  </ul></li>
-</ul>
-</div>
+        <div class="sphinxsidebarwrapper">
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -244,15 +226,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -261,7 +243,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

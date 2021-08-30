@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Android 无 ROOT 导出微信聊天记录 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="一些 Python 3 新特性及其使用方法" href="python3-features.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,37 +33,37 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="android-wu-root-dao-chu-wei-xin-liao-tian-ji-lu">
+  <section id="android-wu-root-dao-chu-wei-xin-liao-tian-ji-lu">
 <h1>Android 无 ROOT 导出微信聊天记录<a class="headerlink" href="#android-wu-root-dao-chu-wei-xin-liao-tian-ji-lu" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li>微信：6.7.3</li>
-<li>MIUI：10.3.2.0</li>
+<li><p>微信：6.7.3</p></li>
+<li><p>MIUI：10.3.2.0</p></li>
 </ul>
-<div class="section" id="bei-fen-bing-dao-chu-wei-xin-shu-ju">
+<section id="bei-fen-bing-dao-chu-wei-xin-shu-ju">
 <h2>备份并导出微信数据<a class="headerlink" href="#bei-fen-bing-dao-chu-wei-xin-shu-ju" title="Permalink to this headline">¶</a></h2>
 <p>在手机上点击进入【设置 / 更多设置 / 备份和重置】，选择【本地备份 / 新建备份】，去除【系统数据】和【软件程序】的勾选，点击【软件程序】右侧的箭头进入程序列表页面，勾选微信，点击【确定】返回上级页面，然后点击【开始备份】开始备份微信数据。</p>
-<p>MIUI 备份后的数据保存在 <code class="docutils literal"><span class="pre">/MIUI/backup/Allbackup/</span></code> 中以备份时间命名的子目录里，将子目录中的备份文件（.bak 文件）复制到电脑上面。</p>
+<p>MIUI 备份后的数据保存在 <code class="docutils literal notranslate"><span class="pre">/MIUI/backup/Allbackup/</span></code> 中以备份时间命名的子目录里，将子目录中的备份文件（.bak 文件）复制到电脑上面。</p>
 <p>MIUI 在 Android 的标准备份文件的前面添加了一个自定义文件头，如下图所示：</p>
 <img alt="_images/miui-backup-header.png" src="_images/miui-backup-header.png" />
-<p>我们需要去除 <code class="docutils literal"><span class="pre">41</span> <span class="pre">4e</span></code> 前面的自定义文件头，然后使用 <a class="reference external" href="https://github.com/nelenkov/android-backup-extractor/releases/download/20181012025725-d750899/abe-all.jar">Android backup extractor</a> 和 tar 提取和解压微信备份数据，提取和解压命令如下：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> <span class="nv">bak_file</span><span class="o">=</span>微信.bak
-<span class="gp">$</span> tail -c +<span class="k">$(</span>python -c <span class="s2">&quot;import sys; print open(&#39;</span><span class="nv">$bak_file</span><span class="s2">&#39;).read(100).index(&#39;\x41\x4e&#39;)+1&quot;</span><span class="k">)</span> <span class="nv">$bak_file</span> <span class="p">|</span> java -jar abe-all.jar unpack - - <span class="p">|</span> tar xf -
+<p>我们需要去除 <code class="docutils literal notranslate"><span class="pre">41</span> <span class="pre">4e</span></code> 前面的自定义文件头，然后使用 <a class="reference external" href="https://github.com/nelenkov/android-backup-extractor/releases/download/20181012025725-d750899/abe-all.jar">Android backup extractor</a> 和 tar 提取和解压微信备份数据，提取和解压命令如下：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nv">bak_file</span><span class="o">=</span>微信.bak
+<span class="gp">$ </span>tail -c +<span class="k">$(</span>python -c <span class="s2">&quot;import sys; print open(&#39;</span><span class="nv">$bak_file</span><span class="s2">&#39;).read(100).index(&#39;\x41\x4e&#39;)+1&quot;</span><span class="k">)</span> <span class="nv">$bak_file</span> <span class="p">|</span> java -jar abe-all.jar unpack - - <span class="p">|</span> tar xf -
 </pre></div>
 </div>
-<p>备份数据会被解压到一个 <code class="docutils literal"><span class="pre">wechat</span></code> 目录里。</p>
-</div>
-<div class="section" id="jie-mi-liao-tian-ji-lu-shu-ju-ku-wen-jian">
+<p>备份数据会被解压到一个 <code class="docutils literal notranslate"><span class="pre">wechat</span></code> 目录里。</p>
+</section>
+<section id="jie-mi-liao-tian-ji-lu-shu-ju-ku-wen-jian">
 <h2>解密聊天记录数据库文件<a class="headerlink" href="#jie-mi-liao-tian-ji-lu-shu-ju-ku-wen-jian" title="Permalink to this headline">¶</a></h2>
-<p>进入 <code class="docutils literal"><span class="pre">wechat</span></code> 目录，执行下面的命令找到聊天记录的数据库所在目录：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> <span class="nb">cd</span> wechat
-<span class="gp">$</span> find . -name <span class="s2">&quot;EnMicroMsg.db&quot;</span>
+<p>进入 <code class="docutils literal notranslate"><span class="pre">wechat</span></code> 目录，执行下面的命令找到聊天记录的数据库所在目录：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">cd</span> wechat
+<span class="gp">$ </span>find . -name <span class="s2">&quot;EnMicroMsg.db&quot;</span>
 <span class="go">./com.tencent.mm/r/MicroMsg/f1bde7***********7a127aae38462/EnMicroMsg.db</span>
 <span class="go">./com.tencent.mm/r/MicroMsg/EnMicroMsg.db</span>
 </pre></div>
 </div>
-<p>上面一串类似随机数的目录里的 <code class="docutils literal"><span class="pre">EnMicroMsg.db</span></code> 就是聊天记录的数据库文件，这个文件是一个使用 sqlcipher 加密过的 sqlite 数据库文件。加密的密码由手机的 IMEI 和 自己的微信 UIN 计算得到，所以首先我们需要先提取这两个的值。</p>
+<p>上面一串类似随机数的目录里的 <code class="docutils literal notranslate"><span class="pre">EnMicroMsg.db</span></code> 就是聊天记录的数据库文件，这个文件是一个使用 sqlcipher 加密过的 sqlite 数据库文件。加密的密码由手机的 IMEI 和 自己的微信 UIN 计算得到，所以首先我们需要先提取这两个的值。</p>
 <p>将下面的代码保存到 MapDumper.java 文件中：</p>
-<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.io.FileInputStream</span><span class="p">;</span>
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.io.FileInputStream</span><span class="p">;</span>
 <span class="kn">import</span> <span class="nn">java.io.ObjectInputStream</span><span class="p">;</span>
 <span class="kn">import</span> <span class="nn">java.util.Map</span><span class="p">;</span>
 
@@ -92,26 +82,26 @@
 </pre></div>
 </div>
 <p>然后执行下面的命令来提取 IMEI 和 UIN：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> javac MapDumper.java
-<span class="gp">$</span> java MapDumper <span class="k">$(</span>find . -name CompatibleInfo.cfg<span class="k">)</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>javac MapDumper.java
+<span class="gp">$ </span>java MapDumper <span class="k">$(</span>find . -name CompatibleInfo.cfg<span class="k">)</span>
 <span class="go">{98305=false, 256=A86802803750460, 94209=0, 258=XXXXXXXXXXXXXX, 259=XiaomiRedmi 5A: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt lpae evtstrm aes pmull sha1 sha2 crc32: AArch64 Processor rev 4 (aarch64): 8: Qualcomm Technologies, Inc MSM8917: null}</span>
-<span class="gp">$</span> java MapDumper <span class="k">$(</span>find . -name systemInfo.cfg<span class="k">)</span>
+<span class="gp">$ </span>java MapDumper <span class="k">$(</span>find . -name systemInfo.cfg<span class="k">)</span>
 <span class="go">{1=YYYYYYYYY, 2=10,163.177.81.139,80,szshort.weixin.qq.com|18,183.3.224.141,80,szshort.weixin.qq.com|6,121.51.140.139,80,szshort.weixin.qq.com|10,163.177.81.139,80,szextshort.weixin.qq.com|18,183.3.224.141,80,szextshort.weixin.qq.com|6,121.51.140.139,80,szextshort.weixin.qq.com|6,121.51.130.84,80,szshort.pay.weixin.qq.com|6,121.51.140.143,80,szshort.pay.weixin.qq.com|10,163.177.81.143,80,szshort.pay.weixin.qq.com|10,58.251.80.105,80,szshort.pay.weixin.qq.com|18,183.3.224.143,80,szshort.pay.weixin.qq.com|18,183.3.234.104,80,szshort.pay.weixin.qq.com|6,127.0.0.1,80,localhost|, 3=10,163.177.81.141,80,szlong.weixin.qq.com|10,58.251.100.119,80,szlong.weixin.qq.com|18,14.215.158.119,80,szlong.weixin.qq.com|18,183.3.224.139,80,szlong.weixin.qq.com|6,121.51.140.141,80,szlong.weixin.qq.com|6,121.51.8.119,80,szlong.weixin.qq.com|, 35=10, 37=637993789, 6=80:8080:443, 7=5:5, 46=0, 47=0, 17=0, 24=szshort.weixin.qq.com, 25=szlong.weixin.qq.com}</span>
 </pre></div>
 </div>
-<p>CompatibleInfo.cfg 文件 dump 出的内容中 <code class="docutils literal"><span class="pre">258=</span></code> 后是手机 IMEI 号， systemInfo.cfg 文件 dump 出的内容中  <code class="docutils literal"><span class="pre">1=</span></code> 后面是微信 UIN 号。</p>
+<p>CompatibleInfo.cfg 文件 dump 出的内容中 <code class="docutils literal notranslate"><span class="pre">258=</span></code> 后是手机 IMEI 号， systemInfo.cfg 文件 dump 出的内容中  <code class="docutils literal notranslate"><span class="pre">1=</span></code> 后面是微信 UIN 号。</p>
 <p>得到这两个值后将 IMEI 和 UIN 合并后计算其 md5 值，取其前 7 位即为加密数据库的密码：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> <span class="nb">echo</span> -n XXXXXXXXXXXXXXYYYYYYYYY <span class="p">|</span> md5 <span class="p">|</span> cut -c -7
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">echo</span> -n XXXXXXXXXXXXXXYYYYYYYYY <span class="p">|</span> md5 <span class="p">|</span> cut -c -7
 <span class="go">PPPPPPP</span>
 </pre></div>
 </div>
 <p>最后，进入 sqlcipher 命令行：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sqlcipher
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>sqlcipher
 <span class="go">sqlite&gt;</span>
 </pre></div>
 </div>
 <p>执行下面的命令解密数据库到 MicroMsg.db 文件（其中 PPPPPPP 为上面计算得到的密码）。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">.open ./com.tencent.mm/r/MicroMsg/f1bde7***********7a127aae38462/EnMicroMsg.db</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">.open ./com.tencent.mm/r/MicroMsg/f1bde7***********7a127aae38462/EnMicroMsg.db</span>
 <span class="go">PRAGMA key=&#39;PPPPPPP&#39;;</span>
 <span class="go">PRAGMA cipher_use_hmac=off;</span>
 <span class="go">PRAGMA cipher_page_size=1024;</span>
@@ -122,18 +112,18 @@
 <span class="go">.quit</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="dao-chu-liao-tian-ji-lu">
+</section>
+<section id="dao-chu-liao-tian-ji-lu">
 <h2>导出聊天记录<a class="headerlink" href="#dao-chu-liao-tian-ji-lu" title="Permalink to this headline">¶</a></h2>
 <p>最后我们使用 <a class="reference external" href="https://github.com/ppwwyyxx/wechat-dump">wechat-dump</a> 中的命令从解密后的 Micromsg.db 文件中导出聊天记录到 .txt 或者 .html 文件。</p>
 <p>参考：</p>
 <ul class="simple">
-<li><a class="reference external" href="https://www.feifeiboke.com/android/3669.html">轻松解包 MIUI 备份 bak 文件 还原出明文数据</a></li>
-<li><a class="reference external" href="https://www.bilibili.com/read/cv8798/">记一次微信聊天文字记录导出到 Excel 工作</a></li>
-<li><a class="reference external" href="https://wormtooth.com/20180417-decrypt-wechat-database/">解密安卓微信聊天记录数据库</a></li>
+<li><p><a class="reference external" href="https://www.feifeiboke.com/android/3669.html">轻松解包 MIUI 备份 bak 文件 还原出明文数据</a></p></li>
+<li><p><a class="reference external" href="https://www.bilibili.com/read/cv8798/">记一次微信聊天文字记录导出到 Excel 工作</a></p></li>
+<li><p><a class="reference external" href="https://wormtooth.com/20180417-decrypt-wechat-database/">解密安卓微信聊天记录数据库</a></p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -142,7 +132,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Android 无 ROOT 导出微信聊天记录</a><ul>
 <li><a class="reference internal" href="#bei-fen-bing-dao-chu-wei-xin-shu-ju">备份并导出微信数据</a></li>
@@ -151,15 +141,7 @@
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="raft.html" title="previous chapter">Raft 共识算法</a></li>
-      <li>Next: <a href="python3-features.html" title="next chapter">一些 Python 3 新特性及其使用方法</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -168,15 +150,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -185,7 +167,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

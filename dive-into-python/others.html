@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Python中的信号处理 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Python中多线程的实现" href="thread.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,9 +33,9 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="python-zhong-di-xin-hao-chu-li">
-<h1>Python中的信号处理<a class="headerlink" href="#python-zhong-di-xin-hao-chu-li" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-default"><div class="highlight"><pre><span></span>Modules/signalmodule.c
+  <section id="python-zhong-de-xin-hao-chu-li">
+<h1>Python中的信号处理<a class="headerlink" href="#python-zhong-de-xin-hao-chu-li" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Modules/signalmodule.c
 ========================
 
 /*
@@ -258,10 +248,10 @@ Py_MakePendingCalls(void)
 <p>Python中的信号是异步处理的，信号处理函数只有主线程才能设置，</p>
 <p>Py_AddPendingCall是个好东西，可以用其往运行中的Python虚拟机中插入执行逻辑。</p>
 <p>PyErr_SetInterrupt()可以用来停止正在运行中的Python虚拟机。</p>
-</div>
-<div class="section" id="unicode">
+</section>
+<section id="unicode">
 <h1>unicode<a class="headerlink" href="#unicode" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-default"><div class="highlight"><pre><span></span>binascii.b2a_base64(u&#39;你好&#39;)
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>binascii.b2a_base64(u&#39;你好&#39;)
 Traceback (most recent call last):
   File &quot;&lt;stdin&gt;&quot;, line 1, in &lt;module&gt;
   UnicodeEncodeError: &#39;ascii&#39; codec can&#39;t encode characters in position 0-1: ordinal not in range(128)
@@ -335,7 +325,7 @@ vgetargs1(PyObject *args, const char *format, va_list *p_va, int flags)
 </pre></div>
 </div>
 <p>Python中的默认编码是ascii，编码规则为</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>If the code point is &lt; 128, each byte is the same as the value of the code point.
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>If the code point is &lt; 128, each byte is the same as the value of the code point.
 If the code point is 128 or greater, the Unicode string can’t be represented in this encoding. (Python raises a UnicodeEncodeError exception in this case.)
 </pre></div>
 </div>
@@ -343,22 +333,22 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
 的格式，将其base64编码是没有意义的，一般在网络中交换数据时都是先转换为基于字节编
 码的utf-8格式。（还是Unicode，只是表现形式不一样而已）。</p>
 <p>关于 <cite># -*- coding: utf-8 -*-</cite></p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Gramma</span><span class="o">/</span><span class="n">Gramma</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Gramma</span><span class="o">/</span><span class="n">Gramma</span>
 <span class="o">===============</span>
 <span class="c1"># not used in grammar, but may appear in &quot;node&quot; passed from Parser to Compiler</span>
 <span class="n">encoding_decl</span><span class="p">:</span> <span class="n">NAME</span>
 </pre></div>
 </div>
 <p><a class="reference external" href="http://docs.python.org/howto/unicode.html">http://docs.python.org/howto/unicode.html</a></p>
-</div>
-<div class="section" id="socket-mo-kuai-kua-ping-tai-dup-di-shi-xian">
-<h1>socket模块跨平台dup的实现<a class="headerlink" href="#socket-mo-kuai-kua-ping-tai-dup-di-shi-xian" title="Permalink to this headline">¶</a></h1>
+</section>
+<section id="socket-mo-kuai-kua-ping-tai-dup-de-shi-xian">
+<h1>socket模块跨平台dup的实现<a class="headerlink" href="#socket-mo-kuai-kua-ping-tai-dup-de-shi-xian" title="Permalink to this headline">¶</a></h1>
 <p>在本地起一个server监听8080端口</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>alan@sina:~$ nc -l 8080
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>alan@sina:~$ nc -l 8080
 </pre></div>
 </div>
 <p>打开python shell，输入如下代码</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">socket</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">socket</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">_s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">_sock</span>
@@ -376,12 +366,12 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
 </pre></div>
 </div>
 <p>以下为nc的输出：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">before</span> <span class="n">close</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">before</span> <span class="n">close</span>
 <span class="n">after</span> <span class="n">close</span> <span class="n">by</span> <span class="n">_s</span>
 </pre></div>
 </div>
 <p>看一下socket模块的代码</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">socket</span><span class="o">.</span><span class="n">py</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">socket</span><span class="o">.</span><span class="n">py</span>
 <span class="o">=========</span>
 
 <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -401,11 +391,11 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
 <p>P.S 因为需要将httplib模块使用的socket模块替换为有限制的intern_socket模块，过程中
 总是出现读完http header后，body莫名其妙timeout的问题，最后检查发现跟这个有关。</p>
 <p>poll在fd已经是-1的时候居然还返回超时阿！坑爹呢阿！</p>
-</div>
-<div class="section" id="number-hack-py">
+</section>
+<section id="number-hack-py">
 <h1>number_hack.py<a class="headerlink" href="#number-hack-py" title="Permalink to this headline">¶</a></h1>
 <p><a class="reference external" href="http://gist.github.com/1208215">http://gist.github.com/1208215</a></p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">ctypes</span>
 <span class="n">pyint_p</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">c_byte</span><span class="o">*</span><span class="n">sys</span><span class="o">.</span><span class="n">getsizeof</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
 <span class="n">five</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">pyint_p</span><span class="p">)</span>
@@ -416,7 +406,7 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
 </div>
 <p>id(object): This is the address of the object in memory.</p>
 <p>int object的结构：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Include</span><span class="o">/</span><span class="n">intobject</span><span class="o">.</span><span class="n">h</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Include</span><span class="o">/</span><span class="n">intobject</span><span class="o">.</span><span class="n">h</span>
 <span class="o">===================</span>
 <span class="n">typedef</span> <span class="n">struct</span> <span class="p">{</span>
     <span class="n">PyObject_HEAD</span>
@@ -430,7 +420,7 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
 </pre></div>
 </div>
 <p>five中的内容结构如下:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">five</span><span class="o">.</span><span class="n">contents</span><span class="p">[:]</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">five</span><span class="o">.</span><span class="n">contents</span><span class="p">[:]</span>
 <span class="go">[17, 0, 0, 0, 0, -23, 34, 8, 5, 0, 0, 0]</span>
 <span class="go">| ob_refcnt | ob_type      | ob_ival   |</span>
 </pre></div>
@@ -438,7 +428,7 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
 <p>小整数在python中是共享的，所以所有的object(5)在python中都是引用的同一个对象，上
 面的代码修改了这个对象中ob_ival字段，所以所有的object(5)里面的raw数值就变成了4，
 所以。</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Objects</span><span class="o">/</span><span class="n">intobject</span><span class="o">.</span><span class="n">c</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Objects</span><span class="o">/</span><span class="n">intobject</span><span class="o">.</span><span class="n">c</span>
 <span class="o">===================</span>
 <span class="n">PyObject</span> <span class="o">*</span>
 <span class="n">PyInt_FromLong</span><span class="p">(</span><span class="n">long</span> <span class="n">ival</span><span class="p">)</span>
@@ -461,17 +451,17 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
 </pre></div>
 </div>
 <p>再改回去:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pychar_p</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">c_char</span><span class="o">*</span><span class="n">sys</span><span class="o">.</span><span class="n">getsizeof</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pychar_p</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">c_char</span><span class="o">*</span><span class="n">sys</span><span class="o">.</span><span class="n">getsizeof</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
 <span class="n">five1</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">pychar_p</span><span class="p">)</span>
 <span class="n">five1</span><span class="o">.</span><span class="n">contents</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\x05</span><span class="s1">&#39;</span>
 </pre></div>
 </div>
 <p>p.s. 查找替换5为4的过程还是是有问题的。如果在ob_refcnt或ob_type的任意一个字节
 里出现了5，就挂了。应该是找最后一个5才行。</p>
-</div>
-<div class="section" id="bound-method-unbound-method-etc">
+</section>
+<section id="bound-method-unbound-method-etc">
 <h1>Bound method, Unbound Method etc<a class="headerlink" href="#bound-method-unbound-method-etc" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 <span class="gp">... </span>    <span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
 <span class="gp">... </span>            <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>
 <span class="gp">...</span>
@@ -490,7 +480,7 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
 </pre></div>
 </div>
 <p>现在我们来看看代码，解释以下为什么A.foo变成了和实际的foo不一样的东西。</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dis</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dis</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dis</span><span class="o">.</span><span class="n">dis</span><span class="p">(</span><span class="nb">compile</span><span class="p">(</span><span class="s1">&#39;A.foo&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;none&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;exec&#39;</span><span class="p">))</span>
 <span class="go">  1           0 LOAD_NAME                0 (a)</span>
 <span class="go">              3 LOAD_ATTR                1 (foo)</span>
@@ -569,17 +559,17 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
 <span class="go">};</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="di-gui-y-combinator">
+</section>
+<section id="di-gui-y-combinator">
 <h1>递归 &amp; Y-Combinator<a class="headerlink" href="#di-gui-y-combinator" title="Permalink to this headline">¶</a></h1>
 <p>求10!</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span> <span class="k">return</span> <span class="mi">1</span>
     <span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="n">n</span> <span class="o">*</span> <span class="n">f</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>使用尾递归</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span> <span class="k">return</span> <span class="n">m</span>
     <span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="n">f</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="o">*</span><span class="n">m</span><span class="p">)</span>
 
@@ -589,55 +579,55 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
 <p>递归能够实现是因为在 <cite>def ….</cite> 定义函数的时候在当前的namespace里加入了 <cite>f</cite> 这个
 变量指向这个函数。</p>
 <p>但是这个变量并不是必须的，匿名函数一样可以实现递归，通过Y combinator。</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Y</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">function</span> <span class="n">that</span> <span class="n">takes</span> <span class="n">a</span> <span class="n">function</span> <span class="n">that</span> <span class="n">could</span> <span class="n">be</span> <span class="n">viewed</span> <span class="k">as</span> <span class="n">describing</span> <span class="n">a</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Y</span> <span class="ow">is</span> <span class="n">a</span> <span class="n">function</span> <span class="n">that</span> <span class="n">takes</span> <span class="n">a</span> <span class="n">function</span> <span class="n">that</span> <span class="n">could</span> <span class="n">be</span> <span class="n">viewed</span> <span class="k">as</span> <span class="n">describing</span> <span class="n">a</span>
 <span class="n">recursive</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">-</span><span class="n">referential</span> <span class="n">function</span><span class="p">,</span> <span class="ow">and</span> <span class="n">returns</span> <span class="n">another</span> <span class="n">function</span> <span class="n">that</span>
 <span class="n">implements</span> <span class="n">that</span> <span class="n">recursive</span> <span class="n">function</span><span class="o">.</span>
 </pre></div>
 </div>
 <p>以下是Y cominator的推导过程。基本是 www.dreamsongs.com/Files/WhyOfY.pdf 这篇文章
 的一个python版</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># currying</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># currying</span>
 <span class="c1"># http://en.wikipedia.org/wiki/Currying</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span> <span class="o">==</span> <span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">b</span><span class="p">:</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
 </pre></div>
 </div>
 <p>首先，使用匿名函数来实现10！</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">h</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">n</span><span class="o">*</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">h</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">n</span><span class="o">*</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">apply</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
 <span class="go">3628800</span>
 </pre></div>
 </div>
 <p>第一步，currying</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">n</span><span class="o">*</span><span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">n</span><span class="o">*</span><span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="n">g</span><span class="p">,)),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,))</span>
 <span class="go">3628800</span>
 </pre></div>
 </div>
 <p>第二步，从 <cite>1 if n &lt; 2 else n*apply(apply(h, (h,)), (n-1,))</cite> 中提取出 <cite>apply(h, (h,))</cite></p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">q</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">n</span><span class="o">*</span><span class="n">apply</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">q</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">n</span><span class="o">*</span><span class="n">apply</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">((</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">)))</span>
 </pre></div>
 </div>
 <p>从而整个函数可以改写为</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">(</span><span class="n">g</span><span class="p">,)),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,))</span>
 <span class="go">3628800</span>
 </pre></div>
 </div>
 <p>最后，合并为：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Y</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">)),</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">)),))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Y</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">)),</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">apply</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="n">h</span><span class="p">,)),</span> <span class="n">n</span><span class="p">)),))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">apply</span><span class="p">(</span><span class="n">apply</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="p">(</span><span class="n">f</span><span class="p">,)),</span> <span class="p">(</span><span class="mi">10</span><span class="p">,))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">Y</span><span class="p">(</span><span class="n">f</span><span class="p">)(</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>使用Y  Combinator计算Fibonacci number</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Y</span><span class="p">(</span><span class="k">lambda</span> <span class="n">q</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">apply</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span> <span class="o">+</span> <span class="n">apply</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">2</span><span class="p">,)))(</span><span class="mi">10</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Y</span><span class="p">(</span><span class="k">lambda</span> <span class="n">q</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">apply</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">,))</span> <span class="o">+</span> <span class="n">apply</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">2</span><span class="p">,)))(</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>more:</p>
 <p><a class="reference external" href="http://en.wikipedia.org/wiki/Fixed-point_combinator#Y_combinator">http://en.wikipedia.org/wiki/Fixed-point_combinator#Y_combinator</a></p>
 <p><a class="reference external" href="http://en.wikipedia.org/wiki/Lambda_calculus">http://en.wikipedia.org/wiki/Lambda_calculus</a></p>
-</div>
+</section>
 
 
           </div>
@@ -646,26 +636,16 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Python中的信号处理</a></li>
 <li><a class="reference internal" href="#unicode">unicode</a></li>
-<li><a class="reference internal" href="#socket-mo-kuai-kua-ping-tai-dup-di-shi-xian">socket模块跨平台dup的实现</a></li>
+<li><a class="reference internal" href="#socket-mo-kuai-kua-ping-tai-dup-de-shi-xian">socket模块跨平台dup的实现</a></li>
 <li><a class="reference internal" href="#number-hack-py">number_hack.py</a></li>
 <li><a class="reference internal" href="#bound-method-unbound-method-etc">Bound method, Unbound Method etc</a></li>
 <li><a class="reference internal" href="#di-gui-y-combinator">递归 &amp; Y-Combinator</a></li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">Python 源码相关笔记</a><ul>
-      <li>Previous: <a href="import.html" title="previous chapter">Import模块分析</a></li>
-      <li>Next: <a href="thread.html" title="next chapter">Python中多线程的实现</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -674,15 +654,15 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -691,7 +671,7 @@ If the code point is 128 or greater, the Unicode string can’t be represented i
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

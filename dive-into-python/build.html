@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Python环境构建 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="greenlet, eventlet, gevent etc" href="greenlet.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,20 +33,18 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="python-huan-jing-gou-jian">
+  <section id="python-huan-jing-gou-jian">
 <h1>Python环境构建<a class="headerlink" href="#python-huan-jing-gou-jian" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="python-bian-yi-xiang-guan">
+<section id="python-bian-yi-xiang-guan">
 <h2>Python编译相关<a class="headerlink" href="#python-bian-yi-xiang-guan" title="Permalink to this headline">¶</a></h2>
 <p>动态扩展加载： HAVE_DYNAMIC_LOADING</p>
 <p>添加package到标准库，也就是在Lib目录下建子目录需要修改Makefile.pre.in。
 将目录路径添加到LIBSUBDIRS变量中。</p>
 <ol class="arabic">
-<li><p class="first">Python代码中调用Python函数。</p>
-</li>
-<li><p class="first">Python代码中调用C函数。</p>
-</li>
-<li><p class="first">C代码中调用Python函数。</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">struct</span> <span class="n">wrapperbase</span> <span class="p">{</span>
+<li><p>Python代码中调用Python函数。</p></li>
+<li><p>Python代码中调用C函数。</p></li>
+<li><p>C代码中调用Python函数。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">struct</span> <span class="n">wrapperbase</span> <span class="p">{</span>
     <span class="n">char</span> <span class="o">*</span><span class="n">name</span><span class="p">;</span>
     <span class="nb">int</span> <span class="n">offset</span><span class="p">;</span>
     <span class="n">void</span> <span class="o">*</span><span class="n">function</span><span class="p">;</span>
@@ -73,8 +61,8 @@
 <p>设置断点
 import pdb; pdb.set_trace()</p>
 <p>raise</p>
-</div>
-<div class="section" id="distutils">
+</section>
+<section id="distutils">
 <h2>distutils<a class="headerlink" href="#distutils" title="Permalink to this headline">¶</a></h2>
 <p>export DISTUTILS_DEBUG=1</p>
 <p><a class="reference external" href="http://www.ibm.com/developerworks/linux/library/l-dynamic-libraries/">http://www.ibm.com/developerworks/linux/library/l-dynamic-libraries/</a></p>
@@ -85,16 +73,16 @@ PYTHONPATH: 这个变量会prepend到sys.path中。</p>
 <p>–enable-shared</p>
 <p>对于–enable-shared编译出来的python executable，其运行时需要知道：</p>
 <ol class="arabic">
-<li><p class="first">python2.6.so的位置。</p>
+<li><p>python2.6.so的位置。</p>
 <p>python excutable里只有一个main函数，只是一个空壳，负责调用Py_Main。真正的入
 Py_Main在python2.6.so里。</p>
 <p>$ echo $prefix &gt; ld.so.conf.d/python$version.so.conf</p>
 </li>
-<li><p class="first">标准库的位置。</p>
+<li><p>标准库的位置。</p>
 <p>默认为os.path.join(sys.prefix, ‘lib/python&lt;version&gt;’)</p>
 </li>
 </ol>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pprint</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pprint</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dist.sysconfig</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">sysconfig</span><span class="o">.</span><span class="n">get_config_vars</span><span class="p">())</span>
 </pre></div>
@@ -104,7 +92,7 @@ Py_Main在python2.6.so里。</p>
 Modules/getpath.c中的caculate_path函数。
 $prefix/lib/python$version/site.py</p>
 <p>如何使用setuptools为阉割版（无法import subprocess）的python安装包？</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">xpython</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">xpython</span>
 <span class="o">=============</span>
 <span class="c1">#!/path/to/nornmal/python</span>
 
@@ -132,8 +120,8 @@ $prefix/lib/python$version/site.py</p>
 </div>
 <p>最后执行xpython setup.py install搞定！</p>
 <p>上面执行xpython用的正常版的python最好是静态编译，省很多事阿。</p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -142,7 +130,7 @@ $prefix/lib/python$version/site.py</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Python环境构建</a><ul>
 <li><a class="reference internal" href="#python-bian-yi-xiang-guan">Python编译相关</a></li>
@@ -150,17 +138,7 @@ $prefix/lib/python$version/site.py</p>
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">Python 源码相关笔记</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">Python 源码相关笔记</a></li>
-      <li>Next: <a href="greenlet.html" title="next chapter">greenlet, eventlet, gevent etc</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -169,15 +147,15 @@ $prefix/lib/python$version/site.py</p>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -186,7 +164,7 @@ $prefix/lib/python$version/site.py</p>
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

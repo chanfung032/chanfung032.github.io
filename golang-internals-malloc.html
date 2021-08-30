@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Go 语言实现——内存管理 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Go 语言实现——网络 IO" href="golang-internals-io.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,28 +33,28 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="go-yu-yan-shi-xian-nei-cun-guan-li">
+  <section id="go-yu-yan-shi-xian-nei-cun-guan-li">
 <h1>Go 语言实现——内存管理<a class="headerlink" href="#go-yu-yan-shi-xian-nei-cun-guan-li" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="gai-shu">
+<section id="gai-shu">
 <h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
 <p>Go 语言的堆内存分配是基于 <a class="reference external" href="http://goog-perftools.sourceforge.net/doc/tcmalloc.html">TCMalloc</a> 的模型实现的，是一个带有 thread cache 的分配器。</p>
 <p>分配器一开始向操作系统申请一大片地址空间用于内存分配，分配器的分配单位是 page（8kb）。</p>
 <ul class="simple">
-<li>对于大于 32kb 的 object 分配器直接分配连续的 page。</li>
-<li>小于 32kb 的 small object 的分配稍微复杂一点。首先，分配器从 1~32k 定义了大约 70 个大小固定的 object class，分配器分配连续的 page 给这些 object class 去使用，然后要分配 small object 的时候，按其 object 大小向上寻找一个最接近其大小的 object class，从这个 object class 的 page 中切一块分配给这个 object。object class 中的 page 用完了再分配新的 page。</li>
+<li><p>对于大于 32kb 的 object 分配器直接分配连续的 page。</p></li>
+<li><p>小于 32kb 的 small object 的分配稍微复杂一点。首先，分配器从 1~32k 定义了大约 70 个大小固定的 object class，分配器分配连续的 page 给这些 object class 去使用，然后要分配 small object 的时候，按其 object 大小向上寻找一个最接近其大小的 object class，从这个 object class 的 page 中切一块分配给这个 object。object class 中的 page 用完了再分配新的 page。</p></li>
 </ul>
 <p>分配器中分配出去的连续 page 叫做 span ，线程会为每个 object class 缓存一个 span 用于本线程的 small object 分配，这样大部分情况下 small object 的分配就不用加全局锁了。</p>
-</div>
-<div class="section" id="zhu-yao-shu-ju-jie-gou">
+</section>
+<section id="zhu-yao-shu-ju-jie-gou">
 <h2>主要数据结构<a class="headerlink" href="#zhu-yao-shu-ju-jie-gou" title="Permalink to this headline">¶</a></h2>
 <p>和分配器相关的主要是 mheap、mcentral、mspan、mcache 这四个结构体。</p>
 <ul class="simple">
-<li>mheap 分配器相关的结构体。</li>
-<li>mcentral 管理分配给每个 object class 的所有 span。</li>
-<li>mspan 管理分配出去的 span 。</li>
-<li>mcache 管理每个线程的 span cache 的结构体。</li>
+<li><p>mheap 分配器相关的结构体。</p></li>
+<li><p>mcentral 管理分配给每个 object class 的所有 span。</p></li>
+<li><p>mspan 管理分配出去的 span 。</p></li>
+<li><p>mcache 管理每个线程的 span cache 的结构体。</p></li>
 </ul>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">mheap</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">mheap</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="c1">// 所有已分配的 span</span>
     <span class="nx">allspans</span> <span class="p">[]</span><span class="o">*</span><span class="nx">mspan</span>
     <span class="c1">// arena 中已使用的 page 到对应的 *mspan 的映射表，1 个 page 对应一个</span>
@@ -146,34 +136,34 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="chu-shi-hua">
+</section>
+<section id="chu-shi-hua">
 <h2>初始化<a class="headerlink" href="#chu-shi-hua" title="Permalink to this headline">¶</a></h2>
 <p>在 Go 运行环境初始化的过程中，会调用 mallocinit() 函数初始化堆内存分配器，mallocinit() 会向操作系统申请如下的一段虚拟地址空间：</p>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="34%" />
-<col width="31%" />
-<col width="34%" />
+<col style="width: 34%" />
+<col style="width: 31%" />
+<col style="width: 34%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td>spans 512M</td>
-<td>bitmap 16G</td>
-<td>arena 512G</td>
+<tbody>
+<tr class="row-odd"><td><p>spans 512M</p></td>
+<td><p>bitmap 16G</p></td>
+<td><p>arena 512G</p></td>
 </tr>
 </tbody>
 </table>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">mheap_</span><span class="p">.</span><span class="nx">spans</span><span class="p">.</span><span class="nx">array</span> <span class="p">=</span> <span class="nx">spans</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">mheap_</span><span class="p">.</span><span class="nx">spans</span><span class="p">.</span><span class="nx">array</span> <span class="p">=</span> <span class="nx">spans</span>
 <span class="nx">mheap_</span><span class="p">.</span><span class="nx">bitmap</span> <span class="p">=</span> <span class="nx">bitmap</span>
 <span class="nx">mheap_</span><span class="p">.</span><span class="nx">arena_start</span> <span class="p">=</span> <span class="nx">arena</span>
 </pre></div>
 </div>
 <p>这段地址空间中的 arena 就是最终分配 object 用的内存空间，前两个是分配器自用：</p>
 <ul class="simple">
-<li>spans 是 mheap_.spans 这个 slice 的底层 array 。</li>
-<li>bitmap 是给 gc 来标记对象用的（Go 的 object 里没有 object header，所以这个标记只能外放了）。</li>
+<li><p>spans 是 mheap_.spans 这个 slice 的底层 array 。</p></li>
+<li><p>bitmap 是给 gc 来标记对象用的（Go 的 object 里没有 object header，所以这个标记只能外放了）。</p></li>
 </ul>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">mallocinit</span><span class="p">()</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">mallocinit</span><span class="p">()</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="nx">p</span><span class="p">,</span> <span class="nx">pSize</span> <span class="kt">uintptr</span>
     <span class="kd">var</span> <span class="nx">reserved</span> <span class="kt">bool</span>
 
@@ -228,11 +218,11 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="fen-pei">
+</section>
+<section id="fen-pei">
 <h2>分配<a class="headerlink" href="#fen-pei" title="Permalink to this headline">¶</a></h2>
 <p>堆内存分配器的入口是 newobject，从其函数中能看到其对 small 和 large object 的不同处理。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">newobject</span><span class="p">(</span><span class="nx">typ</span> <span class="o">*</span><span class="nx">_type</span><span class="p">)</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">newobject</span><span class="p">(</span><span class="nx">typ</span> <span class="o">*</span><span class="nx">_type</span><span class="p">)</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span> <span class="p">{</span>
     <span class="k">return</span> <span class="nx">mallocgc</span><span class="p">(</span><span class="nx">typ</span><span class="p">.</span><span class="nx">size</span><span class="p">,</span> <span class="nx">typ</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
 <span class="p">}</span>
 
@@ -313,7 +303,7 @@
 </pre></div>
 </div>
 <p>上面代码中 nextFreeFast 会尝试根据 span.allocCache 直接找到下一个空闲 slot 用来分配，如果没找到再调用 c.nextFree(spc) 根据 span.alloBits 来找到下一个空闲 slot 并且重新装填 span.allocCache。mcache 在初始化的时候所有的 object class 缓存的 span 都是 emptymspan，一个没有任何 page 的空 span，在 span 没有空闲 slot 的情况下，c.nextFree(spc) 会调用 c.refill() 向 mheap_.central 重新申请一个新的可用 span。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">mcache</span><span class="p">)</span> <span class="nx">refill</span><span class="p">(</span><span class="nx">spc</span> <span class="nx">spanClass</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">mcache</span><span class="p">)</span> <span class="nx">refill</span><span class="p">(</span><span class="nx">spc</span> <span class="nx">spanClass</span><span class="p">)</span> <span class="p">{</span>
     <span class="c1">// 将当前缓存的 span 还给 mcentral。</span>
     <span class="nx">s</span> <span class="o">:=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">alloc</span><span class="p">[</span><span class="nx">spc</span><span class="p">]</span>
     <span class="k">if</span> <span class="nx">s</span> <span class="o">!=</span> <span class="o">&amp;</span><span class="nx">emptymspan</span> <span class="p">{</span>
@@ -349,7 +339,7 @@
 </pre></div>
 </div>
 <p>如果 mcentral 中没有可用的 span，mcentral 会调用 mheap.alloc() 申请一个新的 span。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">mcentral</span><span class="p">)</span> <span class="nx">grow</span><span class="p">()</span> <span class="o">*</span><span class="nx">mspan</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">mcentral</span><span class="p">)</span> <span class="nx">grow</span><span class="p">()</span> <span class="o">*</span><span class="nx">mspan</span> <span class="p">{</span>
     <span class="c1">// 根据 span 的 sizeclass 确定要分配多少 page。</span>
     <span class="nx">npages</span> <span class="o">:=</span> <span class="nb">uintptr</span><span class="p">(</span><span class="nx">class_to_allocnpages</span><span class="p">[</span><span class="nx">c</span><span class="p">.</span><span class="nx">spanclass</span><span class="p">.</span><span class="nx">sizeclass</span><span class="p">()])</span>
     <span class="nx">size</span> <span class="o">:=</span> <span class="nb">uintptr</span><span class="p">(</span><span class="nx">class_to_size</span><span class="p">[</span><span class="nx">c</span><span class="p">.</span><span class="nx">spanclass</span><span class="p">.</span><span class="nx">sizeclass</span><span class="p">()])</span>
@@ -370,11 +360,11 @@
 </div>
 <p>mheap 分配新的 span 的逻辑如下：</p>
 <ol class="arabic simple">
-<li>检查 mheap.free 中有没有空闲 span, 有的话返回。</li>
-<li>检查 mheap.freelarge 中有没有空闲 span，有的话裁剪返回。</li>
-<li>从 mheap.arena 中再新分配一个至少 64 kb 的 span 并释放到 mheap.freelarge 中，返回 2 继续执行。</li>
+<li><p>检查 mheap.free 中有没有空闲 span, 有的话返回。</p></li>
+<li><p>检查 mheap.freelarge 中有没有空闲 span，有的话裁剪返回。</p></li>
+<li><p>从 mheap.arena 中再新分配一个至少 64 kb 的 span 并释放到 mheap.freelarge 中，返回 2 继续执行。</p></li>
 </ol>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">mheap</span><span class="p">)</span> <span class="nx">alloc</span><span class="p">(</span><span class="nx">npage</span> <span class="kt">uintptr</span><span class="p">,</span> <span class="nx">spanclass</span> <span class="nx">spanClass</span><span class="p">,</span> <span class="nx">large</span> <span class="kt">bool</span><span class="p">,</span> <span class="nx">needzero</span> <span class="kt">bool</span><span class="p">)</span> <span class="o">*</span><span class="nx">mspan</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">mheap</span><span class="p">)</span> <span class="nx">alloc</span><span class="p">(</span><span class="nx">npage</span> <span class="kt">uintptr</span><span class="p">,</span> <span class="nx">spanclass</span> <span class="nx">spanClass</span><span class="p">,</span> <span class="nx">large</span> <span class="kt">bool</span><span class="p">,</span> <span class="nx">needzero</span> <span class="kt">bool</span><span class="p">)</span> <span class="o">*</span><span class="nx">mspan</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="nx">s</span> <span class="o">*</span><span class="nx">mspan</span>
     <span class="nx">systemstack</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
         <span class="nx">s</span> <span class="p">=</span> <span class="nx">h</span><span class="p">.</span><span class="nx">alloc_m</span><span class="p">(</span><span class="nx">npage</span><span class="p">,</span> <span class="nx">spanclass</span><span class="p">,</span> <span class="nx">large</span><span class="p">)</span>
@@ -437,11 +427,11 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="hui-shou">
+</section>
+<section id="hui-shou">
 <h2>回收<a class="headerlink" href="#hui-shou" title="Permalink to this headline">¶</a></h2>
 <p>当一个 span 中所有的对象被释放时，这个 span 会被回收（对象的释放由 gc 来完成，这里暂且先跳过），回收的 span 会被加入到 mheap.free 和 mheap.freelarge 中，供后续新的 span 申请使用。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">mheap</span><span class="p">)</span> <span class="nx">freeSpan</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">mspan</span><span class="p">,</span> <span class="nx">acct</span> <span class="kt">int32</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">mheap</span><span class="p">)</span> <span class="nx">freeSpan</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">mspan</span><span class="p">,</span> <span class="nx">acct</span> <span class="kt">int32</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">systemstack</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
         <span class="nx">h</span><span class="p">.</span><span class="nx">freeSpanLocked</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="kc">true</span><span class="p">,</span> <span class="kc">true</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
     <span class="p">})</span>
@@ -505,18 +495,20 @@
 </div>
 <p>最后 sysmon 每隔一段时间会执行 mheap_.scavenge(）将长时间不用的 span 的内存通过 madvise(MADV_DONTNEED) “释放” 给操作系统。</p>
 <blockquote>
-<div>MADV_DONTNEED: Do not expect access in the near future. (For the time being, the application is finished with the given range, so the kernel can free resources associated with it.) Subsequent accesses of pages in this range will succeed, but will result either in reloading of the memory contents from the underlying mapped file (see mmap(2)) or zero-fill-on-demand pages for mappings without an underlying file.</div></blockquote>
-</div>
-<div class="section" id="fen-pei-qi-zi-yong-di-nei-cun-fen-pei">
-<h2>分配器自用的内存分配<a class="headerlink" href="#fen-pei-qi-zi-yong-di-nei-cun-fen-pei" title="Permalink to this headline">¶</a></h2>
+<div><p>MADV_DONTNEED: Do not expect access in the near future. (For the time being, the application is finished with the given range, so the kernel can free resources associated with it.) Subsequent accesses of pages in this range will succeed, but will result either in reloading of the memory contents from the underlying mapped file (see mmap(2)) or zero-fill-on-demand pages for mappings without an underlying file.</p>
+</div></blockquote>
+</section>
+<section id="fen-pei-qi-zi-yong-de-nei-cun-fen-pei">
+<h2>分配器自用的内存分配<a class="headerlink" href="#fen-pei-qi-zi-yong-de-nei-cun-fen-pei" title="Permalink to this headline">¶</a></h2>
 <p>分配器自用的一些结构体 mcache、mspan 等是通过 fixalloc 分配器来分配的。</p>
 <blockquote>
-<div>fixalloc is a SLAB-style allocator that allocates objects of a fixed
+<div><p>fixalloc is a SLAB-style allocator that allocates objects of a fixed
 size. fixalloced objects can be freed, but this memory can only be
 reused by the same fixalloc pool, so it can only be reused for
-objects of the same type.</div></blockquote>
-</div>
-</div>
+objects of the same type.</p>
+</div></blockquote>
+</section>
+</section>
 
 
           </div>
@@ -525,7 +517,7 @@ objects of the same type.</div></blockquote>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Go 语言实现——内存管理</a><ul>
 <li><a class="reference internal" href="#gai-shu">概述</a></li>
@@ -533,19 +525,11 @@ objects of the same type.</div></blockquote>
 <li><a class="reference internal" href="#chu-shi-hua">初始化</a></li>
 <li><a class="reference internal" href="#fen-pei">分配</a></li>
 <li><a class="reference internal" href="#hui-shou">回收</a></li>
-<li><a class="reference internal" href="#fen-pei-qi-zi-yong-di-nei-cun-fen-pei">分配器自用的内存分配</a></li>
+<li><a class="reference internal" href="#fen-pei-qi-zi-yong-de-nei-cun-fen-pei">分配器自用的内存分配</a></li>
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="golang-asynchronous-preemption.html" title="previous chapter">Go 语言实现——异步抢占调度</a></li>
-      <li>Next: <a href="golang-internals-io.html" title="next chapter">Go 语言实现——网络 IO</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -554,15 +538,15 @@ objects of the same type.</div></blockquote>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -571,7 +555,7 @@ objects of the same type.</div></blockquote>
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

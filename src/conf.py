@@ -39,6 +39,7 @@ docutils.nodes.make_id = _make_id
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'myst_parser',
     'sphinx.ext.mathjax',
 ]
 
@@ -48,7 +49,10 @@ templates_path = ['_templates']
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
@@ -150,9 +154,15 @@ html_theme_options = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+from sphinx.application import Sphinx
+from sphinx.config import Config
+import sphinx.builders.html
+def validate_html_static_path(app: Sphinx, config: Config) -> None:
+    """Check html_static_paths setting."""
+    pass
+sphinx.builders.html.validate_html_static_path = validate_html_static_path
 
-html_css_files = ['custom.css']
+html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -168,7 +178,14 @@ html_css_files = ['custom.css']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+html_sidebars = {
+    '**': [
+        #'about.html',
+        'localtoc.html',
+        'sourcelink.html',
+        'searchbox.html',
+    ]
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.

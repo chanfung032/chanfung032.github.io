@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>Go 语言实现——函数 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Go 语言实现——[]byte 和 string" href="golang-internals-byte-array-and-string.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,12 +33,12 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="go-yu-yan-shi-xian-han-shu">
+  <section id="go-yu-yan-shi-xian-han-shu">
 <h1>Go 语言实现——函数<a class="headerlink" href="#go-yu-yan-shi-xian-han-shu" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="diao-yong-gui-fan">
+<section id="diao-yong-gui-fan">
 <h2>调用规范<a class="headerlink" href="#diao-yong-gui-fan" title="Permalink to this headline">¶</a></h2>
 <p>代码：</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
     <span class="k">return</span> <span class="nx">x</span> <span class="o">-</span> <span class="nx">y</span>
 <span class="p">}</span>
 
@@ -58,7 +48,7 @@
 </pre></div>
 </div>
 <p>编译后的汇编代码：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> go compile -l -S test.go
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>go compile -l -S test.go
 <span class="go">&quot;&quot;.foo STEXT nosplit size=19 args=0x18 locals=0x0</span>
 <span class="go">    // foo 函数，$0-24 表示这个函数的stack frame的大小为0，参数的长度为24</span>
 <span class="go">    0x0000 00000 (test.go:3)        TEXT    &quot;&quot;.foo(SB), NOSPLIT, $0-24</span>
@@ -84,13 +74,13 @@
 </pre></div>
 </div>
 <p>在 <em>main</em> 函数中时，栈是下面这样的（栈是从高地址往低地址增长的）：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">返回值</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">返回值</span>
 <span class="n">参数2</span>
 <span class="n">参数1</span>  <span class="o">&lt;-</span><span class="n">SP</span>
 </pre></div>
 </div>
 <p>执行 CALL <em>foo</em> 函数指令进入 <em>foo</em> 函数后，栈会变成下面这样：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>返回值
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>返回值
 参数2
 参数1
 返回地址（PC） &lt;-SP
@@ -98,13 +88,13 @@
 </div>
 <p>从上面可以看出：</p>
 <ul class="simple">
-<li>函数调用的参数通过栈来传递。</li>
-<li>函数的返回值也是通过栈来返回，不是通过寄存器，因为 Go 支持多返回值。</li>
-<li><em>foo</em> 函数并没有保护恢复寄存器的代码，所以寄存器应该是 caller 保护而不是 callee 保护的。</li>
-<li>栈基本和 C 一样，只是 convention 稍微不同（那么多个 goroutine 的话，它们各自的栈在内存中又是怎样布局的呢？）。</li>
+<li><p>函数调用的参数通过栈来传递。</p></li>
+<li><p>函数的返回值也是通过栈来返回，不是通过寄存器，因为 Go 支持多返回值。</p></li>
+<li><p><em>foo</em> 函数并没有保护恢复寄存器的代码，所以寄存器应该是 caller 保护而不是 callee 保护的。</p></li>
+<li><p>栈基本和 C 一样，只是 convention 稍微不同（那么多个 goroutine 的话，它们各自的栈在内存中又是怎样布局的呢？）。</p></li>
 </ul>
-</div>
-<div class="section" id="defer">
+</section>
+<section id="defer">
 <h2>Defer<a class="headerlink" href="#defer" title="Permalink to this headline">¶</a></h2>
 <p>From: <a class="reference external" href="https://blog.golang.org/defer-panic-and-recover">https://blog.golang.org/defer-panic-and-recover</a></p>
 <blockquote>
@@ -117,12 +107,12 @@
 </div></blockquote>
 <p>上面这个 <em>返回之前执行</em> 是这样执行的：</p>
 <ol class="arabic simple">
-<li>先将 return 的值赋给返回变量。</li>
-<li>执行 defer 的函数（ <strong>这里是可以修改返回变量的值的!!!</strong> ）。</li>
-<li>return 返回。</li>
+<li><p>先将 return 的值赋给返回变量。</p></li>
+<li><p>执行 defer 的函数（ <strong>这里是可以修改返回变量的值的!!!</strong> ）。</p></li>
+<li><p>return 返回。</p></li>
 </ol>
 <p>比如下面这段代码，根据上面的过程可以得出输出为 11 而不是 10：</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">foo</span><span class="p">()</span> <span class="p">(</span><span class="nx">r</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">foo</span><span class="p">()</span> <span class="p">(</span><span class="nx">r</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
         <span class="nx">r</span> <span class="p">=</span> <span class="nx">r</span> <span class="o">+</span> <span class="mi">1</span>
     <span class="p">}()</span>
@@ -131,7 +121,7 @@
 </pre></div>
 </div>
 <p>下面为这段代码的汇编代码：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>// 初始化返回值为 0
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>// 初始化返回值为 0
 0x001d 00029 (test.go:3)    MOVQ    $0, &quot;&quot;.~r0+32(FP)
 // 调用 runtime.deferproc 保存函数及其参数
 // func deferproc(siz int32, fn *funcval)
@@ -153,10 +143,10 @@
 0x005a 00090 (test.go:7)    RET
 </pre></div>
 </div>
-</div>
-<div class="section" id="eacape-analysis">
+</section>
+<section id="eacape-analysis">
 <h2>Eacape analysis<a class="headerlink" href="#eacape-analysis" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">foo</span><span class="p">()</span> <span class="o">*</span><span class="kt">int</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">foo</span><span class="p">()</span> <span class="o">*</span><span class="kt">int</span> <span class="p">{</span>
     <span class="nx">i</span> <span class="o">:=</span> <span class="mi">1</span>
     <span class="k">return</span> <span class="o">&amp;</span><span class="nx">i</span>
 <span class="p">}</span>
@@ -164,7 +154,7 @@
 </div>
 <p>类似上面这种写法在 C 中是错误的，因为变量 <em>i</em> 是分配在栈上的， 后面的函数调用会覆盖 <em>i</em> 。那么 Go 是怎么做到的呢？</p>
 <p>答案是 Go 是会通过 <a class="reference external" href="https://en.wikipedia.org/wiki/Escape_analysis">Escape analysis</a> 自动将其分配在堆上。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> go tool compile -m -l -S test.go
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>go tool compile -m -l -S test.go
 <span class="go">test.go:5: &amp;i escapes to heap</span>
 <span class="go">test.go:4: moved to heap: i</span>
 <span class="go">&quot;&quot;.foo t=1 size=79 args=0x8 locals=0x18</span>
@@ -184,12 +174,12 @@
 <span class="go">    ...</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="bi-bao">
+</section>
+<section id="bi-bao">
 <h2>闭包<a class="headerlink" href="#bi-bao" title="Permalink to this headline">¶</a></h2>
 <p>闭包（closure） = 函数（function） + 其外围的环境（environment）</p>
 <p>Go 中是通过结构体来实现闭包的。比如下面 foo 返回的匿名函数。</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">x</span> <span class="kt">int</span><span class="p">)</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">x</span> <span class="kt">int</span><span class="p">)</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
     <span class="k">return</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
         <span class="k">return</span> <span class="nx">x</span>
     <span class="p">}</span>
@@ -197,14 +187,14 @@
 </pre></div>
 </div>
 <p>实际 Go 在返回的时候返回的是如下的结构体：</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Closure</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Closure</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">F</span> <span class="kt">uintptr</span>
     <span class="nx">x</span> <span class="kt">int</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 <p>详细的汇编代码分析如下：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>&quot;&quot;.foo t=1 size=91 args=0x10 locals=0x18
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&quot;&quot;.foo t=1 size=91 args=0x10 locals=0x18
     0x0000 00000 (test.go:3)        TEXT    &quot;&quot;.foo(SB), $24-16
     ...
     // 创建一个新的 Closure 结构体用来保存闭包。
@@ -250,8 +240,8 @@
 </pre></div>
 </div>
 <p>参考: <a class="reference external" href="https://tiancaiamao.gitbooks.io/go-internals/content/zh/03.0.html">https://tiancaiamao.gitbooks.io/go-internals/content/zh/03.0.html</a></p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -260,7 +250,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Go 语言实现——函数</a><ul>
 <li><a class="reference internal" href="#diao-yong-gui-fan">调用规范</a></li>
@@ -270,15 +260,7 @@
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="golang-internals-bootstrap.html" title="previous chapter">Go 语言实现——启动过程</a></li>
-      <li>Next: <a href="golang-internals-byte-array-and-string.html" title="next chapter">Go 语言实现——[]byte 和 string</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -287,15 +269,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -304,7 +286,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

@@ -1,27 +1,18 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>容器——seccomp-bpf &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="容器——Network Namespace 和桥接网络模式" href="docker-network.html" />
@@ -32,8 +23,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,12 +33,12 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="rong-qi-seccomp-bpf">
+  <section id="rong-qi-seccomp-bpf">
 <h1>容器——seccomp-bpf<a class="headerlink" href="#rong-qi-seccomp-bpf" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="bpf">
+<section id="bpf">
 <h2>BPF<a class="headerlink" href="#bpf" title="Permalink to this headline">¶</a></h2>
 <p>BPF 本来指的是 Berkeley Packet Filter，如其字面义，是用在网络包的过滤这个场景上的，最早应用在 tcpdump 上，tcpdump 会将过滤表达式转换成 BPF 字节码然后调用内核的接口让其执行这段字节码程序来过滤网络包。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> tcpdump -p -ni eth0 -d <span class="s2">&quot;ip and src 1.1.1.1&quot;</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tcpdump -p -ni eth0 -d <span class="s2">&quot;ip and src 1.1.1.1&quot;</span>
 <span class="gp gp-VirtualEnv">(000)</span> <span class="go">ldh      [12]</span>
 <span class="gp gp-VirtualEnv">(001)</span> <span class="go">jeq      #0x800           jt 2    jf 5</span>
 <span class="gp gp-VirtualEnv">(002)</span> <span class="go">ld       [26]</span>
@@ -59,15 +49,15 @@
 </div>
 <p>这段程序的意思翻译过来如下：</p>
 <ul class="simple">
-<li>（000）加载 ethernet packet 第 12 个字节开始的 2 个字节（ethernet frame 的类型字段）。</li>
-<li>（001）检查加载的值是否为 0x800 （是否为 IP 包），是的话跳到 002 执行，否则 005。</li>
-<li>（002）加载 ethernet packat 第 26 个字节开始的 4 个字节（IP 包的原地址字段）。</li>
-<li>（003）检查加载的值是否为 0x1010101（IP 是否为 1.1.1.1），是的话跳到 004 执行，否则 005。</li>
-<li>（004）返回包匹配。</li>
-<li>（005）返回包不匹配。</li>
+<li><p>（000）加载 ethernet packet 第 12 个字节开始的 2 个字节（ethernet frame 的类型字段）。</p></li>
+<li><p>（001）检查加载的值是否为 0x800 （是否为 IP 包），是的话跳到 002 执行，否则 005。</p></li>
+<li><p>（002）加载 ethernet packat 第 26 个字节开始的 4 个字节（IP 包的原地址字段）。</p></li>
+<li><p>（003）检查加载的值是否为 0x1010101（IP 是否为 1.1.1.1），是的话跳到 004 执行，否则 005。</p></li>
+<li><p>（004）返回包匹配。</p></li>
+<li><p>（005）返回包不匹配。</p></li>
 </ul>
 <p>上面打印出得是翻译过的给人看字节码，我们也可以打印出给机器读的字节码：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> tcpdump -p -ni eth0 -ddd <span class="s2">&quot;ip and src 1.1.1.1&quot;</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tcpdump -p -ni eth0 -ddd <span class="s2">&quot;ip and src 1.1.1.1&quot;</span>
 <span class="go">6</span>
 <span class="go">40 0 0 12</span>
 <span class="go">21 0 3 2048</span>
@@ -78,10 +68,10 @@
 </pre></div>
 </div>
 <p>tcpdump 然后使用类似下面程序的方式将 bpf 程序提交给内核去执行，后面内核只会将匹配 bpf 程序的包发送给 tcpdump。</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;sys/socket.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;sys/types.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;arpa/inet.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;linux/if_ether.h&gt;</span><span class="cp"></span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/socket.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/types.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;arpa/inet.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;linux/if_ether.h&gt;</span><span class="cp"></span>
 
 <span class="cm">/* BPF 字节码结构体</span>
 <span class="cm">   struct sock_filter {</span>
@@ -90,80 +80,80 @@
 <span class="cm">     __u8   jf;   失败跳转</span>
 <span class="cm">     __u32  k;    根据字节码不同意义不一样</span>
 <span class="cm">   };</span>
-<span class="cm">*/</span>
-<span class="k">struct</span> <span class="n">sock_filter</span> <span class="n">code</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
-  <span class="p">{</span><span class="mi">40</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">12</span><span class="p">},</span>
-  <span class="p">{</span><span class="mi">21</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2048</span><span class="p">},</span>
-  <span class="p">{</span><span class="mi">32</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">26</span><span class="p">},</span>
-  <span class="p">{</span><span class="mi">21</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">16843009</span><span class="p">},</span>
-  <span class="p">{</span><span class="mi">6</span><span class="p">,</span>  <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">262144</span><span class="p">},</span>
-  <span class="p">{</span><span class="mi">6</span><span class="p">,</span>  <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">},</span>
-<span class="p">};</span>
+<span class="cm">*/</span><span class="w"></span>
+<span class="k">struct</span> <span class="nc">sock_filter</span><span class="w"> </span><span class="n">code</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="p">{</span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">},</span><span class="w"></span>
+<span class="w">  </span><span class="p">{</span><span class="mi">21</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">2048</span><span class="p">},</span><span class="w"></span>
+<span class="w">  </span><span class="p">{</span><span class="mi">32</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">26</span><span class="p">},</span><span class="w"></span>
+<span class="w">  </span><span class="p">{</span><span class="mi">21</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">16843009</span><span class="p">},</span><span class="w"></span>
+<span class="w">  </span><span class="p">{</span><span class="mi">6</span><span class="p">,</span><span class="w">  </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">262144</span><span class="p">},</span><span class="w"></span>
+<span class="w">  </span><span class="p">{</span><span class="mi">6</span><span class="p">,</span><span class="w">  </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
 
 <span class="cm">/* BPF 程序元信息</span>
 <span class="cm">   struct sock_fprog {</span>
 <span class="cm">     unsigned short             len;</span>
 <span class="cm">     struct sock_filter __user *filter;</span>
 <span class="cm">   };</span>
-<span class="cm">*/</span>
-<span class="k">struct</span> <span class="n">sock_fprog</span> <span class="n">bpf</span> <span class="o">=</span> <span class="p">{</span>
-  <span class="p">.</span><span class="n">len</span> <span class="o">=</span> <span class="n">ARRAY_SIZE</span><span class="p">(</span><span class="n">code</span><span class="p">),</span>
-  <span class="p">.</span><span class="n">filter</span> <span class="o">=</span> <span class="n">code</span><span class="p">,</span>
-<span class="p">};</span>
+<span class="cm">*/</span><span class="w"></span>
+<span class="k">struct</span> <span class="nc">sock_fprog</span><span class="w"> </span><span class="n">bpf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="p">.</span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ARRAY_SIZE</span><span class="p">(</span><span class="n">code</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="p">.</span><span class="n">filter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">code</span><span class="p">,</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
 
-<span class="n">sock</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">PF_PACKET</span><span class="p">,</span> <span class="n">SOCK_RAW</span><span class="p">,</span> <span class="n">htons</span><span class="p">(</span><span class="n">ETH_P_ALL</span><span class="p">));</span>
-<span class="n">ret</span> <span class="o">=</span> <span class="n">setsockopt</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_ATTACH_FILTER</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">bpf</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">bpf</span><span class="p">));</span>
+<span class="n">sock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">socket</span><span class="p">(</span><span class="n">PF_PACKET</span><span class="p">,</span><span class="w"> </span><span class="n">SOCK_RAW</span><span class="p">,</span><span class="w"> </span><span class="n">htons</span><span class="p">(</span><span class="n">ETH_P_ALL</span><span class="p">));</span><span class="w"></span>
+<span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">setsockopt</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span><span class="w"> </span><span class="n">SOL_SOCKET</span><span class="p">,</span><span class="w"> </span><span class="n">SO_ATTACH_FILTER</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">bpf</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">bpf</span><span class="p">));</span><span class="w"></span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="seccomp-bpf">
+</section>
+<section id="seccomp-bpf">
 <h2>seccomp-bpf<a class="headerlink" href="#seccomp-bpf" title="Permalink to this headline">¶</a></h2>
 <p>目前 bpf 在 Linux 上已经应用在方方面面各种场景下， seccomp-bpf 就是 bpf 在 seccomp 上的应用。容器使用 seccomp-bpf + capability 来限制一个容器进程可以调用的系统调用。</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;errno.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;linux/audit.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;linux/bpf.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;linux/filter.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;linux/seccomp.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;linux/unistd.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;stddef.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;sys/prctl.h&gt;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;unistd.h&gt;</span><span class="cp"></span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;errno.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;linux/audit.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;linux/bpf.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;linux/filter.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;linux/seccomp.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;linux/unistd.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stddef.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/prctl.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;unistd.h&gt;</span><span class="cp"></span>
 
-<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;hey there!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;hey there!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w"></span>
 
-  <span class="k">struct</span> <span class="n">sock_filter</span> <span class="n">filter</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
-      <span class="n">BPF_STMT</span><span class="p">(</span><span class="n">BPF_LD</span> <span class="o">+</span> <span class="n">BPF_W</span> <span class="o">+</span> <span class="n">BPF_ABS</span><span class="p">,</span> <span class="p">(</span><span class="n">offsetof</span><span class="p">(</span><span class="k">struct</span> <span class="n">seccomp_data</span><span class="p">,</span> <span class="n">arch</span><span class="p">))),</span>
-      <span class="n">BPF_JUMP</span><span class="p">(</span><span class="n">BPF_JMP</span> <span class="o">+</span> <span class="n">BPF_JEQ</span> <span class="o">+</span> <span class="n">BPF_K</span><span class="p">,</span> <span class="n">AUDIT_ARCH_X86_64</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
-      <span class="n">BPF_STMT</span><span class="p">(</span><span class="n">BPF_LD</span> <span class="o">+</span> <span class="n">BPF_W</span> <span class="o">+</span> <span class="n">BPF_ABS</span><span class="p">,</span> <span class="p">(</span><span class="n">offsetof</span><span class="p">(</span><span class="k">struct</span> <span class="n">seccomp_data</span><span class="p">,</span> <span class="n">nr</span><span class="p">))),</span>
-      <span class="n">BPF_JUMP</span><span class="p">(</span><span class="n">BPF_JMP</span> <span class="o">+</span> <span class="n">BPF_JEQ</span> <span class="o">+</span> <span class="n">BPF_K</span><span class="p">,</span> <span class="n">__NR_write</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-      <span class="n">BPF_STMT</span><span class="p">(</span><span class="n">BPF_RET</span> <span class="o">+</span> <span class="n">BPF_K</span><span class="p">,</span> <span class="n">SECCOMP_RET_ERRNO</span> <span class="o">|</span> <span class="p">(</span><span class="n">EPERM</span> <span class="o">&amp;</span> <span class="n">SECCOMP_RET_DATA</span><span class="p">)),</span>
-      <span class="n">BPF_STMT</span><span class="p">(</span><span class="n">BPF_RET</span> <span class="o">+</span> <span class="n">BPF_K</span><span class="p">,</span> <span class="n">SECCOMP_RET_ALLOW</span><span class="p">),</span>
-  <span class="p">};</span>
-  <span class="k">struct</span> <span class="n">sock_fprog</span> <span class="n">prog</span> <span class="o">=</span> <span class="p">{</span>
-      <span class="p">.</span><span class="n">len</span> <span class="o">=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">short</span><span class="p">)(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">filter</span><span class="p">)</span> <span class="o">/</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">filter</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span>
-      <span class="p">.</span><span class="n">filter</span> <span class="o">=</span> <span class="n">filter</span><span class="p">,</span>
-  <span class="p">};</span>
-  <span class="c1">// 让 seccomp-bpf 程序生效后即使后面程序执行了 execve 也能继续生效</span>
-  <span class="c1">// https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">prctl</span><span class="p">(</span><span class="n">PR_SET_NO_NEW_PRIVS</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
-    <span class="n">perror</span><span class="p">(</span><span class="s">&quot;prctl(NO_NEW_PRIVS)&quot;</span><span class="p">);</span>
-    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
-  <span class="p">}</span>
-  <span class="c1">// 设置 seccomp-bpf</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">prctl</span><span class="p">(</span><span class="n">PR_SET_SECCOMP</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">prog</span><span class="p">))</span> <span class="p">{</span>
-    <span class="n">perror</span><span class="p">(</span><span class="s">&quot;prctl(PR_SET_SECCOMP)&quot;</span><span class="p">);</span>
-    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
-  <span class="p">}</span>
+<span class="w">  </span><span class="k">struct</span> <span class="nc">sock_filter</span><span class="w"> </span><span class="n">filter</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">BPF_STMT</span><span class="p">(</span><span class="n">BPF_LD</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BPF_W</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BPF_ABS</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">offsetof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">seccomp_data</span><span class="p">,</span><span class="w"> </span><span class="n">arch</span><span class="p">))),</span><span class="w"></span>
+<span class="w">      </span><span class="n">BPF_JUMP</span><span class="p">(</span><span class="n">BPF_JMP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BPF_JEQ</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BPF_K</span><span class="p">,</span><span class="w"> </span><span class="n">AUDIT_ARCH_X86_64</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">),</span><span class="w"></span>
+<span class="w">      </span><span class="n">BPF_STMT</span><span class="p">(</span><span class="n">BPF_LD</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BPF_W</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BPF_ABS</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">offsetof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">seccomp_data</span><span class="p">,</span><span class="w"> </span><span class="n">nr</span><span class="p">))),</span><span class="w"></span>
+<span class="w">      </span><span class="n">BPF_JUMP</span><span class="p">(</span><span class="n">BPF_JMP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BPF_JEQ</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BPF_K</span><span class="p">,</span><span class="w"> </span><span class="n">__NR_write</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span><span class="w"></span>
+<span class="w">      </span><span class="n">BPF_STMT</span><span class="p">(</span><span class="n">BPF_RET</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BPF_K</span><span class="p">,</span><span class="w"> </span><span class="n">SECCOMP_RET_ERRNO</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">(</span><span class="n">EPERM</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">SECCOMP_RET_DATA</span><span class="p">)),</span><span class="w"></span>
+<span class="w">      </span><span class="n">BPF_STMT</span><span class="p">(</span><span class="n">BPF_RET</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">BPF_K</span><span class="p">,</span><span class="w"> </span><span class="n">SECCOMP_RET_ALLOW</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="p">};</span><span class="w"></span>
+<span class="w">  </span><span class="k">struct</span> <span class="nc">sock_fprog</span><span class="w"> </span><span class="n">prog</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">short</span><span class="p">)(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">filter</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">filter</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="n">filter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">filter</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="p">};</span><span class="w"></span>
+<span class="w">  </span><span class="c1">// 让 seccomp-bpf 程序生效后即使后面程序执行了 execve 也能继续生效</span>
+<span class="w">  </span><span class="c1">// https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">prctl</span><span class="p">(</span><span class="n">PR_SET_NO_NEW_PRIVS</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">perror</span><span class="p">(</span><span class="s">&quot;prctl(NO_NEW_PRIVS)&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="c1">// 设置 seccomp-bpf</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">prctl</span><span class="p">(</span><span class="n">PR_SET_SECCOMP</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">prog</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">perror</span><span class="p">(</span><span class="s">&quot;prctl(PR_SET_SECCOMP)&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;it will not definitely print this here</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
-  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="w">  </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;it will not definitely print this here</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>上面的 bpf 程序使用各种宏来写的，翻译成 human readable 的格式就是：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">(</span><span class="mi">001</span><span class="p">)</span> <span class="n">ldh</span> <span class="n">seccomp_data</span><span class="o">.</span><span class="n">arch</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="mi">001</span><span class="p">)</span> <span class="n">ldh</span> <span class="n">seccomp_data</span><span class="o">.</span><span class="n">arch</span>
 <span class="p">(</span><span class="mi">002</span><span class="p">)</span> <span class="n">jeq</span> <span class="n">AUDIT_ARCH_X86_64</span> <span class="n">jt</span> <span class="mi">3</span> <span class="n">jf</span> <span class="mi">6</span>
 <span class="p">(</span><span class="mi">003</span><span class="p">)</span> <span class="n">ldh</span> <span class="n">seccomp_data</span><span class="o">.</span><span class="n">nr</span>
 <span class="p">(</span><span class="mi">004</span><span class="p">)</span> <span class="n">jeq</span> <span class="n">__NR_write</span>        <span class="n">jt</span> <span class="mi">5</span> <span class="n">jf</span> <span class="mi">6</span>
@@ -171,18 +161,18 @@
 <span class="p">(</span><span class="mi">006</span><span class="p">)</span> <span class="n">ret</span> <span class="n">SECCOMP_RET_ALLOW</span>
 </pre></div>
 </div>
-<p>运行程序只会打印出第一个 <code class="docutils literal"><span class="pre">hey</span> <span class="pre">there!</span></code> ，最后 printf 的 <code class="docutils literal"><span class="pre">it</span> <span class="pre">will</span> <span class="pre">not</span> <span class="pre">...</span></code> 打印不出来，因为 printf 最后调用系统调用 write 的时候会返回错误 EPERM。strace 可以看到结果如下：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">write</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;it will not definitely print thi&quot;</span><span class="o">...</span><span class="p">,</span> <span class="mi">39</span><span class="p">)</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="n">EPERM</span> <span class="p">(</span><span class="n">Operation</span> <span class="ow">not</span> <span class="n">permitted</span><span class="p">)</span>
+<p>运行程序只会打印出第一个 <code class="docutils literal notranslate"><span class="pre">hey</span> <span class="pre">there!</span></code> ，最后 printf 的 <code class="docutils literal notranslate"><span class="pre">it</span> <span class="pre">will</span> <span class="pre">not</span> <span class="pre">...</span></code> 打印不出来，因为 printf 最后调用系统调用 write 的时候会返回错误 EPERM。strace 可以看到结果如下：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">write</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;it will not definitely print thi&quot;</span><span class="o">...</span><span class="p">,</span> <span class="mi">39</span><span class="p">)</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="n">EPERM</span> <span class="p">(</span><span class="n">Operation</span> <span class="ow">not</span> <span class="n">permitted</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>参考：</p>
 <ul class="simple">
-<li><a class="reference external" href="https://blog.cloudflare.com/bpf-the-forgotten-bytecode/">https://blog.cloudflare.com/bpf-the-forgotten-bytecode/</a></li>
-<li><a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/filter.txt">https://www.kernel.org/doc/Documentation/networking/filter.txt</a></li>
-<li><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/include/uapi/linux/filter.h?h=v3.16.84">https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/include/uapi/linux/filter.h?h=v3.16.84</a></li>
+<li><p><a class="reference external" href="https://blog.cloudflare.com/bpf-the-forgotten-bytecode/">https://blog.cloudflare.com/bpf-the-forgotten-bytecode/</a></p></li>
+<li><p><a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/filter.txt">https://www.kernel.org/doc/Documentation/networking/filter.txt</a></p></li>
+<li><p><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/include/uapi/linux/filter.h?h=v3.16.84">https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/include/uapi/linux/filter.h?h=v3.16.84</a></p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -191,7 +181,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">容器——seccomp-bpf</a><ul>
 <li><a class="reference internal" href="#bpf">BPF</a></li>
@@ -199,15 +189,7 @@
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="golang-internals-variable.html" title="previous chapter">Go 语言实现——数据结构</a></li>
-      <li>Next: <a href="docker-network.html" title="next chapter">容器——Network Namespace 和桥接网络模式</a></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -216,15 +198,15 @@
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -233,7 +215,7 @@
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

@@ -1,39 +1,29 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
     <title>#0129 性能 &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#0220 性能" href="210220.html" />
-    <link rel="prev" title="#0122 xdp &amp; go" href="210122.html" />
+    <link rel="next" title="#0122 xdp &amp; go" href="210122.html" />
+    <link rel="prev" title="#0220 性能" href="210220.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,46 +33,46 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="xing-neng">
+  <section id="xing-neng">
 <h1>#0129 性能<a class="headerlink" href="#xing-neng" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="ce-shi-huan-jing">
+<section id="ce-shi-huan-jing">
 <h2>测试环境<a class="headerlink" href="#ce-shi-huan-jing" title="Permalink to this headline">¶</a></h2>
 <p>本周的任务主要是将 xdp 负载均衡程序上线到物理测试环境并测试其性能。</p>
 <p>测试环境：</p>
 <ul class="simple">
-<li>系统：CentOS 7。</li>
-<li>内核：4.14.69-sn1.el7.centos.x86_64。</li>
-<li>网卡：Intel 82599ES 万兆（driver：ixgbe）、双口，4 网卡做 bond，出入口带宽 40GB/s。</li>
+<li><p>系统：CentOS 7。</p></li>
+<li><p>内核：4.14.69-sn1.el7.centos.x86_64。</p></li>
+<li><p>网卡：Intel 82599ES 万兆（driver：ixgbe）、双口，4 网卡做 bond，出入口带宽 40GB/s。</p></li>
 </ul>
 <p>性能方面主要测试的是 director 模块。</p>
 <p>其它方面考虑到后面线上环境内核升级会比较慢，所以后续 redirector 模块短期内会复用 glb-redirect。</p>
-</div>
-<div class="section" id="xian-shang-bian-yi-cong-chang-shi-dao-fang-qi">
+</section>
+<section id="xian-shang-bian-yi-cong-chang-shi-dao-fang-qi">
 <h2>线上编译？从尝试到放弃<a class="headerlink" href="#xian-shang-bian-yi-cong-chang-shi-dao-fang-qi" title="Permalink to this headline">¶</a></h2>
 <p>线上系统的内核版本低，各种工具链的版本也比较低，编译 bpf 需要依赖高版本的 clang/llvm，尝试升级会发现一连串的依赖都需要升级，cmake、gcc，……，太复杂，果断选择在高版本系统上编译，然后将可执行文件拖到线上环境直接跑。</p>
 <p>另外 <a class="reference external" href="https://pkg.go.dev/github.com/cilium/ebpf#CollectionSpec.RewriteConstants">ebpf.RewriteConstants</a> 在低版本系统上不可使用，配置传递还得使用 Map。</p>
-</div>
-<div class="section" id="bond-wang-kou-he-xdp">
+</section>
+<section id="bond-wang-kou-he-xdp">
 <h2>bond 网口和 xdp<a class="headerlink" href="#bond-wang-kou-he-xdp" title="Permalink to this headline">¶</a></h2>
 <p>在 4.14 内核上，xdp 程序挂载到 bond 网口不起作用，需要挂载到其下所有的物理网口上。</p>
-</div>
-<div class="section" id="cuo-pei-di-lu-you-dao-zhi-ru-bao-bei-diu">
-<h2>错配的路由导致入包被丢<a class="headerlink" href="#cuo-pei-di-lu-you-dao-zhi-ru-bao-bei-diu" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="cuo-pei-de-lu-you-dao-zhi-ru-bao-bei-diu">
+<h2>错配的路由导致入包被丢<a class="headerlink" href="#cuo-pei-de-lu-you-dao-zhi-ru-bao-bei-diu" title="Permalink to this headline">¶</a></h2>
 <p>调试 director 和 glb-redirect 内核模块的时候遇到个奇怪的问题，tcpdump 看到转发的包到目标机器目标网卡了，格式也正确，但是包在到达 glb-redirect 模块之前被丢了，iptables 中除了 glb-redirect 规则外没有其它规则。</p>
 <p>给 iptables glb-redirect 规则前的 <a class="reference external" href="https://upload.wikimedia.org/wikipedia/commons/3/37/Netfilter-packet-flow.svg">表/链</a> 加上 LOG，可以看到在 PREROUTING 阶段能够看到包，但之后就没见了。</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>iptables -t raw  -A PREROUTING -p udp --dport <span class="m">19523</span> -j LOG
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>iptables -t raw  -A PREROUTING -p udp --dport <span class="m">19523</span> -j LOG
 <span class="c1"># iptables -t raw -vL 通过前面的 pkts 计数也可以定位包是在哪个阶段丢的</span>
 <span class="c1"># ...</span>
 </pre></div>
 </div>
 <p>检查路由规则发现，路由表中有以下路由规则（误配的）：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mf">172.18</span><span class="o">.</span><span class="mf">208.71</span>   <span class="mf">0.0</span><span class="o">.</span><span class="mf">0.0</span>         <span class="mf">255.255</span><span class="o">.</span><span class="mf">255.255</span> <span class="n">UH</span>    <span class="mi">0</span>      <span class="mi">0</span>        <span class="mi">0</span> <span class="n">lo</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mf">172.18.208.71</span>   <span class="mf">0.0.0.0</span>         <span class="mf">255.255.255.255</span> <span class="n">UH</span>    <span class="mi">0</span>      <span class="mi">0</span>        <span class="mi">0</span> <span class="n">lo</span>
 </pre></div>
 </div>
 <p>转发过来的包的源 IP 也是 172.18.208.71，虽然包是在入口被丢不是在出口被丢，但是这个很可疑，先删除，再试，没问题了！看来，确实是这条错误的规则导致包被丢了。</p>
 <p>搜索后发现，Linux 有这么一个配置：</p>
 <p><a class="reference external" href="https://superuser.com/questions/426682/linux-drops-packet-when-trying-to-route-it-why">https://superuser.com/questions/426682/linux-drops-packet-when-trying-to-route-it-why</a></p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sysctl net.ipv4.conf.bond0.rp_filter
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>sysctl net.ipv4.conf.bond0.rp_filter
 <span class="go">1</span>
 </pre></div>
 </div>
@@ -90,35 +80,35 @@
 <blockquote>
 <div><p>rp_filter - INTEGER</p>
 <blockquote>
-<div><dl class="docutils">
-<dt>1 - Strict mode as defined in RFC3704 Strict Reverse Path</dt>
-<dd>Each incoming packet is tested against the <a class="reference external" href="https://en.wikipedia.org/wiki/Forwarding_information_base">FIB</a> and if the interface
+<div><dl class="simple">
+<dt>1 - Strict mode as defined in RFC3704 Strict Reverse Path</dt><dd><p>Each incoming packet is tested against the <a class="reference external" href="https://en.wikipedia.org/wiki/Forwarding_information_base">FIB</a> and if the interface
 is not the best reverse path the packet check will fail.
-By default failed packets are discarded.</dd>
+By default failed packets are discarded.</p>
+</dd>
 </dl>
 </div></blockquote>
 <p><a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt</a></p>
 </div></blockquote>
-</div>
-<div class="section" id="shi-yong-wireshark-ming-ling-hang-gong-ju-dump-wang-luo-bao">
-<h2>使用 wireshark 命令行工具 dump 网络包<a class="headerlink" href="#shi-yong-wireshark-ming-ling-hang-gong-ju-dump-wang-luo-bao" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="shi-yong-wireshark-ming-ling-xing-gong-ju-dump-wang-luo-bao">
+<h2>使用 wireshark 命令行工具 dump 网络包<a class="headerlink" href="#shi-yong-wireshark-ming-ling-xing-gong-ju-dump-wang-luo-bao" title="Permalink to this headline">¶</a></h2>
 <p>调试的时候如果需要解析网络包的情况，使用 wireshark 比 tcpdump 会是个更好的工具。</p>
 <p>安装：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">#</span> yum install -y wireshark
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>yum install -y wireshark
 </pre></div>
 </div>
 <p>常用命令：</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># 同时捕获多网卡</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 同时捕获多网卡</span>
 tshark -i eth0 -i eth1
 <span class="c1"># dump 出详细的网络包字段信息</span>
 tshark -i eth0 -V
 </pre></div>
 </div>
-</div>
-<div class="section" id="ying-xiang-xdp-xing-neng-di-liang-ge-dian">
-<h2>影响 xdp 性能的两个点<a class="headerlink" href="#ying-xiang-xdp-xing-neng-di-liang-ge-dian" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="ying-xiang-xdp-xing-neng-de-liang-ge-dian">
+<h2>影响 xdp 性能的两个点<a class="headerlink" href="#ying-xiang-xdp-xing-neng-de-liang-ge-dian" title="Permalink to this headline">¶</a></h2>
 <p>第一，确保 xdp 程序加载使用的是 driver 模式，如下，第二列显示的就是加载模式。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> bpftool net
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>bpftool net
 <span class="go">xdp:</span>
 <span class="go">p2p1(4) driver id 101</span>
 <span class="go">p2p2(5) driver id 101</span>
@@ -132,7 +122,7 @@ tshark -i eth0 -V
 </pre></div>
 </div>
 <p>第二，确保 xdp 程序加载的时候开启了 jit，开和不开 jit 的性能差别非常大，几十倍，不开 jit 的 xdp 跟个弱鸡似的。</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> bpftool prog
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>bpftool prog
 <span class="go">8: xdp  tag 8c806e4dbe1cf688</span>
 <span class="go">    xlated 21856B  not jited  memlock 24576B</span>
 <span class="go">20: xdp  tag e663805a60a750bc</span>
@@ -142,22 +132,22 @@ tshark -i eth0 -V
 </pre></div>
 </div>
 <p>如果系统没有开启 jit，可以通过下面的命令开启：</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> <span class="nb">echo</span> <span class="m">1</span> &gt; /proc/sys/net/core/bpf_jit_enable
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">echo</span> <span class="m">1</span> &gt; /proc/sys/net/core/bpf_jit_enable
 </pre></div>
 </div>
 <p>开启后需要重新加载下 xdp 程序。</p>
 <hr class="docutils" />
 <p>如果考虑牺牲一点安全的话，也可以修改哈希算法为更简单 “but much faster” 的 jhash 或者 half siphash。详细可参见：</p>
 <ul class="simple">
-<li><a class="reference external" href="https://lwn.net/Articles/711167/">https://lwn.net/Articles/711167/</a></li>
-<li><a class="reference external" href="https://github.com/torvalds/linux/blob/master/Documentation/security/siphash.rst">https://github.com/torvalds/linux/blob/master/Documentation/security/siphash.rst</a></li>
-<li><a class="reference external" href="https://github.com/torvalds/linux/blob/v5.10/lib/siphash.c">https://github.com/torvalds/linux/blob/v5.10/lib/siphash.c</a></li>
+<li><p><a class="reference external" href="https://lwn.net/Articles/711167/">https://lwn.net/Articles/711167/</a></p></li>
+<li><p><a class="reference external" href="https://github.com/torvalds/linux/blob/master/Documentation/security/siphash.rst">https://github.com/torvalds/linux/blob/master/Documentation/security/siphash.rst</a></p></li>
+<li><p><a class="reference external" href="https://github.com/torvalds/linux/blob/v5.10/lib/siphash.c">https://github.com/torvalds/linux/blob/v5.10/lib/siphash.c</a></p></li>
 </ul>
-</div>
-<div class="section" id="xdp-zai-nei-he-wang-luo-zhan-zhong-zhi-xing-di-wei-zhi">
-<h2>xdp 在内核网络栈中执行的位置<a class="headerlink" href="#xdp-zai-nei-he-wang-luo-zhan-zhong-zhi-xing-di-wei-zhi" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="xdp-zai-nei-he-wang-luo-zhan-zhong-zhi-xing-de-wei-zhi">
+<h2>xdp 在内核网络栈中执行的位置<a class="headerlink" href="#xdp-zai-nei-he-wang-luo-zhan-zhong-zhi-xing-de-wei-zhi" title="Permalink to this headline">¶</a></h2>
 <p>4.14 内核：</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>-&gt; net_rx_action()
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>-&gt; net_rx_action()
 -&gt; napi_poll()
 -&gt; ixgbe_poll()
     -&gt; ixgbe_clean_rx_irq()
@@ -177,11 +167,11 @@ tshark -i eth0 -V
 </pre></div>
 </div>
 <p>内核协议栈详细的执行过程可以参见：<a class="reference external" href="https://blog.packagecloud.io/eng/2016/06/22/monitoring-tuning-linux-networking-stack-receiving-data/">https://blog.packagecloud.io/eng/2016/06/22/monitoring-tuning-linux-networking-stack-receiving-data/</a></p>
-</div>
-<div class="section" id="ru-he-xiu-gai-xdp-cheng-xu-di-jia-zai-mo-shi">
-<h2>如何修改 xdp 程序的加载模式<a class="headerlink" href="#ru-he-xiu-gai-xdp-cheng-xu-di-jia-zai-mo-shi" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="ru-he-xiu-gai-xdp-cheng-xu-de-jia-zai-mo-shi">
+<h2>如何修改 xdp 程序的加载模式<a class="headerlink" href="#ru-he-xiu-gai-xdp-cheng-xu-de-jia-zai-mo-shi" title="Permalink to this headline">¶</a></h2>
 <p>使用 <a class="reference external" href="https://godoc.org/github.com/vishvananda/netlink#LinkSetXdpFdWithFlags">netlink.LinkSetXdpFdWithFlags</a> 接口，通过最后一个参数 flags 控制。</p>
-<div class="highlight-c"><div class="highlight"><pre><span></span><span class="cp">#define XDP_FLAGS_UPDATE_IF_NOEXIST (1U &lt;&lt; 0)</span>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#define XDP_FLAGS_UPDATE_IF_NOEXIST (1U &lt;&lt; 0)</span>
 <span class="cp">#define XDP_FLAGS_SKB_MODE          (1U &lt;&lt; 1)</span>
 <span class="cp">#define XDP_FLAGS_DRV_MODE          (1U &lt;&lt; 2)</span>
 <span class="cp">#define XDP_FLAGS_HW_MODE           (1U &lt;&lt; 3)</span>
@@ -189,27 +179,27 @@ tshark -i eth0 -V
 </pre></div>
 </div>
 <p>内核中对应的处理函数：<a class="reference external" href="https://elixir.bootlin.com/linux/v4.14/source/net/core/dev.c#L7038">https://elixir.bootlin.com/linux/v4.14/source/net/core/dev.c#L7038</a></p>
-</div>
-<div class="section" id="ya-ce-gong-ju">
+</section>
+<section id="ya-ce-gong-ju">
 <h2>压测工具<a class="headerlink" href="#ya-ce-gong-ju" title="Permalink to this headline">¶</a></h2>
 <p>wrk</p>
 <ul class="simple">
-<li><a class="reference external" href="https://github.com/wg/wrk">https://github.com/wg/wrk</a></li>
+<li><p><a class="reference external" href="https://github.com/wg/wrk">https://github.com/wg/wrk</a></p></li>
 </ul>
 <p>pktgen</p>
 <ul class="simple">
-<li>文档：<a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/pktgen.txt">https://www.kernel.org/doc/Documentation/networking/pktgen.txt</a></li>
-<li>示例：<a class="reference external" href="https://github.com/torvalds/linux/tree/master/samples/pktgen">https://github.com/torvalds/linux/tree/master/samples/pktgen</a></li>
+<li><p>文档：<a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/pktgen.txt">https://www.kernel.org/doc/Documentation/networking/pktgen.txt</a></p></li>
+<li><p>示例：<a class="reference external" href="https://github.com/torvalds/linux/tree/master/samples/pktgen">https://github.com/torvalds/linux/tree/master/samples/pktgen</a></p></li>
 </ul>
-</div>
-<div class="section" id="xing-neng-zhi-biao">
+</section>
+<section id="xing-neng-zhi-biao">
 <h2>性能指标<a class="headerlink" href="#xing-neng-zhi-biao" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> dstat --bits -cnm --net-packets
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>dstat --bits -cnm --net-packets
 </pre></div>
 </div>
 <p>xdp 程序是在 ksoftirqd 中执行的，因此查看软中断的 CPU 消耗即是 xdp 程序的 CPU 消耗（即 dstat 中的 siq 列）。</p>
-</div>
-</div>
+</section>
+</section>
 
 
           </div>
@@ -218,33 +208,23 @@ tshark -i eth0 -V
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">#0129 性能</a><ul>
 <li><a class="reference internal" href="#ce-shi-huan-jing">测试环境</a></li>
 <li><a class="reference internal" href="#xian-shang-bian-yi-cong-chang-shi-dao-fang-qi">线上编译？从尝试到放弃</a></li>
 <li><a class="reference internal" href="#bond-wang-kou-he-xdp">bond 网口和 xdp</a></li>
-<li><a class="reference internal" href="#cuo-pei-di-lu-you-dao-zhi-ru-bao-bei-diu">错配的路由导致入包被丢</a></li>
-<li><a class="reference internal" href="#shi-yong-wireshark-ming-ling-hang-gong-ju-dump-wang-luo-bao">使用 wireshark 命令行工具 dump 网络包</a></li>
-<li><a class="reference internal" href="#ying-xiang-xdp-xing-neng-di-liang-ge-dian">影响 xdp 性能的两个点</a></li>
-<li><a class="reference internal" href="#xdp-zai-nei-he-wang-luo-zhan-zhong-zhi-xing-di-wei-zhi">xdp 在内核网络栈中执行的位置</a></li>
-<li><a class="reference internal" href="#ru-he-xiu-gai-xdp-cheng-xu-di-jia-zai-mo-shi">如何修改 xdp 程序的加载模式</a></li>
+<li><a class="reference internal" href="#cuo-pei-de-lu-you-dao-zhi-ru-bao-bei-diu">错配的路由导致入包被丢</a></li>
+<li><a class="reference internal" href="#shi-yong-wireshark-ming-ling-xing-gong-ju-dump-wang-luo-bao">使用 wireshark 命令行工具 dump 网络包</a></li>
+<li><a class="reference internal" href="#ying-xiang-xdp-xing-neng-de-liang-ge-dian">影响 xdp 性能的两个点</a></li>
+<li><a class="reference internal" href="#xdp-zai-nei-he-wang-luo-zhan-zhong-zhi-xing-de-wei-zhi">xdp 在内核网络栈中执行的位置</a></li>
+<li><a class="reference internal" href="#ru-he-xiu-gai-xdp-cheng-xu-de-jia-zai-mo-shi">如何修改 xdp 程序的加载模式</a></li>
 <li><a class="reference internal" href="#ya-ce-gong-ju">压测工具</a></li>
 <li><a class="reference internal" href="#xing-neng-zhi-biao">性能指标</a></li>
 </ul>
 </li>
 </ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-  <li><a href="index.html">基于 xdp 的 L4LB 开发笔记</a><ul>
-      <li>Previous: <a href="210122.html" title="previous chapter">#0122 xdp &amp; go</a></li>
-      <li>Next: <a href="210220.html" title="next chapter">#0220 性能</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -253,15 +233,15 @@ tshark -i eth0 -V
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -270,7 +250,7 @@ tshark -i eth0 -V
       &copy;2017, chanfung032.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
