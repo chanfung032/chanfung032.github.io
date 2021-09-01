@@ -15,7 +15,7 @@ Feng's blog
    tls-protocol.rst
    tls-certificate.rst
    bayesian-method.rst
-   手写一个简单的递归下降Parser <https://github.com/chanfung032/labs/blob/master/decode-string.py>
+   手写一个简单的递归下降 Parser <https://github.com/chanfung032/labs/blob/master/decode-string.py>
    regexp.rst
    raft.rst
    android-wexin-export-with-no-root.rst
@@ -39,6 +39,7 @@ Feng's blog
    golang-internals-bootstrap.rst
    golang-internals-function.rst
    golang-internals-byte-array-and-string.rst
+   golang-internals-reflection.md
    golang-internals-nil.rst
    golang-internals-variable.rst
    docker-seccomp-bpf.rst
