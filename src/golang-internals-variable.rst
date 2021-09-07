@@ -185,3 +185,37 @@ iface/eface 中的 data 是指向实际值（value）的指针， *itab._type* �
 - https://stackoverflow.com/a/34608738
 - https://blog.altoros.com/golang-internals-part-2-diving-into-the-go-compiler.html
 
+
+uintptr 和 unsafe.Pointer 的区别
+----------------------------------------
+
+两种类型的定义如下：
+
+.. code-block:: go
+
+    // $GOROOT/src/builtin/builtin.go
+    // uintptr is an integer type that is large enough to hold the bit pattern of
+    // any pointer.
+    type uintptr uintptr
+
+    // $GOROOT/src/unsafe/unsafe.go
+    type Pointer *ArbitraryType
+
+uintptr 它就是一个 **整型** 类型，这个类型的比特位数（bit size）足够大，可以存储指针（内存地址）而不溢出。uintptr 中的内容就是一个整数，这个整数和其它整数没有区别，只不过这个整数是一个指针（内存地址），gc 对 uintptr 是无感知的，所以可能 uintptr 变量还在，但它指向的对象已经被 gc 了。
+
+而 unsafe.Pointer 是一个可以指向任意类型对象的指针，unsafe.Pointer 在，他所指向的对象就一定在，不会被 gc 掉。
+
+看一个 uintptr 的应用场景：Go 运行时中有一个 noescape 函数用来切断 *逃逸分析* 系统的数据流跟踪，避免传入的指针逃逸。
+
+.. code-block:: go
+
+    // $GOROOT/src/runtime/stubs.go
+    func noescape(p unsafe.Pointer) unsafe.Pointer {
+        x := uintptr(p)
+        return unsafe.Pointer(x ^ 0) // 任何数值与 0 异或都是原数
+    }
+
+这个函数将传入的指针转换成 uintptr 类型，也就一个整数数值，然后将这个数值异或 0 之后（还是原来的数值）再转换会指针返回。传入的指针和返回的指针都是指向同一个地址，但是经过一次 uintptr 的转换，这两个指针解耦合了。
+
+- https://pkg.go.dev/builtin#uintptr
+- https://pkg.go.dev/unsafe#Pointer

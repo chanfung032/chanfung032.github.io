@@ -204,6 +204,34 @@ after walk main
 <li><p><a class="reference external" href="https://blog.altoros.com/golang-internals-part-2-diving-into-the-go-compiler.html">https://blog.altoros.com/golang-internals-part-2-diving-into-the-go-compiler.html</a></p></li>
 </ul>
 </section>
+<section id="uintptr-he-unsafe-pointer-de-qu-bie">
+<h2>uintptr 和 unsafe.Pointer 的区别<a class="headerlink" href="#uintptr-he-unsafe-pointer-de-qu-bie" title="Permalink to this headline">¶</a></h2>
+<p>两种类型的定义如下：</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="c1">// $GOROOT/src/builtin/builtin.go</span>
+<span class="c1">// uintptr is an integer type that is large enough to hold the bit pattern of</span>
+<span class="c1">// any pointer.</span>
+<span class="kd">type</span> <span class="kt">uintptr</span> <span class="kt">uintptr</span>
+
+<span class="c1">// $GOROOT/src/unsafe/unsafe.go</span>
+<span class="kd">type</span> <span class="nx">Pointer</span> <span class="o">*</span><span class="nx">ArbitraryType</span>
+</pre></div>
+</div>
+<p>uintptr 它就是一个 <strong>整型</strong> 类型，这个类型的比特位数（bit size）足够大，可以存储指针（内存地址）而不溢出。uintptr 中的内容就是一个整数，这个整数和其它整数没有区别，只不过这个整数是一个指针（内存地址），gc 对 uintptr 是无感知的，所以可能 uintptr 变量还在，但它指向的对象已经被 gc 了。</p>
+<p>而 unsafe.Pointer 是一个可以指向任意类型对象的指针，unsafe.Pointer 在，他所指向的对象就一定在，不会被 gc 掉。</p>
+<p>看一个 uintptr 的应用场景：Go 运行时中有一个 noescape 函数用来切断 <em>逃逸分析</em> 系统的数据流跟踪，避免传入的指针逃逸。</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="c1">// $GOROOT/src/runtime/stubs.go</span>
+<span class="kd">func</span> <span class="nx">noescape</span><span class="p">(</span><span class="nx">p</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">)</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span> <span class="p">{</span>
+    <span class="nx">x</span> <span class="o">:=</span> <span class="nb">uintptr</span><span class="p">(</span><span class="nx">p</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nx">unsafe</span><span class="p">.</span><span class="nx">Pointer</span><span class="p">(</span><span class="nx">x</span> <span class="p">^</span> <span class="mi">0</span><span class="p">)</span> <span class="c1">// 任何数值与 0 异或都是原数</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>这个函数将传入的指针转换成 uintptr 类型，也就一个整数数值，然后将这个数值异或 0 之后（还是原来的数值）再转换会指针返回。传入的指针和返回的指针都是指向同一个地址，但是经过一次 uintptr 的转换，这两个指针解耦合了。</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://pkg.go.dev/builtin#uintptr">https://pkg.go.dev/builtin#uintptr</a></p></li>
+<li><p><a class="reference external" href="https://pkg.go.dev/unsafe#Pointer">https://pkg.go.dev/unsafe#Pointer</a></p></li>
+</ul>
+</section>
 </section>
 
 
@@ -218,6 +246,7 @@ after walk main
 <li><a class="reference internal" href="#">Go 语言实现——数据结构</a><ul>
 <li><a class="reference internal" href="#zhi-value-de-nei-cun-jie-gou">值（value）的内存结构</a></li>
 <li><a class="reference internal" href="#jie-kou-interface-de-shi-xian">接口 interface 的实现</a></li>
+<li><a class="reference internal" href="#uintptr-he-unsafe-pointer-de-qu-bie">uintptr 和 unsafe.Pointer 的区别</a></li>
 </ul>
 </li>
 </ul>
