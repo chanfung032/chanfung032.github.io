@@ -353,6 +353,12 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cat  /sys/kernel/debug/tracing/trace_pipe
 </pre></div>
 </div>
+<p>5.19 内核之前，bpf_printk 不会自动在打印的日志后面追加 <code class="docutils literal notranslate"><span class="pre">'\n'</span></code>，所以在老内核上使用 bpf_printk 的话，fmt 需要以 <code class="docutils literal notranslate"><span class="pre">'\n'</span></code> 结尾，否则 trace_pipe 中的日志就会变成就会变成巨长无比的一整行，没法看。</p>
+<p><a class="reference external" href="https://nakryiko.com/posts/bpf-tips-printk/">https://nakryiko.com/posts/bpf-tips-printk/</a></p>
+<p>清除 trace buffer：</p>
+<blockquote>
+<div><p># echo &gt; /sys/kernel/debug/tracing/trace</p>
+</div></blockquote>
 </section>
 <section id="ru-he-jie-jue-bpf-verifier-bao-cuo">
 <h2>如何解决 BPF Verifier 报错<a class="headerlink" href="#ru-he-jie-jue-bpf-verifier-bao-cuo" title="Permalink to this headline">¶</a></h2>

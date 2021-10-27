@@ -373,6 +373,14 @@ https://www.kernel.org/doc/html/latest/core-api/printk-formats.html
 
     $ cat  /sys/kernel/debug/tracing/trace_pipe
 
+5.19 内核之前，bpf_printk 不会自动在打印的日志后面追加 ``'\n'``，所以在老内核上使用 bpf_printk 的话，fmt 需要以 ``'\n'`` 结尾，否则 trace_pipe 中的日志就会变成就会变成巨长无比的一整行，没法看。
+
+https://nakryiko.com/posts/bpf-tips-printk/
+
+清除 trace buffer：
+
+    # echo > /sys/kernel/debug/tracing/trace
+
 如何解决 BPF Verifier 报错
 --------------------------------
 
