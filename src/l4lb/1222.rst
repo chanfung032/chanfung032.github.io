@@ -15,8 +15,8 @@ https://en.wikipedia.org/wiki/Rendezvous_hashing
 .. code-block:: python
 
     for i, entry in enumerated(table_entries):
-        # 以转发表条目编号的哈希为前缀，计算hash(前缀+后端ip)后的值作为后端ip的哈希
-        # 以哈希值作为比较的key，倒序排列所有的后端
+        # 以转发表条目编号的哈希为前缀，计算 hash（前缀 + 后端 ip) 后的值作为后端 ip 的哈希
+        # 以哈希值作为比较的 key，倒序排列所有的后端
         prefix := siphash(i)
         for b in backends:
             b.hash = siphash(prefix + b.ip)
@@ -149,4 +149,5 @@ https://github.com/github/glb-director/blob/master/docs/setup/backend-proxy-setu
   local interfaces over the wire and have them accepted properly.
   default FALSE
 
-https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
+- https://lore.kernel.org/bpf/CACAyw9-TEDHdcjykuQZ8P0Q6QngEZU0z7PXgqtZRQq4Jh1_ojw@mail.gmail.com/
+- https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt

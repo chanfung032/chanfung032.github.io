@@ -45,8 +45,8 @@
 <p>GLB 转发表的生成和更新算法采用的是 Rendezvous Hashing，也是一种一致性哈希，基本逻辑如下所示：</p>
 <p><a class="reference external" href="https://en.wikipedia.org/wiki/Rendezvous_hashing">https://en.wikipedia.org/wiki/Rendezvous_hashing</a></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">enumerated</span><span class="p">(</span><span class="n">table_entries</span><span class="p">):</span>
-    <span class="c1"># 以转发表条目编号的哈希为前缀，计算hash(前缀+后端ip)后的值作为后端ip的哈希</span>
-    <span class="c1"># 以哈希值作为比较的key，倒序排列所有的后端</span>
+    <span class="c1"># 以转发表条目编号的哈希为前缀，计算 hash（前缀 + 后端 ip) 后的值作为后端 ip 的哈希</span>
+    <span class="c1"># 以哈希值作为比较的 key，倒序排列所有的后端</span>
     <span class="n">prefix</span> <span class="o">:=</span> <span class="n">siphash</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">backends</span><span class="p">:</span>
         <span class="n">b</span><span class="o">.</span><span class="n">hash</span> <span class="o">=</span> <span class="n">siphash</span><span class="p">(</span><span class="n">prefix</span> <span class="o">+</span> <span class="n">b</span><span class="o">.</span><span class="n">ip</span><span class="p">)</span>
@@ -163,7 +163,10 @@ suitable routing, this can be used to direct packets between two
 local interfaces over the wire and have them accepted properly.
 default FALSE</p>
 </div></blockquote>
-<p><a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt</a></p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://lore.kernel.org/bpf/CACAyw9-TEDHdcjykuQZ8P0Q6QngEZU0z7PXgqtZRQq4Jh1_ojw&#64;mail.gmail.com/">https://lore.kernel.org/bpf/CACAyw9-TEDHdcjykuQZ8P0Q6QngEZU0z7PXgqtZRQq4Jh1_ojw&#64;mail.gmail.com/</a></p></li>
+<li><p><a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt</a></p></li>
+</ul>
 </section>
 </section>
 
