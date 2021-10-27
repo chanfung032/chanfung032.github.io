@@ -114,3 +114,39 @@ glb-redirect 配置主要包含两个部分：
 
 https://github.com/github/glb-director/blob/master/docs/setup/backend-proxy-setup.md#configuring-gue
 
+关闭 tunl0 的源地址校验：
+
+.. code-block:: console
+
+    # sysctl -ar '\.rp_filter'
+    net.ipv4.conf.all.rp_filter = 1
+    net.ipv4.conf.eth0.rp_filter = 1
+    net.ipv4.conf.default.rp_filter = 1
+    net.ipv4.conf.lo.rp_filter = 1
+    net.ipv4.conf.tunl0.rp_filter = 1
+    # sysctl -w net.ipv4.conf.all.rp_filter=0
+    # sysctl -w net.ipv4.conf.tunl0.rp_filter=0
+
+注意，conf/{all,interface}/rp_filter 都需要配置，因为 ``The max value from conf/{all,interface}/rp_filter is used when doing source validation on the {interface}.`` 。
+
+如果是和 cloudflare 一样对称部署的场景，那么会出现 director 和后端机器是同一台机器的情况，这种情况下 GUE 包的源就是本机地址，这个时候还需要配置 accept_local 参数：
+
+.. code-block:: console
+
+  #  sysctl -ar '\.accept_local'
+  net.ipv4.conf.all.accept_local = 1
+  net.ipv4.conf.eth0.accept_local = 0
+  net.ipv4.conf.default.accept_local = 0
+  net.ipv4.conf.lo.accept_local = 0
+  net.ipv4.conf.tunl0.accept_local = 0
+  # sysctl -w net.ipv4.conf.all.accept_local=1
+
+这个参数默认是 FALSE，也就是默认不接受源地址是本机地址的包。
+
+  accept_local - BOOLEAN
+  Accept packets with local source addresses. In combination with
+  suitable routing, this can be used to direct packets between two
+  local interfaces over the wire and have them accepted properly.
+  default FALSE
+
+https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt

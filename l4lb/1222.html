@@ -133,6 +133,37 @@ iptables -A INPUT -p udp -m udp --dport <span class="m">19523</span> -j GLBREDIR
 </pre></div>
 </div>
 <p><a class="reference external" href="https://github.com/github/glb-director/blob/master/docs/setup/backend-proxy-setup.md#configuring-gue">https://github.com/github/glb-director/blob/master/docs/setup/backend-proxy-setup.md#configuring-gue</a></p>
+<p>关闭 tunl0 的源地址校验：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>sysctl -ar <span class="s1">&#39;\.rp_filter&#39;</span>
+<span class="go">net.ipv4.conf.all.rp_filter = 1</span>
+<span class="go">net.ipv4.conf.eth0.rp_filter = 1</span>
+<span class="go">net.ipv4.conf.default.rp_filter = 1</span>
+<span class="go">net.ipv4.conf.lo.rp_filter = 1</span>
+<span class="go">net.ipv4.conf.tunl0.rp_filter = 1</span>
+<span class="gp"># </span>sysctl -w net.ipv4.conf.all.rp_filter<span class="o">=</span><span class="m">0</span>
+<span class="gp"># </span>sysctl -w net.ipv4.conf.tunl0.rp_filter<span class="o">=</span><span class="m">0</span>
+</pre></div>
+</div>
+<p>注意，conf/{all,interface}/rp_filter 都需要配置，因为 <code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">max</span> <span class="pre">value</span> <span class="pre">from</span> <span class="pre">conf/{all,interface}/rp_filter</span> <span class="pre">is</span> <span class="pre">used</span> <span class="pre">when</span> <span class="pre">doing</span> <span class="pre">source</span> <span class="pre">validation</span> <span class="pre">on</span> <span class="pre">the</span> <span class="pre">{interface}.</span></code> 。</p>
+<p>如果是和 cloudflare 一样对称部署的场景，那么会出现 director 和后端机器是同一台机器的情况，这种情况下 GUE 包的源就是本机地址，这个时候还需要配置 accept_local 参数：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">#  </span>sysctl -ar <span class="s1">&#39;\.accept_local&#39;</span>
+<span class="go">net.ipv4.conf.all.accept_local = 1</span>
+<span class="go">net.ipv4.conf.eth0.accept_local = 0</span>
+<span class="go">net.ipv4.conf.default.accept_local = 0</span>
+<span class="go">net.ipv4.conf.lo.accept_local = 0</span>
+<span class="go">net.ipv4.conf.tunl0.accept_local = 0</span>
+<span class="gp"># </span>sysctl -w net.ipv4.conf.all.accept_local<span class="o">=</span><span class="m">1</span>
+</pre></div>
+</div>
+<p>这个参数默认是 FALSE，也就是默认不接受源地址是本机地址的包。</p>
+<blockquote>
+<div><p>accept_local - BOOLEAN
+Accept packets with local source addresses. In combination with
+suitable routing, this can be used to direct packets between two
+local interfaces over the wire and have them accepted properly.
+default FALSE</p>
+</div></blockquote>
+<p><a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt</a></p>
 </section>
 </section>
 
