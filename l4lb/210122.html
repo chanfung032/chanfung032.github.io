@@ -211,6 +211,19 @@ xdpcap /path/to/pinned/map - <span class="p">|</span> tcpdump -r -
 xdpcap /path/to/pinned/map - <span class="s2">&quot;tcp and port 80&quot;</span> <span class="p">|</span> tcpdump -r -
 </pre></div>
 </div>
+<hr class="docutils" />
+<p>负载均衡 xdpcap 捕获的包都是转发出去的 GUE 包，如果需要对内层 IP 包进行过滤，需要使用 xdpcap 项目提供的另一个工具 <code class="docutils literal notranslate"><span class="pre">bpfoff</span></code> 。该工具会重写 bpf 指令中加载数据的指令，修改指令的偏移量参数，让其跳过外层封包的 header。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 安装 bpfoff 命令</span>
+go get -u github.com/cloudflare/xdpcap/cmd/bpfoff
+
+<span class="c1"># 过滤 GUE 封包的内层 IP 包。(ethernet 14 字节 + GUE 封包 40字节）</span>
+xdpcap /path/to/pinned/map file.pcap <span class="s2">&quot;</span><span class="k">$(</span>bpfoff <span class="m">54</span> <span class="s2">&quot;ip and tcp port 53&quot;</span><span class="k">)</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/cloudflare/xdpcap/issues/44#issuecomment-664192969">https://github.com/cloudflare/xdpcap/issues/44#issuecomment-664192969</a></p></li>
+<li><p><a class="reference external" href="https://github.com/cloudflare/xdpcap/blob/master/cmd/bpfoff/main.go">https://github.com/cloudflare/xdpcap/blob/master/cmd/bpfoff/main.go</a></p></li>
+</ul>
 </section>
 <section id="nei-he-pei-zhi-xu-qiu">
 <h2>内核配置需求<a class="headerlink" href="#nei-he-pei-zhi-xu-qiu" title="Permalink to this headline">¶</a></h2>

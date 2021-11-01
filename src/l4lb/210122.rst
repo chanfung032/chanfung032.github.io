@@ -202,6 +202,21 @@ xdpcap 使用方法
     xdpcap /path/to/pinned/map - | tcpdump -r -
     xdpcap /path/to/pinned/map - "tcp and port 80" | tcpdump -r -
 
+----
+
+负载均衡 xdpcap 捕获的包都是转发出去的 GUE 包，如果需要对内层 IP 包进行过滤，需要使用 xdpcap 项目提供的另一个工具 ``bpfoff`` 。该工具会重写 bpf 指令中加载数据的指令，修改指令的偏移量参数，让其跳过外层封包的 header。
+
+.. code-block:: bash
+
+    # 安装 bpfoff 命令
+    go get -u github.com/cloudflare/xdpcap/cmd/bpfoff
+
+    # 过滤 GUE 封包的内层 IP 包。(ethernet 14 字节 + GUE 封包 40字节）
+    xdpcap /path/to/pinned/map file.pcap "$(bpfoff 54 "ip and tcp port 53")"
+
+- https://github.com/cloudflare/xdpcap/issues/44#issuecomment-664192969
+- https://github.com/cloudflare/xdpcap/blob/master/cmd/bpfoff/main.go
+
 内核配置需求
 ---------------
 
