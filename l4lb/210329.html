@@ -156,7 +156,7 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 
     <span class="s">&quot;github.com/hashicorp/consul/api&quot;</span>
 <span class="p">)</span>
-<span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">api</span><span class="p">.</span><span class="nx">NewClient</span><span class="p">(</span><span class="nx">consul</span><span class="p">.</span><span class="nx">DefaultConfig</span><span class="p">())</span>
+<span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">api</span><span class="p">.</span><span class="nx">NewClient</span><span class="p">(</span><span class="nx">api</span><span class="p">.</span><span class="nx">DefaultConfig</span><span class="p">())</span>
 </pre></div>
 </div>
 </section>
@@ -201,8 +201,8 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 <p><a class="reference external" href="https://www.consul.io/docs/troubleshoot/faq#q-what-is-the-per-key-value-size-limitation-for-consul-s-key-value-store">https://www.consul.io/docs/troubleshoot/faq#q-what-is-the-per-key-value-size-limitation-for-consul-s-key-value-store</a></p>
 </section>
 <section id="fu-wu-zhu-ce-jian-kang-jian-cha">
-<h3>服务注册&amp;健康检查<a class="headerlink" href="#fu-wu-zhu-ce-jian-kang-jian-cha" title="Permalink to this headline">¶</a></h3>
-<p>注册一个服务&amp;健康检查，健康检查类型为 <a class="reference external" href="https://www.consul.io/docs/discovery/checks#ttl">TTL</a>，应用程序自行上报健康信息，如果 TTL 时间内没有上报，就标记服务为 fail：</p>
+<h3>服务注册 &amp; 健康检查<a class="headerlink" href="#fu-wu-zhu-ce-jian-kang-jian-cha" title="Permalink to this headline">¶</a></h3>
+<p>注册一个服务 &amp; 健康检查，健康检查类型为 <a class="reference external" href="https://www.consul.io/docs/discovery/checks#ttl">TTL</a>，应用程序自行上报健康信息，如果 TTL 时间内没有上报，就标记服务为 fail：</p>
 <div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">ttl</span> <span class="o">:=</span> <span class="mi">10</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span>
 <span class="nx">agent</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nx">Agent</span><span class="p">()</span>
 <span class="nx">serviceDef</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">api</span><span class="p">.</span><span class="nx">AgentServiceRegistration</span><span class="p">{</span>
@@ -230,7 +230,7 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 <li><p><a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api#Agent">https://pkg.go.dev/github.com/hashicorp/consul/api#Agent</a></p></li>
 <li><p><a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api#AgentServiceCheck">https://pkg.go.dev/github.com/hashicorp/consul/api#AgentServiceCheck</a></p></li>
 </ul>
-<p>获取某一服务&amp;健康检查的信息：</p>
+<p>获取某一服务 &amp; 健康检查的信息：</p>
 <div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">hs</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nx">Health</span><span class="p">()</span>
 <span class="nx">serviceEntries</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">hs</span><span class="p">.</span><span class="nx">Service</span><span class="p">(</span><span class="s">&quot;myservice&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">e</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">serviceEntries</span> <span class="p">{</span>
@@ -297,7 +297,7 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>默认情况下，持有锁的应用进程如果挂了/网络不通，其它正在等待同一把锁的应用进程需要 15s 后才能获得锁，这个参数由 <a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api#LockOptions">LockOptions</a> 中的 <code class="docutils literal notranslate"><span class="pre">LockDelay</span></code> 参数控制，默认为 15s，作用在于：当持有锁的应用进程是因为比如网络抖动等问题导致锁丢失了而不是进程挂了，该应用进程可能正在写持有锁才能操作的 kv，给其一定的时间退出，防止多个应用进程同时写导致状态不一致。详细可以见：<a class="reference external" href="https://www.consul.io/docs/dynamic-app-config/sessions">https://www.consul.io/docs/dynamic-app-config/sessions</a> 。</p>
+<p>默认情况下，持有锁的应用进程如果挂了 / 网络不通，其它正在等待同一把锁的应用进程需要 15s 后才能获得锁，这个参数由 <a class="reference external" href="https://pkg.go.dev/github.com/hashicorp/consul/api#LockOptions">LockOptions</a> 中的 <code class="docutils literal notranslate"><span class="pre">LockDelay</span></code> 参数控制，默认为 15s，作用在于：当持有锁的应用进程是因为比如网络抖动等问题导致锁丢失了而不是进程挂了，该应用进程可能正在写持有锁才能操作的 kv，给其一定的时间退出，防止多个应用进程同时写导致状态不一致。详细可以见：<a class="reference external" href="https://www.consul.io/docs/dynamic-app-config/sessions">https://www.consul.io/docs/dynamic-app-config/sessions</a> 。</p>
 <p>锁底层是使用 KV + Session 实现的，详细可见：<a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/application-leader-elections">https://learn.hashicorp.com/tutorials/consul/application-leader-elections</a> 。</p>
 </section>
 </section>
@@ -323,7 +323,7 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 <li><a class="reference internal" href="#go-api-examples">Go API Examples</a><ul>
 <li><a class="reference internal" href="#dao-ru-bao">导入包</a></li>
 <li><a class="reference internal" href="#kv-cun-chu">KV 存储</a></li>
-<li><a class="reference internal" href="#fu-wu-zhu-ce-jian-kang-jian-cha">服务注册&amp;健康检查</a></li>
+<li><a class="reference internal" href="#fu-wu-zhu-ce-jian-kang-jian-cha">服务注册 &amp; 健康检查</a></li>
 <li><a class="reference internal" href="#jian-kong-watch">监控（watch）</a></li>
 <li><a class="reference internal" href="#fen-bu-shi-suo">分布式锁</a></li>
 </ul>

@@ -40,10 +40,10 @@ cloudflare 如何部署
     # 在国外服务器上下载 rpm 包。
     # consul 最新版本号可以在 https://www.consul.io/downloads 页面查看到。
     wget https://rpm.releases.hashicorp.com/RHEL/7/x86_64/stable/consul-1.9.5-1.x86_64.rpm
-    
+
     # 将 consul-1.9.5-1.x86_64.rpm 复制拷贝到国内服务器上
     # ...
-    
+
     # 安装
     rpm -i consul-1.9.5-1.x86_64.rpm
 
@@ -150,7 +150,7 @@ Go API Examples
 
         "github.com/hashicorp/consul/api"
     )
-    client, err := api.NewClient(consul.DefaultConfig())
+    client, err := api.NewClient(api.DefaultConfig())
 
 KV 存储
 ^^^^^^^^^^^
@@ -204,10 +204,10 @@ kv 存储的值最大大小为 512KB。
 
 https://www.consul.io/docs/troubleshoot/faq#q-what-is-the-per-key-value-size-limitation-for-consul-s-key-value-store
 
-服务注册&健康检查
+服务注册 & 健康检查
 ^^^^^^^^^^^^^^^^^^^
 
-注册一个服务&健康检查，健康检查类型为 `TTL <https://www.consul.io/docs/discovery/checks#ttl>`_，应用程序自行上报健康信息，如果 TTL 时间内没有上报，就标记服务为 fail：
+注册一个服务 & 健康检查，健康检查类型为 `TTL <https://www.consul.io/docs/discovery/checks#ttl>`_，应用程序自行上报健康信息，如果 TTL 时间内没有上报，就标记服务为 fail：
 
 .. code-block:: go
 
@@ -236,7 +236,7 @@ https://www.consul.io/docs/troubleshoot/faq#q-what-is-the-per-key-value-size-lim
 - https://pkg.go.dev/github.com/hashicorp/consul/api#Agent
 - https://pkg.go.dev/github.com/hashicorp/consul/api#AgentServiceCheck
 
-获取某一服务&健康检查的信息：
+获取某一服务 & 健康检查的信息：
 
 .. code-block:: go
 
@@ -307,6 +307,6 @@ https://www.consul.io/docs/troubleshoot/faq#q-what-is-the-per-key-value-size-lim
         lock.Unlock()
     }
 
-默认情况下，持有锁的应用进程如果挂了/网络不通，其它正在等待同一把锁的应用进程需要 15s 后才能获得锁，这个参数由 `LockOptions <https://pkg.go.dev/github.com/hashicorp/consul/api#LockOptions>`_ 中的 ``LockDelay`` 参数控制，默认为 15s，作用在于：当持有锁的应用进程是因为比如网络抖动等问题导致锁丢失了而不是进程挂了，该应用进程可能正在写持有锁才能操作的 kv，给其一定的时间退出，防止多个应用进程同时写导致状态不一致。详细可以见：https://www.consul.io/docs/dynamic-app-config/sessions 。
+默认情况下，持有锁的应用进程如果挂了 / 网络不通，其它正在等待同一把锁的应用进程需要 15s 后才能获得锁，这个参数由 `LockOptions <https://pkg.go.dev/github.com/hashicorp/consul/api#LockOptions>`_ 中的 ``LockDelay`` 参数控制，默认为 15s，作用在于：当持有锁的应用进程是因为比如网络抖动等问题导致锁丢失了而不是进程挂了，该应用进程可能正在写持有锁才能操作的 kv，给其一定的时间退出，防止多个应用进程同时写导致状态不一致。详细可以见：https://www.consul.io/docs/dynamic-app-config/sessions 。
 
 锁底层是使用 KV + Session 实现的，详细可见：https://learn.hashicorp.com/tutorials/consul/application-leader-elections 。
