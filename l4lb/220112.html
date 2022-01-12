@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title># 220112 UDP &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#0607 Serf" href="210607.html" />
+    <link rel="prev" title="基于 xdp 的 L4LB 开发笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="udp">
+<h1># 220112 UDP<a class="headerlink" href="#udp" title="Permalink to this headline">¶</a></h1>
+<section id="unimog-de-udp-chu-li-ce-lve">
+<h2>Unimog 的 UDP 处理策略<a class="headerlink" href="#unimog-de-udp-chu-li-ce-lve" title="Permalink to this headline">¶</a></h2>
+<p>首先，对于像 DNS 这种简单的 <em>请求响应</em> 式服务，仅均衡负载，不维护状态，转发表每个槽位中只有一跳，完全无状态。</p>
+<p>而对于复杂的像 QUIC 这种需要维护连接状态的服务。</p>
+<ul>
+<li><p>在 director 上会有一个 QUIC 协议的 dissector 提取网络包中的 connection id 替代默认的 IP 端口来计算到转发表的哈希。</p></li>
+<li><p>第二跳逻辑和 TCP 不一样，TCP 有 SYN 包来区分是 <em>新连接</em> 还是 <em>已建立连接（established）</em> 的包，SYN 包直接在第一跳接收，UDP 不行。UDP 只能通过内核接口判断是 <em>新连接</em> 的包还是 <em>已建立连接</em> 的包。所以 UDP 包在正常情况下包都需要过两跳。</p>
+<p>UDP 包在转发时，第一跳/第二跳分别对应转发表中的第二跳/第一跳。转发表没有变更的情况下所有包都是在转发的第二跳（转发表的第一跳）上被接收的。只有某一个槽位有变更的时候，转发表的第一跳变成转发表的第二跳，也就成了转发的第一跳，此时老连接上的包才会在转发的第一跳上被接收。维护了老连接，保证了老连接不会断，相对于 TCP，额外开销不小。</p>
+</li>
+<li><p>上面第二跳的逻辑要工作，对 UDP Server 有要求，需要 UDP Server 建立 connected udp sockets。</p></li>
+</ul>
+<img alt="../_images/udp-forward-cf.png" src="../_images/udp-forward-cf.png" />
+<p>bpf 中使用  <code class="docutils literal notranslate"><span class="pre">bpf_sk_lookup_udp</span></code> 判断是 <em>新连接</em> 的包还是 <em>已建立连接</em> 的包。</p>
+<p><a class="reference external" href="https://github.com/torvalds/linux/blob/v5.16/tools/testing/selftests/bpf/progs/test_cls_redirect.c#L683">https://github.com/torvalds/linux/blob/v5.16/tools/testing/selftests/bpf/progs/test_cls_redirect.c#L683</a></p>
+<p>查看其调用链可以发现最后调用的 <code class="docutils literal notranslate"><span class="pre">__udp4_lib_lookup</span></code> 和 <code class="docutils literal notranslate"><span class="pre">__udp6_lib_lookup</span></code> 这两个函数。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>bpf_sk_lookup_udp
+➡️ bpf_sk_lookup
+  ➡️ bpf_skc_lookup
+    ➡️ __bpf_skc_lookup
+      ➡️ sk_lookup
+        ➡️ __udp4_lib_lookup
+        ➡️ __udp6_lib_lookup
+</pre></div>
+</div>
+</section>
+<section id="shen-me-shi-connected-udp-sockets">
+<h2>什么是 connected udp sockets<a class="headerlink" href="#shen-me-shi-connected-udp-sockets" title="Permalink to this headline">¶</a></h2>
+<p>connected udp sockets 指的是在读写 socket 之前调用 connect 系统调用 “建立” 和对端的连接。</p>
+<p>对于客户端来说，使用下面的方式建立的 socket 就是 connected 的，比较好理解。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">c</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+<span class="n">c</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s1">&#39;127.0.0.1&#39;</span><span class="p">,</span> <span class="mi">1234</span><span class="p">))</span>
+<span class="n">c</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;hello world!&quot;</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">cd</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">2048</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>而我们大部分情况下看到的 udp 服务端的实现基本都是 unconnected 的，比如下面这段代码。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+<span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s1">&#39;127.0.0.1&#39;</span><span class="p">,</span> <span class="mi">1234</span><span class="p">))</span>
+
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">msg</span><span class="p">,</span> <span class="n">addr</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">addr</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>我们需要对该服务端做如下改造，才能使上面的第二跳逻辑可以工作。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+<span class="n">s</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s1">&#39;127.0.0.1&#39;</span><span class="p">,</span> <span class="mi">1234</span><span class="p">))</span>
+
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">msg</span><span class="p">,</span> <span class="n">addr</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">c</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s1">&#39;127.0.0.1&#39;</span><span class="p">,</span> <span class="mi">1234</span><span class="p">))</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">addr</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>上面的代码比较糙，只能处理一条连接，通过 <code class="docutils literal notranslate"><span class="pre">ss</span></code> 命令可以看到这条 established 的连接（ESTAB 那一行），前面 unconnected 的版本只能看到看到 UNCONN 那一行。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ss -panu<span class="p">|</span>grep python
+<span class="go">ESTAB  0      0          127.0.0.1:1234     127.0.0.1:57346 users:((&quot;python&quot;,pid=52309,fd=4))</span>
+<span class="go">UNCONN 0      0          127.0.0.1:1234       0.0.0.0:*     users:((&quot;python&quot;,pid=52309,fd=3))</span>
+</pre></div>
+</div>
+<p>UDP 的 connect 调用并不会实际的去和对端服务器建立连接，所以上面说建立连接的时候都是加引号的，调用 connect 不会和对端有任何的网络包交互，只是告诉内核某一个 socket 的对端是哪，而不需要每次都得调用 recvfrom，sendto 获得/传递对端的 IP 和端口。</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://blog.cloudflare.com/everything-you-ever-wanted-to-know-about-udp-sockets-but-were-afraid-to-ask-part-1/">https://blog.cloudflare.com/everything-you-ever-wanted-to-know-about-udp-sockets-but-were-afraid-to-ask-part-1/</a></p></li>
+<li><p><a class="reference external" href="https://ops.tips/blog/udp-client-and-server-in-go/">https://ops.tips/blog/udp-client-and-server-in-go/</a></p></li>
+</ul>
+<hr class="docutils" />
+<p>使用 nc 来模拟 connected udp socket</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># 服务端</span>
+<span class="n">nc</span> <span class="o">-</span><span class="n">ul</span> <span class="n">IP</span> <span class="n">PORT</span>
+
+<span class="c1"># 客户端</span>
+<span class="n">nc</span> <span class="o">-</span><span class="n">u</span> <span class="n">IP</span> <span class="n">PORT</span>
+</pre></div>
+</div>
+<p>注意，这里的 IP 不能通配的 <code class="docutils literal notranslate"><span class="pre">0.0.0.0</span></code>。</p>
+<p>nc 中只需处理一条连接，所以不需要再创建新的 socket，直接在原本的 server socket 上 connect 就可以了，详细见：<a class="reference external" href="https://github.com/openbsd/src/blob/master/usr.bin/nc/netcat.c#L609">https://github.com/openbsd/src/blob/master/usr.bin/nc/netcat.c#L609</a></p>
+<hr class="docutils" />
+<p>nginx 中 udp 使用的 unconnected socket。</p>
+<ul class="simple">
+<li><p>使用 recvmsg 收包 <a class="reference external" href="https://github.com/nginx/nginx/blob/master/src/event/ngx_event_udp.c">https://github.com/nginx/nginx/blob/master/src/event/ngx_event_udp.c</a></p></li>
+<li><p>使用 sendto 发包 <a class="reference external" href="https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_udp_send.c">https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_udp_send.c</a></p></li>
+<li><p>使用 sendmsg 发包 <a class="reference external" href="https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_udp_sendmsg_chain.c">https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_udp_sendmsg_chain.c</a></p></li>
+</ul>
+</section>
+<section id="ling-yi-zhong-chu-li-ce-lve">
+<h2>另一种处理策略<a class="headerlink" href="#ling-yi-zhong-chu-li-ce-lve" title="Permalink to this headline">¶</a></h2>
+<p>Unimog 处理策略中，正常情况下，UDP 的包都需要经过 2 跳，额外开销太大，我们可以稍微修改下策略，让大部分的包在第一跳解决，修改如下：</p>
+<p>转发的第一跳和第二跳还是和转发表一致，但是增加一个第三跳，第三跳还是转发表中的第一跳，如果第二跳上检查没发现对应的连接，那么是新连接的包，继续转发给第三跳（也就是第一跳）去处理。那么这个连接上后续的包就会在第一跳上直接被处理了。</p>
+<img alt="../_images/udp-forward.png" src="../_images/udp-forward.png" />
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#"># 220112 UDP</a><ul>
+<li><a class="reference internal" href="#unimog-de-udp-chu-li-ce-lve">Unimog 的 UDP 处理策略</a></li>
+<li><a class="reference internal" href="#shen-me-shi-connected-udp-sockets">什么是 connected udp sockets</a></li>
+<li><a class="reference internal" href="#ling-yi-zhong-chu-li-ce-lve">另一种处理策略</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/220112.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/220112.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
