@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title># 220112 UDP &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <title>#220112 UDP &#8212; Feng&#39;s blog 1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -16,7 +16,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="#0607 Serf" href="210607.html" />
-    <link rel="prev" title="基于 xdp 的 L4LB 开发笔记" href="index.html" />
+    <link rel="prev" title="#220321 Facebook: From XDP to Socket" href="220321.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -34,7 +34,7 @@
           <div class="body" role="main">
             
   <section id="udp">
-<h1># 220112 UDP<a class="headerlink" href="#udp" title="Permalink to this headline">¶</a></h1>
+<h1>#220112 UDP<a class="headerlink" href="#udp" title="Permalink to this headline">¶</a></h1>
 <section id="unimog-de-udp-chu-li-ce-lve">
 <h2>Unimog 的 UDP 处理策略<a class="headerlink" href="#unimog-de-udp-chu-li-ce-lve" title="Permalink to this headline">¶</a></h2>
 <p>首先，对于像 DNS 这种简单的 <em>请求响应</em> 式服务，仅均衡负载，不维护状态，转发表每个槽位中只有一跳，完全无状态。</p>
@@ -42,7 +42,7 @@
 <ul>
 <li><p>在 director 上会有一个 QUIC 协议的 dissector 提取网络包中的 connection id 替代默认的 IP 端口来计算到转发表的哈希。</p></li>
 <li><p>第二跳逻辑和 TCP 不一样，TCP 有 SYN 包来区分是 <em>新连接</em> 还是 <em>已建立连接（established）</em> 的包，SYN 包直接在第一跳接收，UDP 不行。UDP 只能通过内核接口判断是 <em>新连接</em> 的包还是 <em>已建立连接</em> 的包。所以 UDP 包在正常情况下包都需要过两跳。</p>
-<p>UDP 包在转发时，第一跳/第二跳分别对应转发表中的第二跳/第一跳。转发表没有变更的情况下所有包都是在转发的第二跳（转发表的第一跳）上被接收的。只有某一个槽位有变更的时候，转发表的第一跳变成转发表的第二跳，也就成了转发的第一跳，此时老连接上的包才会在转发的第一跳上被接收。维护了老连接，保证了老连接不会断，相对于 TCP，额外开销不小。</p>
+<p>UDP 包在转发时，第一跳 / 第二跳分别对应转发表中的第二跳 / 第一跳。转发表没有变更的情况下所有包都是在转发的第二跳（转发表的第一跳）上被接收的。只有某一个槽位有变更的时候，转发表的第一跳变成转发表的第二跳，也就成了转发的第一跳，此时老连接上的包才会在转发的第一跳上被接收。维护了老连接，保证了老连接不会断，相对于 TCP，额外开销不小。</p>
 </li>
 <li><p>上面第二跳的逻辑要工作，对 UDP Server 有要求，需要 UDP Server 建立 connected udp sockets。</p></li>
 </ul>
@@ -106,7 +106,7 @@
 <span class="go">UNCONN 0      0          127.0.0.1:1234       0.0.0.0:*     users:((&quot;python&quot;,pid=52309,fd=3))</span>
 </pre></div>
 </div>
-<p>UDP 的 connect 调用并不会实际的去和对端服务器建立连接，所以上面说建立连接的时候都是加引号的，调用 connect 不会和对端有任何的网络包交互，只是告诉内核某一个 socket 的对端是哪，而不需要每次都得调用 recvfrom，sendto 获得/传递对端的 IP 和端口。</p>
+<p>UDP 的 connect 调用并不会实际的去和对端服务器建立连接，所以上面说建立连接的时候都是加引号的，调用 connect 不会和对端有任何的网络包交互，只是告诉内核某一个 socket 的对端是哪，而不需要每次都得调用 recvfrom，sendto 获得 / 传递对端的 IP 和端口。</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://blog.cloudflare.com/everything-you-ever-wanted-to-know-about-udp-sockets-but-were-afraid-to-ask-part-1/">https://blog.cloudflare.com/everything-you-ever-wanted-to-know-about-udp-sockets-but-were-afraid-to-ask-part-1/</a></p></li>
 <li><p><a class="reference external" href="https://ops.tips/blog/udp-client-and-server-in-go/">https://ops.tips/blog/udp-client-and-server-in-go/</a></p></li>
@@ -147,7 +147,7 @@
         <div class="sphinxsidebarwrapper">
   <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#"># 220112 UDP</a><ul>
+<li><a class="reference internal" href="#">#220112 UDP</a><ul>
 <li><a class="reference internal" href="#unimog-de-udp-chu-li-ce-lve">Unimog 的 UDP 处理策略</a></li>
 <li><a class="reference internal" href="#shen-me-shi-connected-udp-sockets">什么是 connected udp sockets</a></li>
 <li><a class="reference internal" href="#ling-yi-zhong-chu-li-ce-lve">另一种处理策略</a></li>

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>#220321 Facebook: From XDP to Socket &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <title>#220321 FB: From XDP to Socket &#8212; Feng&#39;s blog 1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -15,7 +15,7 @@
     <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="# 220112 UDP" href="220112.html" />
+    <link rel="next" title="#220112 UDP" href="220112.html" />
     <link rel="prev" title="基于 xdp 的 L4LB 开发笔记" href="index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -33,8 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="facebook-from-xdp-to-socket">
-<h1>#220321 Facebook: From XDP to Socket<a class="headerlink" href="#facebook-from-xdp-to-socket" title="Permalink to this headline">¶</a></h1>
+  <section id="fb-from-xdp-to-socket">
+<h1>#220321 FB: From XDP to Socket<a class="headerlink" href="#fb-from-xdp-to-socket" title="Permalink to this headline">¶</a></h1>
 <section id="gai-shu">
 <h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
 <p>原文：<a class="reference external" href="https://lpc.events/event/11/contributions/950/">https://lpc.events/event/11/contributions/950/</a></p>
@@ -48,7 +48,7 @@
 <p>整个架构里使用到 XDP 的地方有两个地方：</p>
 <ol class="arabic simple">
 <li><p>基于 XDP 实现的 L4 Katran。</p></li>
-<li><p>L7 UDP 服务的优雅重启/发布。</p></li>
+<li><p>L7 UDP 服务的优雅重启 / 发布。</p></li>
 </ol>
 </section>
 <section id="ji-yu-xdp-shi-xian-de-l4-katran">
@@ -73,7 +73,7 @@
 </ul>
 </section>
 <section id="l7-udp-fu-wu-de-you-ya-chong-qi-fa-bu">
-<h2>L7 UDP 服务的优雅重启/发布<a class="headerlink" href="#l7-udp-fu-wu-de-you-ya-chong-qi-fa-bu" title="Permalink to this headline">¶</a></h2>
+<h2>L7 UDP 服务的优雅重启 / 发布<a class="headerlink" href="#l7-udp-fu-wu-de-you-ya-chong-qi-fa-bu" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://lwn.net/Articles/542629/">SO_REUSEPORT</a> 允许多个 socket bind 到同一个 port，对于 UDP 包（有连接的，比如 QUIC），内核在调度包给监听的 socket 时用的是简单的哈希方法，一旦 socket 有变化，比如重启的时候，新的 socket 监听加入，旧的 socket 监听退出，如何保证已经建立的 “连接” 的包发送给旧进程，旧进程优雅退出，新连接的包发送给新启动的进程创建的 socket，就是个问题。</p>
 <img alt="../_images/fb-reuseport.png" src="../_images/fb-reuseport.png" />
 <p>FB 的方案是使用 bpf 实现一个 socket 层面的负载均衡器 bpf_sk_reuseport。这个负载均衡：</p>
@@ -91,7 +91,7 @@
 <img alt="../_images/ngx_quic_bpf.png" src="../_images/ngx_quic_bpf.png" />
 <ul class="simple">
 <li><p>完整代码：<a class="reference external" href="https://hg.nginx.org/nginx-quic/rev/7df607cb2d11">https://hg.nginx.org/nginx-quic/rev/7df607cb2d11</a></p></li>
-<li><p><a class="reference external" href="https://medium.com/nttlabs/nginx-quic-ebpf-soreuseport-127c62112a8d">NginxでのeBPFとSO_REUSEPORTを使ったQUICコネクション受信処理</a></p></li>
+<li><p><a class="reference external" href="https://medium.com/nttlabs/nginx-quic-ebpf-soreuseport-127c62112a8d">Nginx での eBPF と SO_REUSEPORT を使った QUIC コネクション受信処理</a></p></li>
 </ul>
 </section>
 </section>
@@ -105,10 +105,10 @@
         <div class="sphinxsidebarwrapper">
   <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">#220321 Facebook: From XDP to Socket</a><ul>
+<li><a class="reference internal" href="#">#220321 FB: From XDP to Socket</a><ul>
 <li><a class="reference internal" href="#gai-shu">概述</a></li>
 <li><a class="reference internal" href="#ji-yu-xdp-shi-xian-de-l4-katran">基于 XDP 实现的 L4 Katran</a></li>
-<li><a class="reference internal" href="#l7-udp-fu-wu-de-you-ya-chong-qi-fa-bu">L7 UDP 服务的优雅重启/发布</a></li>
+<li><a class="reference internal" href="#l7-udp-fu-wu-de-you-ya-chong-qi-fa-bu">L7 UDP 服务的优雅重启 / 发布</a></li>
 </ul>
 </li>
 </ul>

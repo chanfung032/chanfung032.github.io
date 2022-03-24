@@ -1,4 +1,4 @@
-# 220112 UDP
+#220112 UDP
 ===========================
 
 Unimog 的 UDP 处理策略
@@ -10,10 +10,10 @@ Unimog 的 UDP 处理策略
 
 - 在 director 上会有一个 QUIC 协议的 dissector 提取网络包中的 connection id 替代默认的 IP 端口来计算到转发表的哈希。
 - 第二跳逻辑和 TCP 不一样，TCP 有 SYN 包来区分是 *新连接* 还是 *已建立连接（established）* 的包，SYN 包直接在第一跳接收，UDP 不行。UDP 只能通过内核接口判断是 *新连接* 的包还是 *已建立连接* 的包。所以 UDP 包在正常情况下包都需要过两跳。
-  
-  UDP 包在转发时，第一跳/第二跳分别对应转发表中的第二跳/第一跳。转发表没有变更的情况下所有包都是在转发的第二跳（转发表的第一跳）上被接收的。只有某一个槽位有变更的时候，转发表的第一跳变成转发表的第二跳，也就成了转发的第一跳，此时老连接上的包才会在转发的第一跳上被接收。维护了老连接，保证了老连接不会断，相对于 TCP，额外开销不小。
+
+  UDP 包在转发时，第一跳 / 第二跳分别对应转发表中的第二跳 / 第一跳。转发表没有变更的情况下所有包都是在转发的第二跳（转发表的第一跳）上被接收的。只有某一个槽位有变更的时候，转发表的第一跳变成转发表的第二跳，也就成了转发的第一跳，此时老连接上的包才会在转发的第一跳上被接收。维护了老连接，保证了老连接不会断，相对于 TCP，额外开销不小。
 - 上面第二跳的逻辑要工作，对 UDP Server 有要求，需要 UDP Server 建立 connected udp sockets。
-  
+
 .. image:: images/udp-forward-cf.png
 
 bpf 中使用  ``bpf_sk_lookup_udp`` 判断是 *新连接* 的包还是 *已建立连接* 的包。
@@ -86,7 +86,7 @@ connected udp sockets 指的是在读写 socket 之前调用 connect 系统调�
     ESTAB  0      0          127.0.0.1:1234     127.0.0.1:57346 users:(("python",pid=52309,fd=4))
     UNCONN 0      0          127.0.0.1:1234       0.0.0.0:*     users:(("python",pid=52309,fd=3))
 
-UDP 的 connect 调用并不会实际的去和对端服务器建立连接，所以上面说建立连接的时候都是加引号的，调用 connect 不会和对端有任何的网络包交互，只是告诉内核某一个 socket 的对端是哪，而不需要每次都得调用 recvfrom，sendto 获得/传递对端的 IP 和端口。
+UDP 的 connect 调用并不会实际的去和对端服务器建立连接，所以上面说建立连接的时候都是加引号的，调用 connect 不会和对端有任何的网络包交互，只是告诉内核某一个 socket 的对端是哪，而不需要每次都得调用 recvfrom，sendto 获得 / 传递对端的 IP 和端口。
 
 - https://blog.cloudflare.com/everything-you-ever-wanted-to-know-about-udp-sockets-but-were-afraid-to-ask-part-1/
 - https://ops.tips/blog/udp-client-and-server-in-go/
@@ -95,7 +95,7 @@ UDP 的 connect 调用并不会实际的去和对端服务器建立连接，所�
 
 使用 nc 来模拟 connected udp socket
 
-.. code-block:: 
+.. code-block::
 
     # 服务端
     nc -ul IP PORT
@@ -111,9 +111,9 @@ nc 中只需处理一条连接，所以不需要再创建新的 socket，直接�
 
 nginx 中 udp 使用的 unconnected socket。
 
-- 使用 recvmsg 收包 https://github.com/nginx/nginx/blob/master/src/event/ngx_event_udp.c 
-- 使用 sendto 发包 https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_udp_send.c 
-- 使用 sendmsg 发包 https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_udp_sendmsg_chain.c 
+- 使用 recvmsg 收包 https://github.com/nginx/nginx/blob/master/src/event/ngx_event_udp.c
+- 使用 sendto 发包 https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_udp_send.c
+- 使用 sendmsg 发包 https://github.com/nginx/nginx/blob/master/src/os/unix/ngx_udp_sendmsg_chain.c
 
 另一种处理策略
 -----------------------
