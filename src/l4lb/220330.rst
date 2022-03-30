@@ -1,0 +1,56 @@
+#220330 ixgbe Detected Tx Unit Hang
+=========================================
+
+现象是网卡不断重启，查看 ``/var/log/message`` 可以看到以下错误信息： ::
+
+    Mar 25 15:35:53: [686973.797868] ixgbe 0000:83:00.0 p4p1: Detected Tx Unit Hang (XDP)
+    Mar 25 15:35:53: [686973.797868]   Tx Queue             <24>
+    Mar 25 15:35:53: [686973.797868]   TDH, TDT             <84>, <136>
+    Mar 25 15:35:53: [686973.797868]   next_to_use          <136>
+    Mar 25 15:35:53: [686973.797868]   next_to_clean        <84>
+    Mar 25 15:35:53: [686973.797868] tx_buffer_info[next_to_clean]
+    Mar 25 15:35:53: [686973.797868]   time_stamp           <0>
+    Mar 25 15:35:53: [686973.797868]   jiffies              <128edcdc0>
+    ...
+    Mar 25 15:35:53: [686973.797955] ixgbe 0000:83:00.0 p4p1: tx hang 1 detected on queue 25, resetting adapter
+    ...
+    15:35:53 kernel: [687078.764725] bond0: link status down for interface p4p2, disabling it in 200 ms
+
+这个问题是 ixgbe 驱动 xdp 实现 BUG 导致，出现在 cpu 比较多的机器。
+
+    When the received core is such that the xdp queue falls beyond
+    MAX_TX_QUEUES(64), then the hang results. In other words, if I leave
+    `ethtool -L eno1 combined 40` (the default), and a packet is received on
+    core 24 or greater, it hangs. However, if I lower the tx queue count to
+    24 (since XDP is forced to nr_cpu_ids), or if I force the incoming
+    packets onto core < 24 with an ntuple filter, then no hang occurs.
+
+.. code-block:: console
+
+    # ethtool -l p4p1
+    Channel parameters for p4p1:
+    Pre-set maximums:
+    RX:		0
+    TX:		0
+    Other:		1
+    Combined:	63
+    Current hardware settings:
+    RX:		0
+    TX:		0
+    Other:		1
+    Combined:	28
+    # nproc
+    56
+    # uname -r
+    4.19.113-88.4bs.el7.centos.x86_64
+
+当 ``combined + xdp queues(nr_cpu_ids) > max_tx_queues(64)`` 就会出现这个问题。
+
+详细问题讨论在这两个 thread 中：
+
+- https://www.spinics.net/lists/netdev/msg439438.html
+- https://www.spinics.net/lists/netdev/msg519914.html
+
+不升级内核的情况下，可以通过 ``ethtool -L p4p1 combined N`` 命令调低 combined 的个数，绕过这个 BUG，但是会影响性能。
+
+BUG 在 4.20-rc1 已经修复。参见：https://github.com/torvalds/linux/commit/8d7179b1e2d64b3493c0114916486fe92e6109a9

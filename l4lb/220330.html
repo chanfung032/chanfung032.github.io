@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>#220330 ixgbe Detected Tx Unit Hang &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#220321 FB: From XDP to Socket" href="220321.html" />
+    <link rel="prev" title="基于 xdp 的 L4LB 开发笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="ixgbe-detected-tx-unit-hang">
+<h1>#220330 ixgbe Detected Tx Unit Hang<a class="headerlink" href="#ixgbe-detected-tx-unit-hang" title="Permalink to this headline">¶</a></h1>
+<p>现象是网卡不断重启，查看 <code class="docutils literal notranslate"><span class="pre">/var/log/message</span></code> 可以看到以下错误信息：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mar</span> <span class="mi">25</span> <span class="mi">15</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span> <span class="p">[</span><span class="mf">686973.797868</span><span class="p">]</span> <span class="n">ixgbe</span> <span class="mi">0000</span><span class="p">:</span><span class="mi">83</span><span class="p">:</span><span class="mf">00.0</span> <span class="n">p4p1</span><span class="p">:</span> <span class="n">Detected</span> <span class="n">Tx</span> <span class="n">Unit</span> <span class="n">Hang</span> <span class="p">(</span><span class="n">XDP</span><span class="p">)</span>
+<span class="n">Mar</span> <span class="mi">25</span> <span class="mi">15</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span> <span class="p">[</span><span class="mf">686973.797868</span><span class="p">]</span>   <span class="n">Tx</span> <span class="n">Queue</span>             <span class="o">&lt;</span><span class="mi">24</span><span class="o">&gt;</span>
+<span class="n">Mar</span> <span class="mi">25</span> <span class="mi">15</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span> <span class="p">[</span><span class="mf">686973.797868</span><span class="p">]</span>   <span class="n">TDH</span><span class="p">,</span> <span class="n">TDT</span>             <span class="o">&lt;</span><span class="mi">84</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="mi">136</span><span class="o">&gt;</span>
+<span class="n">Mar</span> <span class="mi">25</span> <span class="mi">15</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span> <span class="p">[</span><span class="mf">686973.797868</span><span class="p">]</span>   <span class="n">next_to_use</span>          <span class="o">&lt;</span><span class="mi">136</span><span class="o">&gt;</span>
+<span class="n">Mar</span> <span class="mi">25</span> <span class="mi">15</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span> <span class="p">[</span><span class="mf">686973.797868</span><span class="p">]</span>   <span class="n">next_to_clean</span>        <span class="o">&lt;</span><span class="mi">84</span><span class="o">&gt;</span>
+<span class="n">Mar</span> <span class="mi">25</span> <span class="mi">15</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span> <span class="p">[</span><span class="mf">686973.797868</span><span class="p">]</span> <span class="n">tx_buffer_info</span><span class="p">[</span><span class="n">next_to_clean</span><span class="p">]</span>
+<span class="n">Mar</span> <span class="mi">25</span> <span class="mi">15</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span> <span class="p">[</span><span class="mf">686973.797868</span><span class="p">]</span>   <span class="n">time_stamp</span>           <span class="o">&lt;</span><span class="mi">0</span><span class="o">&gt;</span>
+<span class="n">Mar</span> <span class="mi">25</span> <span class="mi">15</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span> <span class="p">[</span><span class="mf">686973.797868</span><span class="p">]</span>   <span class="n">jiffies</span>              <span class="o">&lt;</span><span class="mi">128</span><span class="n">edcdc0</span><span class="o">&gt;</span>
+<span class="o">...</span>
+<span class="n">Mar</span> <span class="mi">25</span> <span class="mi">15</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span> <span class="p">[</span><span class="mf">686973.797955</span><span class="p">]</span> <span class="n">ixgbe</span> <span class="mi">0000</span><span class="p">:</span><span class="mi">83</span><span class="p">:</span><span class="mf">00.0</span> <span class="n">p4p1</span><span class="p">:</span> <span class="n">tx</span> <span class="n">hang</span> <span class="mi">1</span> <span class="n">detected</span> <span class="n">on</span> <span class="n">queue</span> <span class="mi">25</span><span class="p">,</span> <span class="n">resetting</span> <span class="n">adapter</span>
+<span class="o">...</span>
+<span class="mi">15</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mi">53</span> <span class="n">kernel</span><span class="p">:</span> <span class="p">[</span><span class="mf">687078.764725</span><span class="p">]</span> <span class="n">bond0</span><span class="p">:</span> <span class="n">link</span> <span class="n">status</span> <span class="n">down</span> <span class="k">for</span> <span class="n">interface</span> <span class="n">p4p2</span><span class="p">,</span> <span class="n">disabling</span> <span class="n">it</span> <span class="ow">in</span> <span class="mi">200</span> <span class="n">ms</span>
+</pre></div>
+</div>
+<p>这个问题是 ixgbe 驱动 xdp 实现 BUG 导致，出现在 cpu 比较多的机器。</p>
+<blockquote>
+<div><p>When the received core is such that the xdp queue falls beyond
+MAX_TX_QUEUES(64), then the hang results. In other words, if I leave
+<cite>ethtool -L eno1 combined 40</cite> (the default), and a packet is received on
+core 24 or greater, it hangs. However, if I lower the tx queue count to
+24 (since XDP is forced to nr_cpu_ids), or if I force the incoming
+packets onto core &lt; 24 with an ntuple filter, then no hang occurs.</p>
+</div></blockquote>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ethtool -l p4p1
+<span class="go">Channel parameters for p4p1:</span>
+<span class="go">Pre-set maximums:</span>
+<span class="go">RX:         0</span>
+<span class="go">TX:         0</span>
+<span class="go">Other:              1</span>
+<span class="go">Combined:   63</span>
+<span class="go">Current hardware settings:</span>
+<span class="go">RX:         0</span>
+<span class="go">TX:         0</span>
+<span class="go">Other:              1</span>
+<span class="go">Combined:   28</span>
+<span class="gp"># </span>nproc
+<span class="go">56</span>
+<span class="gp"># </span>uname -r
+<span class="go">4.19.113-88.4bs.el7.centos.x86_64</span>
+</pre></div>
+</div>
+<p>当 <code class="docutils literal notranslate"><span class="pre">combined</span> <span class="pre">+</span> <span class="pre">xdp</span> <span class="pre">queues(nr_cpu_ids)</span> <span class="pre">&gt;</span> <span class="pre">max_tx_queues(64)</span></code> 就会出现这个问题。</p>
+<p>详细问题讨论在这两个 thread 中：</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.spinics.net/lists/netdev/msg439438.html">https://www.spinics.net/lists/netdev/msg439438.html</a></p></li>
+<li><p><a class="reference external" href="https://www.spinics.net/lists/netdev/msg519914.html">https://www.spinics.net/lists/netdev/msg519914.html</a></p></li>
+</ul>
+<p>不升级内核的情况下，可以通过 <code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-L</span> <span class="pre">p4p1</span> <span class="pre">combined</span> <span class="pre">N</span></code> 命令调低 combined 的个数，绕过这个 BUG，但是会影响性能。</p>
+<p>BUG 在 4.20-rc1 已经修复。参见：<a class="reference external" href="https://github.com/torvalds/linux/commit/8d7179b1e2d64b3493c0114916486fe92e6109a9">https://github.com/torvalds/linux/commit/8d7179b1e2d64b3493c0114916486fe92e6109a9</a></p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/220330.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/220330.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
