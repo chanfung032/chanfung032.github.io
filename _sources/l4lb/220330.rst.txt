@@ -54,3 +54,5 @@
 不升级内核的情况下，可以通过 ``ethtool -L p4p1 combined N`` 命令调低 combined 的个数，绕过这个 BUG，但是会影响性能。
 
 BUG 在 4.20-rc1 已经修复。参见：https://github.com/torvalds/linux/commit/8d7179b1e2d64b3493c0114916486fe92e6109a9
+
+另一个解决问题的方法是设定 XDP 加载模式为 skb 模式，同样会影响性能，但是不需要升级内核。
