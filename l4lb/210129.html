@@ -179,6 +179,7 @@ tshark -i eth0 -V
 </pre></div>
 </div>
 <p>内核中对应的处理函数：<a class="reference external" href="https://elixir.bootlin.com/linux/v4.14/source/net/core/dev.c#L7038">https://elixir.bootlin.com/linux/v4.14/source/net/core/dev.c#L7038</a></p>
+<p>注意，如果要切换加载模式，需要卸载 XDP 后重新加载，使用 <code class="docutils literal notranslate"><span class="pre">XDP_FLAGS_UPDATE_IF_NOEXIST</span></code> 是无效的，这个参数只对同一模式有用。</p>
 </section>
 <section id="ya-ce-gong-ju">
 <h2>压测工具<a class="headerlink" href="#ya-ce-gong-ju" title="Permalink to this headline">¶</a></h2>

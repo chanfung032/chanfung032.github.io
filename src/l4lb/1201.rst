@@ -274,12 +274,12 @@ struct icmphdr	  <linux/icmp.h>
     0x1
     0x4
 
-指针加 1 的时候，如果是 ``void*`` 指针，指针是往后移一个字节，如果指针有类型，那么则是往后移 ``sizeof(类型）`` 个字节。所以上面所有 hdr 类型的 bounds checking 的时候都是使用相同的指针加 1 操作。
+指针加 1 的时候，如果是 ``void*`` 指针，指针是往后移一个字节，如果指针有类型，那么则是往后移 ``sizeof（类型）`` 个字节。所以上面所有 hdr 类型的 bounds checking 的时候都是使用相同的指针加 1 操作。
 
 网络包 Rewrite
 ----------------------
 
-xdp 程序可以直接修改 [ctx->data, ctx->data_end] 之间的数据，并且可以通过 ``bpf_xdp_adjust_head`` 函数来扩大/缩小网络数据包的 buffer 的大小。
+xdp 程序可以直接修改 [ctx->data, ctx->data_end] 之间的数据，并且可以通过 ``bpf_xdp_adjust_head`` 函数来扩大 / 缩小网络数据包的 buffer 的大小。
 
 .. c:function:: long bpf_xdp_adjust_head(struct xdp_buff *xdp_md, int delta)
 
