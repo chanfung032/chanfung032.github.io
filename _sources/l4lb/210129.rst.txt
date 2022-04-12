@@ -176,6 +176,23 @@ xdp 在内核网络栈中执行的位置
 
 注意，如果要切换加载模式，需要卸载 XDP 后重新加载，使用 ``XDP_FLAGS_UPDATE_IF_NOEXIST`` 是无效的，这个参数只对同一模式有用。
 
+如何获取 xdp 程序的加载模式
+-----------------------------
+
+加载模式不是通过 xdp 属性里的 flag 字段获取的，而是通过 attached 的值来判断的。详细见：https://github.com/torvalds/linux/blob/master/tools/bpf/bpftool/netlink_dumper.c#:~:text=static%20int%20do_xdp_dump_one
+
+go 的 `netlink <https://github.com/vishvananda/netlink>`_ 库需要使用 `1.2.0-beta <https://github.com/vishvananda/netlink/releases/tag/v1.2.0-beta>`_ 以上版本才有获取加载模式的功能。
+
+.. code-block:: go
+
+    link, _ := netlink.LinkByName(ifaceName)
+    link.Attrs().Xdp.AttachMode
+    // 加载模式：
+    //   XDP_ATTACHED_NONE
+    //   XDP_ATTACHED_DRV
+    //   XDP_ATTACHED_SKB
+    //   XDP_ATTACHED_HW
+
 压测工具
 -------------
 
