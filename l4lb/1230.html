@@ -113,6 +113,14 @@ tcpdump -n -nn -vvv -xx -i &lt;iface&gt;
 <p>最后，curl 基本可以运行了，但不是 100% 成功，间或有超时或者 IP 包重传导致的响应慢，tcpdump 发现正常和不正常的唯一区别是不正常的时候有些转发包的 tcpdump 信息显示 checksum incorrect，检查发现 xdp director 封包的时候计算 checksum 的时候没有首先将 checksum 置零。修改再运行，100% 成功。</p>
 <p>至此，第一个小目标，完成。</p>
 </section>
+<section id="yuan-mu-biao-ip-yi-yang-dao-zhi-de-bao-bei-diu">
+<h2>源/目标 IP 一样导致的包被丢<a class="headerlink" href="#yuan-mu-biao-ip-yi-yang-dao-zhi-de-bao-bei-diu" title="Permalink to this headline">¶</a></h2>
+<p>当转发的后端就是本机的时候，xdp 可以直接 accept 包，此时包中的源 IP 和目的 IP 就会一样，这种包会被内核丢掉，解决方法是修改源 IP，或者修改下面这个内核参数关闭该行为：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>sysctl -w net.ipv4.conf.interface.accept_local<span class="o">=</span><span class="m">1</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt</a></p>
+</section>
 <section id="zhao-chu-nei-he-zai-na-diu-bao-de-ji-ge-fang-fa">
 <h2>找出内核在哪丢包的几个方法<a class="headerlink" href="#zhao-chu-nei-he-zai-na-diu-bao-de-ji-ge-fang-fa" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://jvns.ca/blog/2017/09/05/finding-out-where-packets-are-being-dropped/">https://jvns.ca/blog/2017/09/05/finding-out-where-packets-are-being-dropped/</a></p>
@@ -173,6 +181,10 @@ tcpdump -n -nn -vvv -xx -i &lt;iface&gt;
 </pre></div>
 </div>
 </section>
+<section id="centos-7-an-zhuang-zui-xin-ban-ben-de-bpftool">
+<h2>CentOS 7 安装最新版本的 bpftool<a class="headerlink" href="#centos-7-an-zhuang-zui-xin-ban-ben-de-bpftool" title="Permalink to this headline">¶</a></h2>
+<p>使用 <a class="reference external" href="https://github.com/fbs/el7-bpf-specs">https://github.com/fbs/el7-bpf-specs</a> 提供的 yum 仓库中的 bpftool 。</p>
+</section>
 </section>
 
 
@@ -191,7 +203,9 @@ tcpdump -n -nn -vvv -xx -i &lt;iface&gt;
 <li><a class="reference internal" href="#bytes-missing">14 bytes missing!</a></li>
 <li><a class="reference internal" href="#bpf-redirect-dao-qi-ta-wang-kou-yao-xiu-gai-dst-mac-di-zhi">bpf_redirect 到其它网口要修改 dst mac 地址</a></li>
 <li><a class="reference internal" href="#suan-iphdr-de-checksum-shi-xian-jiang-checksum-she-zhi-wei-0">算 iphdr 的 checksum 时先将 checksum 设置为 0</a></li>
+<li><a class="reference internal" href="#yuan-mu-biao-ip-yi-yang-dao-zhi-de-bao-bei-diu">源/目标 IP 一样导致的包被丢</a></li>
 <li><a class="reference internal" href="#zhao-chu-nei-he-zai-na-diu-bao-de-ji-ge-fang-fa">找出内核在哪丢包的几个方法</a></li>
+<li><a class="reference internal" href="#centos-7-an-zhuang-zui-xin-ban-ben-de-bpftool">CentOS 7 安装最新版本的 bpftool</a></li>
 </ul>
 </li>
 </ul>

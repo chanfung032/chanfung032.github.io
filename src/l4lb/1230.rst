@@ -106,6 +106,17 @@ bpf_redirect 到其它网口要修改 dst mac 地址
 
 至此，第一个小目标，完成。
 
+源/目标 IP 一样导致的包被丢
+-------------------------------
+
+当转发的后端就是本机的时候，xdp 可以直接 accept 包，此时包中的源 IP 和目的 IP 就会一样，这种包会被内核丢掉，解决方法是修改源 IP，或者修改下面这个内核参数关闭该行为：
+
+.. code-block:: console
+
+    # sysctl -w net.ipv4.conf.interface.accept_local=1
+
+https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
+
 找出内核在哪丢包的几个方法
 -----------------------------
 
@@ -172,3 +183,8 @@ https://jvns.ca/blog/2017/09/05/finding-out-where-packets-are-being-dropped/
     Issue Ctrl-C to stop monitoring
 
     2 drops at ip_rcv_core+200 (0xffffffffa1a00d10)
+
+CentOS 7 安装最新版本的 bpftool
+---------------------------------------
+
+使用 https://github.com/fbs/el7-bpf-specs 提供的 yum 仓库中的 bpftool 。
