@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>#220810 sk_buff 结构体及其基本操作 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="基于 xdp 的 L4LB 开发笔记" href="../l4lb/index.html" />
+    <link rel="prev" title="内核笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="sk-buff-jie-gou-ti-ji-qi-ji-ben-cao-zuo">
+<h1>#220810 sk_buff 结构体及其基本操作<a class="headerlink" href="#sk-buff-jie-gou-ti-ji-qi-ji-ben-cao-zuo" title="Permalink to this headline">¶</a></h1>
+<section id="zhe-ge-jie-gou-shi-shen-me-gan-shen-me-yong-de">
+<h2>这个结构是什么干什么用的<a class="headerlink" href="#zhe-ge-jie-gou-shi-shen-me-gan-shen-me-yong-de" title="Permalink to this headline">¶</a></h2>
+<p>sk_buff 结构体是内核协议栈中最重要的一个结构体，协议栈中大部分函数都会有一个 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sk_buff</span> <span class="pre">*skb</span></code> 的参数，这个结构体对应的变量名一般都是 skb，所以也叫 skb 结构体。网络包在协议栈中的上传下达都是通过这个结构体，每一个协议层中对网络包操作也就是操作 sk_buff 这个结构体。</p>
+<p>虽然名字中带 buff 字样，但 sk_buff 本身并不保存任何网络包数据，它只是个元结构体（metadata struct），所有网络包数据都包含在它关联的各种 buffer 中。</p>
+<p>sk_buff 是个特别复杂的结构体，光结构体定义就有 200 多行，本文只是简单的介绍下它的 <em>基本</em> 结构、 <em>基本</em> 操作。</p>
+<p><a class="reference external" href="https://elixir.bootlin.com/linux/v5.19/source/include/linux/skbuff.h#L1004">https://elixir.bootlin.com/linux/v5.19/source/include/linux/skbuff.h#L1004</a></p>
+</section>
+<section id="ru-he-shi-yong-sk-buff-gou-jian-wang-luo-bao">
+<h2>如何使用 sk_buff 构建网络包<a class="headerlink" href="#ru-he-shi-yong-sk-buff-gou-jian-wang-luo-bao" title="Permalink to this headline">¶</a></h2>
+<p>第一步，创建一个新 skb：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">skb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">alloc_skb</span><span class="p">(</span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">GFP_KERNEL</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+<p>我们重点关注 skb 结构体中的以下几个字段：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w">        </span><span class="n">len</span><span class="p">,</span><span class="w"></span>
+<span class="w">                        </span><span class="n">data_len</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="n">sk_buff_data_t</span><span class="w">      </span><span class="n">tail</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">sk_buff_data_t</span><span class="w">      </span><span class="n">end</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w">       </span><span class="o">*</span><span class="n">head</span><span class="p">,</span><span class="w"></span>
+<span class="w">                        </span><span class="o">*</span><span class="n">data</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>刚创建好的 skb 内存结构大致如下所示：</p>
+<img alt="../_images/skb-alloc.svg" src="../_images/skb-alloc.svg" /><p>head、data、tail 这三个指针一开始都指向一块内存 buffer 的开始地址，end 指向结束地址，len 为 0。这块 buffer 的后面是一个 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">skb_shared_info</span></code> 结构体（暂时不解释这个结构体是干什么的，后面用到时解释）。</p>
+<p>第二步，预留一部分空间给各种协议头（因为构建包的过程一般是用户数据先写，然后才加各种协议头，防止频繁重新分配内存）。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">skb_reserve</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">header_len</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+<p>这个函数主要是移动 data 和 tail 指针，如下图所示：</p>
+<img alt="../_images/skb-reserve.svg" src="../_images/skb-reserve.svg" /><p>第三步，写入用户数据。skb_put 会移动 tail 指针并且增加 len。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">skb_put</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">user_data_len</span><span class="p">);</span><span class="w"></span>
+<span class="n">memcpy</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">user_data</span><span class="p">,</span><span class="w"> </span><span class="n">user_data_len</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+<img alt="../_images/skb-put.svg" src="../_images/skb-put.svg" /><p>第四步，添加协议头。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">tcphdr</span><span class="w"> </span><span class="o">*</span><span class="n">tcp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">struct</span> <span class="nc">tcphdr</span><span class="o">*</span><span class="p">)</span><span class="n">skb_push</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">tcphdr</span><span class="p">));</span><span class="w"></span>
+<span class="n">tcp</span><span class="o">-&gt;</span><span class="n">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">htons</span><span class="p">(</span><span class="mi">1025</span><span class="p">);</span><span class="w"></span>
+<span class="n">tcp</span><span class="o">-&gt;</span><span class="n">dest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">htons</span><span class="p">(</span><span class="mi">2095</span><span class="p">);</span><span class="w"></span>
+<span class="n">tcp</span><span class="o">-&gt;</span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">htons</span><span class="p">(</span><span class="n">user_data_len</span><span class="p">);</span><span class="w"></span>
+<span class="n">tcp</span><span class="o">-&gt;</span><span class="n">check</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+</pre></div>
+</div>
+<img alt="../_images/skb-push.svg" src="../_images/skb-push.svg" /><p>skb_push 的反操作是 skb_pull，这个操作在解包的时候经常使用，比如剥除掉刚才的 TCP 头：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">skb_pull</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">tcphdr</span><span class="p">));</span><span class="w"></span>
+</pre></div>
+</div>
+<img alt="../_images/skb-pull.svg" src="../_images/skb-pull.svg" /><p>如上继续操作下去，一个完整的网络包就构建出来了。</p>
+</section>
+<section id="xian-xing-skb-he-fei-xian-xing-skb">
+<h2>线性 skb 和非线性 skb<a class="headerlink" href="#xian-xing-skb-he-fei-xian-xing-skb" title="Permalink to this headline">¶</a></h2>
+<p>上面的 skb 结构比较简单，所有的数据都在 head 和 end 之间，这个一般被称为线性 skb（linear），相对的，数据无法简单的在 head 和 end 存储下来的时候，就会用到非线性 skb，常见的非线性 skb 有以下 3 种：</p>
+<p>第一种在发送大包（jumbo frame）的时候常用到，多余的数据存放在另外的物理页中，skb_shared_info 中有一个数组 frags，存放一组（页面、偏移、大小）结构体用来记录这些数据在哪。</p>
+<img alt="../_images/skb-frags.svg" src="../_images/skb-frags.svg" /><p>第二种是 IP 数据分片（fragment）的时候用到的 frag_list。每片数据有各自自己的 skb 结构体，通过 skb-&gt;next 组成一个单链表，skb_shared_info 中的 frag_list 指针指向链表头。</p>
+<img alt="../_images/skb-fraglist.svg" src="../_images/skb-fraglist.svg" /><p>最后一种是 gso 分段，当一个 TCP 数据包大小超过 mtu 后，会被切割成几个 &lt;=mtu 大小的数据包，这几个包是通过简单的 skb-&gt;next 链接到一起，相关分段信息保存在第一个 skb-&gt;skb_shared_info 的 gso_segs 和 gso_size 里。</p>
+<img alt="../_images/skb-gso-frags.svg" src="../_images/skb-gso-frags.svg" /><p>判断线性还是非线性 skb 的方式比较简单：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">data_len</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">printk</span><span class="p">(</span><span class="s">&quot; skb is linear, skb_len is %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="c1">// len 为当前 skb 以及后续所有级联的 skb 中的数据长度</span>
+<span class="w">  </span><span class="c1">// data_len 中是后面级联的 skb 中的数据长度</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">data_len</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">data_len</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="n">printk</span><span class="p">(</span><span class="s">&quot;skb is NOT linear, skb_len is %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="skb-cloneskb-copy-fu-zhi-skb-de-cha-bie">
+<h2>skb_clone、skb_copy 复制 skb 的差别<a class="headerlink" href="#skb-cloneskb-copy-fu-zhi-skb-de-cha-bie" title="Permalink to this headline">¶</a></h2>
+<p>skb_clone 是浅拷贝，skb_clone 只是复制了 sk_buff 这个元结构体，其它关联的 buffer 都没复制，而是通过 skb_shared_info 中的 dataref 作为数据 buffer 的引用计数，保证 kfree_skb 的时候不会误删除还有引用的数据 buffer。</p>
+<img alt="../_images/skb-clone.svg" src="../_images/skb-clone.svg" /><p>skb_clone 出来的数据 buffer 是不能修改的，如果要修改就得使用 skb_copy 系函数，skb_copy 是深拷贝，完全复制了 sk_buff 元结构体以及关联的数据 buffer。另外还有一个 pskb_copy（p stands for partial？），只复制 head 指向的 buffer，不复制 skb_shared_info 中 frags 和 frag_list 关联的 buffer。用哪个视具体情况决定。</p>
+<img alt="../_images/skb-copy.svg" src="../_images/skb-copy.svg" /></section>
+<section id="skb-realloc-headroom-bu-hui-shi-fang-yuan-lai-de-skb">
+<h2>skb_realloc_headroom 不会释放原来的 skb<a class="headerlink" href="#skb-realloc-headroom-bu-hui-shi-fang-yuan-lai-de-skb" title="Permalink to this headline">¶</a></h2>
+<p>skb headroom 如果不够用，可以通过 skb_realloc_headroom 扩大 headroom，skb_realloc_headroom 内部是通过  skb_clone 或者 skb_copy 完成的，但这个函数内部并没有处理原来的 skb，这个和 C 函数的 realloc 不太一样。所以这个函数成功返回的话，需要通过 kfree_skb 释放原 skb，否则会有 skb 泄露。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb_realloc_headroom</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">headroom</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb2</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">delta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">headroom</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">skb_headroom</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">delta</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="n">skb2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pskb_copy</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">GFP_ATOMIC</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">skb2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">skb_clone</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">GFP_ATOMIC</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">skb2</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">pskb_expand_head</span><span class="p">(</span><span class="n">skb2</span><span class="p">,</span><span class="w"> </span><span class="n">SKB_DATA_ALIGN</span><span class="p">(</span><span class="n">delta</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                         </span><span class="n">GFP_ATOMIC</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="n">kfree_skb</span><span class="p">(</span><span class="n">skb2</span><span class="p">);</span><span class="w"></span>
+<span class="w">            </span><span class="n">skb2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">skb2</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://elixir.bootlin.com/linux/v5.19/source/net/core/skbuff.c#L1767">https://elixir.bootlin.com/linux/v5.19/source/net/core/skbuff.c#L1767</a></p>
+<p>skb 不释放也就不会调用其析构函数 skb-&gt;destructor，有些资源释放是在这个析构函数里做的，之前写一个内核隧道模块的时候遇到的问题就是 ping 隧道对端 IP 大概 10 次左右之后就报 <code class="docutils literal notranslate"><span class="pre">ping:</span> <span class="pre">sendmsg:</span> <span class="pre">No</span> <span class="pre">buffer</span> <span class="pre">space</span> <span class="pre">available</span></code> 错误，查了半天发现有 skb 泄漏，没调析构函数 <a class="reference external" href="https://elixir.bootlin.com/linux/v5.19/source/net/core/sock.c#L2349">sock_wfree</a> 。</p>
+<p>References:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="http://vger.kernel.org/~davem/skb_data.html">http://vger.kernel.org/~davem/skb_data.html</a></p></li>
+<li><p><a class="reference external" href="http://amsekharkernel.blogspot.com/2014/08/what-is-skb-in-linux-kernel-what-are.html">What is SKB in Linux kernel? What are SKB operations? Memory Representation of SKB? How to send packet out using skb operations?</a></p></li>
+<li><p><a class="reference external" href="https://wiki.bit-hive.com/linuxkernelmemo/pg/sk_buff">https://wiki.bit-hive.com/linuxkernelmemo/pg/sk_buff</a></p></li>
+<li><p><a class="reference external" href="https://people.cs.clemson.edu/~westall/853/notes/skbuff.pdf">https://people.cs.clemson.edu/~westall/853/notes/skbuff.pdf</a></p></li>
+<li><p><a class="reference external" href="http://wangcong.org/2014/05/31/skbuff-e5-86-85-e5-ad-98-e6-a8-a1-e5-9e-8b/">http://wangcong.org/2014/05/31/skbuff-e5-86-85-e5-ad-98-e6-a8-a1-e5-9e-8b/</a></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#220810 sk_buff 结构体及其基本操作</a><ul>
+<li><a class="reference internal" href="#zhe-ge-jie-gou-shi-shen-me-gan-shen-me-yong-de">这个结构是什么干什么用的</a></li>
+<li><a class="reference internal" href="#ru-he-shi-yong-sk-buff-gou-jian-wang-luo-bao">如何使用 sk_buff 构建网络包</a></li>
+<li><a class="reference internal" href="#xian-xing-skb-he-fei-xian-xing-skb">线性 skb 和非线性 skb</a></li>
+<li><a class="reference internal" href="#skb-cloneskb-copy-fu-zhi-skb-de-cha-bie">skb_clone、skb_copy 复制 skb 的差别</a></li>
+<li><a class="reference internal" href="#skb-realloc-headroom-bu-hui-shi-fang-yuan-lai-de-skb">skb_realloc_headroom 不会释放原来的 skb</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/kernel/220810-skbuff.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/kernel/220810-skbuff.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

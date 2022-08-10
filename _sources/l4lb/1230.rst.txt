@@ -170,6 +170,12 @@ https://jvns.ca/blog/2017/09/05/finding-out-where-packets-are-being-dropped/
     ffffffffa1975c77 __netif_receive_skb_one_core+0x67 ([kernel.kallsyms])
     ...
 
+或者使用下面这个 bpftrace one-liner：
+
+.. code-block:: console
+
+    bpftrace -e 'tracepoint:skb:kfree_skb { printf("%s\n", kstack) }'
+
 方法三：使用 ``dropwatch`` 工具，https://github.com/pavel-odintsov/drop_watch，不过这个项目似乎很久没有维护了。
 
 .. code-block:: console

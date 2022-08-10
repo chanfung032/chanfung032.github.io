@@ -1,0 +1,165 @@
+#220810 sk_buff 结构体及其基本操作
+====================================
+
+这个结构是什么干什么用的
+------------------------------
+
+sk_buff 结构体是内核协议栈中最重要的一个结构体，协议栈中大部分函数都会有一个 ``struct sk_buff *skb`` 的参数，这个结构体对应的变量名一般都是 skb，所以也叫 skb 结构体。网络包在协议栈中的上传下达都是通过这个结构体，每一个协议层中对网络包操作也就是操作 sk_buff 这个结构体。
+
+虽然名字中带 buff 字样，但 sk_buff 本身并不保存任何网络包数据，它只是个元结构体（metadata struct），所有网络包数据都包含在它关联的各种 buffer 中。
+
+sk_buff 是个特别复杂的结构体，光结构体定义就有 200 多行，本文只是简单的介绍下它的 *基本* 结构、 *基本* 操作。
+
+https://elixir.bootlin.com/linux/v5.19/source/include/linux/skbuff.h#L1004
+
+如何使用 sk_buff 构建网络包
+-----------------------------
+
+第一步，创建一个新 skb：
+
+.. code-block:: c
+
+    skb = alloc_skb(size, GFP_KERNEL);
+
+我们重点关注 skb 结构体中的以下几个字段：
+
+.. code-block:: c
+
+    struct sk_buff {
+        // ...
+        unsigned int        len,
+                            data_len;
+        // ...
+        sk_buff_data_t      tail;
+        sk_buff_data_t      end;
+        unsigned char       *head,
+                            *data;
+        // ...
+    }
+
+刚创建好的 skb 内存结构大致如下所示：
+
+.. image:: images/skb-alloc.svg
+
+head、data、tail 这三个指针一开始都指向一块内存 buffer 的开始地址，end 指向结束地址，len 为 0。这块 buffer 的后面是一个 ``struct skb_shared_info`` 结构体（暂时不解释这个结构体是干什么的，后面用到时解释）。
+
+第二步，预留一部分空间给各种协议头（因为构建包的过程一般是用户数据先写，然后才加各种协议头，防止频繁重新分配内存）。
+
+.. code-block:: c
+
+    skb_reserve(skb, header_len);
+
+这个函数主要是移动 data 和 tail 指针，如下图所示：
+
+.. image:: images/skb-reserve.svg
+
+第三步，写入用户数据。skb_put 会移动 tail 指针并且增加 len。
+
+.. code-block:: c
+
+    unsigned char *data = skb_put(skb, user_data_len);
+    memcpy(data, user_data, user_data_len);
+
+..  image:: images/skb-put.svg
+
+第四步，添加协议头。
+
+.. code-block:: c
+
+    struct tcphdr *tcp = (struct tcphdr*)skb_push(skb, sizeof(struct tcphdr));
+    tcp->source = htons(1025);
+    tcp->dest = htons(2095);
+    tcp->len = htons(user_data_len);
+    tcp->check = 0;
+
+.. image:: images/skb-push.svg
+
+skb_push 的反操作是 skb_pull，这个操作在解包的时候经常使用，比如剥除掉刚才的 TCP 头：
+
+.. code-block:: c
+
+    skb_pull(skb, sizeof(struct tcphdr));
+
+.. image:: images/skb-pull.svg
+
+如上继续操作下去，一个完整的网络包就构建出来了。
+
+线性 skb 和非线性 skb
+---------------------------------
+
+上面的 skb 结构比较简单，所有的数据都在 head 和 end 之间，这个一般被称为线性 skb（linear），相对的，数据无法简单的在 head 和 end 存储下来的时候，就会用到非线性 skb，常见的非线性 skb 有以下 3 种：
+
+第一种在发送大包（jumbo frame）的时候常用到，多余的数据存放在另外的物理页中，skb_shared_info 中有一个数组 frags，存放一组（页面、偏移、大小）结构体用来记录这些数据在哪。
+
+.. image:: images/skb-frags.svg
+
+第二种是 IP 数据分片（fragment）的时候用到的 frag_list。每片数据有各自自己的 skb 结构体，通过 skb->next 组成一个单链表，skb_shared_info 中的 frag_list 指针指向链表头。
+
+.. image:: images/skb-fraglist.svg
+
+最后一种是 gso 分段，当一个 TCP 数据包大小超过 mtu 后，会被切割成几个 <=mtu 大小的数据包，这几个包是通过简单的 skb->next 链接到一起，相关分段信息保存在第一个 skb->skb_shared_info 的 gso_segs 和 gso_size 里。
+
+.. image:: images/skb-gso-frags.svg
+
+判断线性还是非线性 skb 的方式比较简单：
+
+.. code-block:: c
+
+    if (skb->data_len == 0) {
+      printk(" skb is linear, skb_len is %d", skb->len);
+    } else {
+      // len 为当前 skb 以及后续所有级联的 skb 中的数据长度
+      // data_len 中是后面级联的 skb 中的数据长度
+      if (skb->data_len != 0) {
+        skb->len = (skb->len) - (skb->data_len);
+      }
+      printk("skb is NOT linear, skb_len is %d", skb->len);
+    }
+
+skb_clone、skb_copy 复制 skb 的差别
+-------------------------------------
+
+skb_clone 是浅拷贝，skb_clone 只是复制了 sk_buff 这个元结构体，其它关联的 buffer 都没复制，而是通过 skb_shared_info 中的 dataref 作为数据 buffer 的引用计数，保证 kfree_skb 的时候不会误删除还有引用的数据 buffer。
+
+.. image:: images/skb-clone.svg
+
+skb_clone 出来的数据 buffer 是不能修改的，如果要修改就得使用 skb_copy 系函数，skb_copy 是深拷贝，完全复制了 sk_buff 元结构体以及关联的数据 buffer。另外还有一个 pskb_copy（p stands for partial？），只复制 head 指向的 buffer，不复制 skb_shared_info 中 frags 和 frag_list 关联的 buffer。用哪个视具体情况决定。
+
+.. image:: images/skb-copy.svg
+
+skb_realloc_headroom 不会释放原来的 skb
+----------------------------------------
+
+skb headroom 如果不够用，可以通过 skb_realloc_headroom 扩大 headroom，skb_realloc_headroom 内部是通过  skb_clone 或者 skb_copy 完成的，但这个函数内部并没有处理原来的 skb，这个和 C 函数的 realloc 不太一样。所以这个函数成功返回的话，需要通过 kfree_skb 释放原 skb，否则会有 skb 泄露。
+
+.. code-block:: c
+
+    struct sk_buff *skb_realloc_headroom(struct sk_buff *skb, unsigned int headroom)
+    {
+        struct sk_buff *skb2;
+        int delta = headroom - skb_headroom(skb);
+    
+        if (delta <= 0)
+            skb2 = pskb_copy(skb, GFP_ATOMIC);
+        else {
+            skb2 = skb_clone(skb, GFP_ATOMIC);
+            if (skb2 && pskb_expand_head(skb2, SKB_DATA_ALIGN(delta), 0,
+                             GFP_ATOMIC)) {
+                kfree_skb(skb2);
+                skb2 = NULL;
+            }
+        }
+        return skb2;
+    }
+
+https://elixir.bootlin.com/linux/v5.19/source/net/core/skbuff.c#L1767
+
+skb 不释放也就不会调用其析构函数 skb->destructor，有些资源释放是在这个析构函数里做的，之前写一个内核隧道模块的时候遇到的问题就是 ping 隧道对端 IP 大概 10 次左右之后就报 ``ping: sendmsg: No buffer space available`` 错误，查了半天发现有 skb 泄漏，没调析构函数 `sock_wfree <https://elixir.bootlin.com/linux/v5.19/source/net/core/sock.c#L2349>`_ 。
+
+References:
+
+- http://vger.kernel.org/~davem/skb_data.html
+- `What is SKB in Linux kernel? What are SKB operations? Memory Representation of SKB? How to send packet out using skb operations? <http://amsekharkernel.blogspot.com/2014/08/what-is-skb-in-linux-kernel-what-are.html>`_
+- https://wiki.bit-hive.com/linuxkernelmemo/pg/sk_buff
+- https://people.cs.clemson.edu/~westall/853/notes/skbuff.pdf
+- http://wangcong.org/2014/05/31/skbuff-e5-86-85-e5-ad-98-e6-a8-a1-e5-9e-8b/

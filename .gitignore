@@ -5,3 +5,4 @@ src/_*.rst
 objects.inv
 searchindex.js
 NOTES
+.DS_Store

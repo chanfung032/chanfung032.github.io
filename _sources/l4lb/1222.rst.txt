@@ -151,3 +151,10 @@ https://github.com/github/glb-director/blob/master/docs/setup/backend-proxy-setu
 
 - https://lore.kernel.org/bpf/CACAyw9-TEDHdcjykuQZ8P0Q6QngEZU0z7PXgqtZRQq4Jh1_ojw@mail.gmail.com/
 - https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
+
+passing argument 4 of 'proc_create' from incompatible pointer type
+------------------------------------------------------------------------
+
+高版本内核编译 glb 会报这个错误，解决方法：
+
+https://stackoverflow.com/questions/64931555/how-to-fix-error-passing-argument-4-of-proc-create-from-incompatible-pointer
