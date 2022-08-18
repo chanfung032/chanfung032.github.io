@@ -15,7 +15,7 @@
     <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#220810 sk_buff 结构体及其基本操作" href="220810-skbuff.html" />
+    <link rel="next" title="#220817 网络栈接收数据（RX）——从网卡收到包到 net_rx_action" href="220818-network-rx.html" />
     <link rel="prev" title="Feng’s blog" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -37,6 +37,15 @@
 <h1>内核笔记<a class="headerlink" href="#nei-he-bi-ji" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="220818-network-rx.html">#220817 网络栈接收数据（RX）——从网卡收到包到 net_rx_action</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#chang-jian-de-ji-zhong-intel-wang-ka">常见的几种 intel 网卡</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#shou-bao-guo-cheng">收包过程</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#wang-ka-zhong-duan-chu-li-cheng-xu">网卡中断处理程序</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#kai-shi-shou-bao">开始收包</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#ge-zhong-chu-li-han-shu-poll-han-shu-dou-shi-zen-me-lai-de">各种处理函数、poll 函数都是怎么来的</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#msi-x-zhong-duan-shi-ge-shen-me-dong-xi">MSI-X 中断是个什么东西</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="220810-skbuff.html">#220810 sk_buff 结构体及其基本操作</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="220810-skbuff.html#zhe-ge-jie-gou-shi-shen-me-gan-shen-me-yong-de">这个结构是什么干什么用的</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220810-skbuff.html#ru-he-shi-yong-sk-buff-gou-jian-wang-luo-bao">如何使用 sk_buff 构建网络包</a></li>
