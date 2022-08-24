@@ -84,6 +84,8 @@ skb_push 的反操作是 skb_pull，这个操作在解包的时候经常使用�
 
 如上继续操作下去，一个完整的网络包就构建出来了。
 
+.. _nonlinear-skb:
+
 线性 skb 和非线性 skb
 ---------------------------------
 
@@ -138,7 +140,7 @@ skb headroom 如果不够用，可以通过 skb_realloc_headroom 扩大 headroom
     {
         struct sk_buff *skb2;
         int delta = headroom - skb_headroom(skb);
-    
+
         if (delta <= 0)
             skb2 = pskb_copy(skb, GFP_ATOMIC);
         else {

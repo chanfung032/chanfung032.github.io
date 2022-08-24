@@ -1,0 +1,194 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>#220824 网络栈接收数据（RX）—— GRO &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#220817 网络栈接收数据（RX）——从网卡收到包到 net_rx_action" href="220818-network-rx.html" />
+    <link rel="prev" title="内核笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="wang-luo-zhan-jie-shou-shu-ju-rx-gro">
+<h1>#220824 网络栈接收数据（RX）—— GRO<a class="headerlink" href="#wang-luo-zhan-jie-shou-shu-ju-rx-gro" title="Permalink to this headline">¶</a></h1>
+<section id="indirect-call-hong-de-zuo-yong-shi-shen-me">
+<h2>INDIRECT_CALL_* 宏的作用是什么<a class="headerlink" href="#indirect-call-hong-de-zuo-yong-shi-shen-me" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://elixir.bootlin.com/linux/latest/source/include/linux/indirect_call_wrapper.h">https://elixir.bootlin.com/linux/latest/source/include/linux/indirect_call_wrapper.h</a></p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">INDIRECT_CALL_INET</span><span class="p">(</span><span class="n">ptype</span><span class="o">-&gt;</span><span class="n">callbacks</span><span class="p">.</span><span class="n">gro_complete</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">ipv6_gro_complete</span><span class="p">,</span><span class="w"> </span><span class="n">inet_gro_complete</span><span class="p">,</span><span class="w"> </span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+<p>宏展开之后就是：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">likely</span><span class="p">(</span><span class="n">ptype</span><span class="o">-&gt;</span><span class="n">callbacks</span><span class="p">.</span><span class="n">gro_complete</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">inet_gro_complete</span><span class="p">)</span><span class="o">?</span><span class="w"></span>
+<span class="w">  </span><span class="n">inet_gro_complete</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="o">:</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="n">likely</span><span class="p">(</span><span class="n">ptype</span><span class="o">-&gt;</span><span class="n">callbacks</span><span class="p">.</span><span class="n">gro_complete</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">ipv6_gro_complete</span><span class="p">)</span><span class="o">?</span><span class="w"></span>
+<span class="w">    </span><span class="n">ipv6_gro_complete</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="o">:</span><span class="w"></span>
+<span class="w">    </span><span class="n">ptype</span><span class="o">-&gt;</span><span class="n">callbacks</span><span class="p">.</span><span class="n">gro_complete</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">));</span><span class="w"></span>
+</pre></div>
+</div>
+<p>功能就是猜某个函数指针指向的函数是哪个函数，如果是某几个已知函数，那就直接调用这些函数，而不是通过函数指针。因为 <strong>直接调用函数比通过函数指针调用的性能要好</strong> 。这个具体可以参见：<a class="reference external" href="https://lwn.net/Articles/774743/">https://lwn.net/Articles/774743/</a>，大体说来就是：</p>
+<div class="line-block">
+<div class="line">因为函数指针调用（indirect function call）性能不行，所以 CPU 进化出了 indirect branch predictor。</div>
+<div class="line">因为有了 indirect branch predictor，所有有了 <a class="reference external" href="https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)">Spectre</a> （幽灵👻） 这类针对它的侧信道攻击，呜呜呜，predictor 不能用了。</div>
+<div class="line">因为 predictor 不能用了，所以有了 <a class="reference external" href="https://support.google.com/faqs/answer/7625886">retpoline</a> 这个 hack。retpoline 解决了问题又没有彻底解决。</div>
+<div class="line">indirect function call 性能不行，那就用 direct function call？于是就有了 <code class="docutils literal notranslate"><span class="pre">INDIRECT_CALL_*</span></code> 宏。</div>
+</div>
+</section>
+<section id="cong-napi-gro-receive-dao-netif-receive-skb">
+<h2>从 napi_gro_receive 到 netif_receive_skb<a class="headerlink" href="#cong-napi-gro-receive-dao-netif-receive-skb" title="Permalink to this headline">¶</a></h2>
+<p>GRO 全称 Generic Receive Offload，是 Linux 网络栈里收包侧的一个软件优化，功能就是将网卡收到的一堆 mtu 1500 的小包给合并为大包再交给上层协议栈去处理。GRO 位于 tcpdump 等抓包工具的挂载点之前，所以抓包工具看到的 GRO 之后的大包。</p>
+<img alt="../_images/gro.svg" src="../_images/gro.svg" /><p>调用栈：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>napi_gro_receive(napi, skb)
+  |- gro_result = dev_gro_receive(napi, skb)
+  |  |- bucket = skb_get_hash_raw(skb)
+  |  |- gro_list = &amp;napi-&gt;gro_hash[bucket]
+  |  |
+  |  |- if netif_elide_gro(skb-&gt;dev)
+  |  |    return GRO_NORMAL
+  |  |
+  |  |- gro_list_prepare(&amp;gro_list-&gt;list, skb)
+  |  |
+  |  |- pp = ptype-&gt;callbacks.gro_receive/inet_gro_receive
+  |  |    |- tcp4_gro_receive
+  |  |      |- tcp_gro_receive
+  |  |        |- skb_gro_receive
+  |  |
+  |  |- if pp:
+  |  |    |- napi_gro_complete
+  |  |      |- ptype-&gt;callbacks.gro_complete/inet_gro_complete
+  |  |      | |- tcp4_gro_complete
+  |  |      |- gro_normal_one 👈
+  |  |
+  |  |- if NAPI_GRO_CB(skb)-&gt;same_flow
+  |  |    return GRO_MERGED_FREE
+  |  |
+  |  |- list_add(&amp;skb-&gt;list, &amp;gro_list-&gt;list)
+  |  |- return GRO_HELD
+  |
+  |- napi_skb_finish(napi, skb, gro_result)
+     |- switch gro_result
+     |- case GRO_NORMAL: gro_normal_one(napi, skb, 1) 👈
+     |- case GRO_MERGED_FREE: __kfree_skb(skb)
+     |- default: return
+</pre></div>
+</div>
+<p>（GRO 合并包这个函数比较复杂，这里我们只是要大致理清其脉络，所以上面的调用栈经过了一定的简化）</p>
+<p><code class="docutils literal notranslate"><span class="pre">napi_gro_receive</span></code> 的输入是驱动从网卡 ring buffer 收获并构建出的一个个 skb 结构体，要合并就得缓存，GRO 模块会将收到的 skb 缓存到 <code class="docutils literal notranslate"><span class="pre">napi-&gt;gro_hash</span></code> 中，这是一个大小为 8 的数组，每个元素又分别是个 skb 列表。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">napi_struct</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="c1">//...</span>
+<span class="w">  </span><span class="cp">#define GRO_HASH_BUCKETS  8</span>
+<span class="w">  </span><span class="k">struct</span> <span class="nc">gro_list</span><span class="w"> </span><span class="n">gro_hash</span><span class="p">[</span><span class="n">GRO_HASH_BUCKETS</span><span class="p">]</span><span class="w"></span>
+<span class="w">  </span><span class="c1">//...</span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>缓存和合并完成继续往上发送包的逻辑如下：</p>
+<ol class="arabic simple">
+<li><p>首先，调用 <code class="docutils literal notranslate"><span class="pre">skb_get_hash_raw</span></code> 获取包的 hash（这个 hash 是驱动从 ring buffer 收包的时候直接从包的 metadata 中获取到并调用 <code class="docutils literal notranslate"><span class="pre">skb_set_hash</span></code> 设置的，也就是网卡直接提供了的），GRO 模块将相同 hash 的 skb 缓存到同一个列表中。 <code class="docutils literal notranslate"><span class="pre">napi-&gt;gro_hash[bucket]</span></code> 获取到缓存 skb 列表，这里面可能有和新到来的 skb 属于同一个流的 skb。</p></li>
+<li><p>调用 <code class="docutils literal notranslate"><span class="pre">netif_elide_gro</span></code> 检查要不要做 GRO，不做的话直接跳过 GRO 处理。调用 <code class="docutils literal notranslate"><span class="pre">napi_skb_finish</span></code>，最终调用 <code class="docutils literal notranslate"><span class="pre">gro_normal_one</span></code> 将包继续往上层传。</p></li>
+<li><p>如果需要做 GRO，则调用 <code class="docutils literal notranslate"><span class="pre">gro_list_prepare</span></code> 对比新来的 skb 和 缓存 skb 列表里的每一个 skb 的 L2 协议头（mac header）是否一致，给缓存列表中对比一致的 skb 设置 <code class="docutils literal notranslate"><span class="pre">NAPI_GRO_CB(skb)-&gt;same_flow</span> <span class="pre">=</span> <span class="pre">1</span></code> 标示其可能和新来的 skb 是一个流的。</p></li>
+<li><p>根据上层协议逐级往上调用上面协议层的 <code class="docutils literal notranslate"><span class="pre">gro_receive</span></code> 函数，比如一个 TCP 包会依次调用 <code class="docutils literal notranslate"><span class="pre">inet_gro_receive</span></code> -&gt; <code class="docutils literal notranslate"><span class="pre">tcp_gro_receive</span></code> 函数，每一个协议层中会根据自己这一层的 header 继续过滤缓存 skb 列表中可能是同一个流的 skb。最终如果找到同一个流的 skb 缓存。调用 <code class="docutils literal notranslate"><span class="pre">skb_gro_receive</span></code> 合并包。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gro_receive</span></code> 函数最终会返回一个指针，如果不为空，说明有合并后的 skb 需要往上层送了，这个时候需要级联调用 <code class="docutils literal notranslate"><span class="pre">gro_complete</span></code> 函数更新每层协议头中的一些字段（比如 checksum），完成后，调用 <code class="docutils literal notranslate"><span class="pre">gro_normal_one</span></code> 将包继续往上层传。</p></li>
+<li><p>包被合并后对应的 skb 会在 <code class="docutils literal notranslate"><span class="pre">napi_skb_finish</span></code> 中被释放掉。</p></li>
+<li><p>如果没有找到同一个流的 skb，新的 skb 会被添加到缓存 skb 列表中。</p></li>
+</ol>
+<p>skb 合并的方法是将 <strong>新 skb 的线性数据和非线性数据</strong> 合并到 <strong>老 skb 的非线性数据区</strong> 中。合并的时候优先使用 <code class="docutils literal notranslate"><span class="pre">skb_shared_info-&gt;frags</span></code> 数组（新 skb 的线性区如果是页直接映射的，也可以直接合并到里面，详细见：   <a class="reference external" href="https://github.com/torvalds/linux/commit/d7e8883cfcf4851afe74fb380cc62b7fa9cf66ba">net: make GRO aware of skb-&gt;head_frag</a> )，放不下之后再 fallback 使用 <code class="docutils literal notranslate"><span class="pre">skb_shared_info-&gt;frag_list</span></code> （可以参见前面 skb 文中 <a class="reference internal" href="220810-skbuff.html#nonlinear-skb"><span class="std std-ref">线性 skb 和非线性 skb</span></a> 第一种和第二种结构）。新 skb 的各种协议头会被 <code class="docutils literal notranslate"><span class="pre">skb_pull</span></code> 到只剩下数据。</p>
+<p><code class="docutils literal notranslate"><span class="pre">gro_normal_one</span></code> 函数之后，skb 就出了 GRO 模块。 从 <code class="docutils literal notranslate"><span class="pre">netif_receive_skb_list_internal</span></code> 开始 skb 就算进入了协议栈。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">gro_normal_one</span>
+  <span class="o">|-</span> <span class="n">gro_normal_list</span>
+    <span class="o">|-</span> <span class="n">netif_receive_skb_list_internal</span>
+      <span class="o">|-</span> <span class="n">__netif_receive_skb_list</span>
+        <span class="o">|-</span> <span class="n">__netif_receive_skb_list_core</span>
+          <span class="o">|-</span> <span class="n">__netif_receive_skb_core</span>
+            <span class="o">|-</span> <span class="n">deliver_skb</span>
+</pre></div>
+</div>
+<p>References:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://lwn.net/Articles/358910/">https://lwn.net/Articles/358910/</a></p></li>
+<li><p><a class="reference external" href="https://blog.csdn.net/zgy666/article/details/106989856">https://blog.csdn.net/zgy666/article/details/106989856</a></p></li>
+<li><p><a class="reference external" href="http://arthurchiao.art/blog/linux-net-stack-implementation-rx-zh/#66-napi_gro_receive">http://arthurchiao.art/blog/linux-net-stack-implementation-rx-zh/#66-napi_gro_receive</a></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#220824 网络栈接收数据（RX）—— GRO</a><ul>
+<li><a class="reference internal" href="#indirect-call-hong-de-zuo-yong-shi-shen-me">INDIRECT_CALL_* 宏的作用是什么</a></li>
+<li><a class="reference internal" href="#cong-napi-gro-receive-dao-netif-receive-skb">从 napi_gro_receive 到 netif_receive_skb</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/kernel/220824-network-rx-gro.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/kernel/220824-network-rx-gro.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

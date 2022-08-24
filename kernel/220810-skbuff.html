@@ -16,7 +16,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="基于 xdp 的 L4LB 开发笔记" href="../l4lb/index.html" />
-    <link rel="prev" title="内核笔记" href="index.html" />
+    <link rel="prev" title="#220817 网络栈接收数据（RX）——从网卡收到包到 net_rx_action" href="220818-network-rx.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -89,7 +89,7 @@
 <img alt="../_images/skb-pull.svg" src="../_images/skb-pull.svg" /><p>如上继续操作下去，一个完整的网络包就构建出来了。</p>
 </section>
 <section id="xian-xing-skb-he-fei-xian-xing-skb">
-<h2>线性 skb 和非线性 skb<a class="headerlink" href="#xian-xing-skb-he-fei-xian-xing-skb" title="Permalink to this headline">¶</a></h2>
+<span id="nonlinear-skb"></span><h2>线性 skb 和非线性 skb<a class="headerlink" href="#xian-xing-skb-he-fei-xian-xing-skb" title="Permalink to this headline">¶</a></h2>
 <p>上面的 skb 结构比较简单，所有的数据都在 head 和 end 之间，这个一般被称为线性 skb（linear），相对的，数据无法简单的在 head 和 end 存储下来的时候，就会用到非线性 skb，常见的非线性 skb 有以下 3 种：</p>
 <p>第一种在发送大包（jumbo frame）的时候常用到，多余的数据存放在另外的物理页中，skb_shared_info 中有一个数组 frags，存放一组（页面、偏移、大小）结构体用来记录这些数据在哪。</p>
 <img alt="../_images/skb-frags.svg" src="../_images/skb-frags.svg" /><p>第二种是 IP 数据分片（fragment）的时候用到的 frag_list。每片数据有各自自己的 skb 结构体，通过 skb-&gt;next 组成一个单链表，skb_shared_info 中的 frag_list 指针指向链表头。</p>

@@ -15,7 +15,7 @@
     <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#220817 网络栈接收数据（RX）——从网卡收到包到 net_rx_action" href="220818-network-rx.html" />
+    <link rel="next" title="#220824 网络栈接收数据（RX）—— GRO" href="220824-network-rx-gro.html" />
     <link rel="prev" title="Feng’s blog" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -37,6 +37,11 @@
 <h1>内核笔记<a class="headerlink" href="#nei-he-bi-ji" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="220824-network-rx-gro.html">#220824 网络栈接收数据（RX）—— GRO</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="220824-network-rx-gro.html#indirect-call-hong-de-zuo-yong-shi-shen-me">INDIRECT_CALL_* 宏的作用是什么</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220824-network-rx-gro.html#cong-napi-gro-receive-dao-netif-receive-skb">从 napi_gro_receive 到 netif_receive_skb</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="220818-network-rx.html">#220817 网络栈接收数据（RX）——从网卡收到包到 net_rx_action</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#chang-jian-de-ji-zhong-intel-wang-ka">常见的几种 intel 网卡</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#shou-bao-guo-cheng">收包过程</a></li>
