@@ -23,12 +23,12 @@ https://elixir.bootlin.com/linux/latest/source/include/linux/indirect_call_wrapp
       :
       ptype->callbacks.gro_complete(skb, 0));
 
-功能就是猜某个函数指针指向的函数是哪个函数，如果是某几个已知函数，那就直接调用这些函数，而不是通过函数指针。因为 **直接调用函数比通过函数指针调用的性能要好** 。这个具体可以参见：https://lwn.net/Articles/774743/，大体说来就是：
+功能就是猜某个函数指针指向的是哪个函数，如果是某几个已知函数，那就直接调用这些函数，而不是通过函数指针。因为 **直接调用函数比通过函数指针调用的性能要好** 。这个具体可以参见：https://lwn.net/Articles/774743/，大体说来就是：
 
 | 因为函数指针调用（indirect function call）性能不行，所以 CPU 进化出了 indirect branch predictor。
 | 因为有了 indirect branch predictor，所有有了 `Spectre <https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)>`_ （幽灵👻） 这类针对它的侧信道攻击，呜呜呜，predictor 不能用了。
 | 因为 predictor 不能用了，所以有了 `retpoline <https://support.google.com/faqs/answer/7625886>`_ 这个 hack。retpoline 解决了问题又没有彻底解决。
-| indirect function call 性能不行，那就用 direct function call？于是就有了 ``INDIRECT_CALL_*`` 宏。
+| 通过函数指针调用性能不行，那就用想个办法直接调函数，不用指针？于是就有了 ``INDIRECT_CALL_*`` 宏。
 
 从 napi_gro_receive 到 netif_receive_skb
 ------------------------------------------
@@ -97,7 +97,7 @@ GRO 全称 Generic Receive Offload，是 Linux 网络栈里收包侧的一个软
 
 skb 合并的方法是将 **新 skb 的线性数据和非线性数据** 合并到 **老 skb 的非线性数据区** 中。合并的时候优先使用 ``skb_shared_info->frags`` 数组（新 skb 的线性区如果是页直接映射的，也可以直接合并到里面，详细见：   `net: make GRO aware of skb->head_frag <https://github.com/torvalds/linux/commit/d7e8883cfcf4851afe74fb380cc62b7fa9cf66ba>`_ )，放不下之后再 fallback 使用 ``skb_shared_info->frag_list`` （可以参见前面 skb 文中 :ref:`nonlinear-skb` 第一种和第二种结构）。新 skb 的各种协议头会被 ``skb_pull`` 到只剩下数据。
 
-``gro_normal_one`` 函数之后，skb 就出了 GRO 模块。 从 ``netif_receive_skb_list_internal`` 开始 skb 就算进入了协议栈。 ::
+``gro_normal_one`` 函数中， skb 会被保存到 ``napi->rx_list`` 列表中，当列表长度超过阈值 ``gro_normal_batch`` 时，调用 ``gro_normal_list`` 批量将 skb 往上层送。 从 ``netif_receive_skb_list_internal`` 开始 skb 就算出了 GRO 模块了开始协议栈投递了。 ::
 
     gro_normal_one
       |- gro_normal_list

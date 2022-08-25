@@ -53,12 +53,12 @@
 <span class="w">    </span><span class="n">ptype</span><span class="o">-&gt;</span><span class="n">callbacks</span><span class="p">.</span><span class="n">gro_complete</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">));</span><span class="w"></span>
 </pre></div>
 </div>
-<p>功能就是猜某个函数指针指向的函数是哪个函数，如果是某几个已知函数，那就直接调用这些函数，而不是通过函数指针。因为 <strong>直接调用函数比通过函数指针调用的性能要好</strong> 。这个具体可以参见：<a class="reference external" href="https://lwn.net/Articles/774743/">https://lwn.net/Articles/774743/</a>，大体说来就是：</p>
+<p>功能就是猜某个函数指针指向的是哪个函数，如果是某几个已知函数，那就直接调用这些函数，而不是通过函数指针。因为 <strong>直接调用函数比通过函数指针调用的性能要好</strong> 。这个具体可以参见：<a class="reference external" href="https://lwn.net/Articles/774743/">https://lwn.net/Articles/774743/</a>，大体说来就是：</p>
 <div class="line-block">
 <div class="line">因为函数指针调用（indirect function call）性能不行，所以 CPU 进化出了 indirect branch predictor。</div>
 <div class="line">因为有了 indirect branch predictor，所有有了 <a class="reference external" href="https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)">Spectre</a> （幽灵👻） 这类针对它的侧信道攻击，呜呜呜，predictor 不能用了。</div>
 <div class="line">因为 predictor 不能用了，所以有了 <a class="reference external" href="https://support.google.com/faqs/answer/7625886">retpoline</a> 这个 hack。retpoline 解决了问题又没有彻底解决。</div>
-<div class="line">indirect function call 性能不行，那就用 direct function call？于是就有了 <code class="docutils literal notranslate"><span class="pre">INDIRECT_CALL_*</span></code> 宏。</div>
+<div class="line">通过函数指针调用性能不行，那就用想个办法直接调函数，不用指针？于是就有了 <code class="docutils literal notranslate"><span class="pre">INDIRECT_CALL_*</span></code> 宏。</div>
 </div>
 </section>
 <section id="cong-napi-gro-receive-dao-netif-receive-skb">
@@ -120,7 +120,7 @@
 <li><p>如果没有找到同一个流的 skb，新的 skb 会被添加到缓存 skb 列表中。</p></li>
 </ol>
 <p>skb 合并的方法是将 <strong>新 skb 的线性数据和非线性数据</strong> 合并到 <strong>老 skb 的非线性数据区</strong> 中。合并的时候优先使用 <code class="docutils literal notranslate"><span class="pre">skb_shared_info-&gt;frags</span></code> 数组（新 skb 的线性区如果是页直接映射的，也可以直接合并到里面，详细见：   <a class="reference external" href="https://github.com/torvalds/linux/commit/d7e8883cfcf4851afe74fb380cc62b7fa9cf66ba">net: make GRO aware of skb-&gt;head_frag</a> )，放不下之后再 fallback 使用 <code class="docutils literal notranslate"><span class="pre">skb_shared_info-&gt;frag_list</span></code> （可以参见前面 skb 文中 <a class="reference internal" href="220810-skbuff.html#nonlinear-skb"><span class="std std-ref">线性 skb 和非线性 skb</span></a> 第一种和第二种结构）。新 skb 的各种协议头会被 <code class="docutils literal notranslate"><span class="pre">skb_pull</span></code> 到只剩下数据。</p>
-<p><code class="docutils literal notranslate"><span class="pre">gro_normal_one</span></code> 函数之后，skb 就出了 GRO 模块。 从 <code class="docutils literal notranslate"><span class="pre">netif_receive_skb_list_internal</span></code> 开始 skb 就算进入了协议栈。</p>
+<p><code class="docutils literal notranslate"><span class="pre">gro_normal_one</span></code> 函数中， skb 会被保存到 <code class="docutils literal notranslate"><span class="pre">napi-&gt;rx_list</span></code> 列表中，当列表长度超过阈值 <code class="docutils literal notranslate"><span class="pre">gro_normal_batch</span></code> 时，调用 <code class="docutils literal notranslate"><span class="pre">gro_normal_list</span></code> 批量将 skb 往上层送。 从 <code class="docutils literal notranslate"><span class="pre">netif_receive_skb_list_internal</span></code> 开始 skb 就算出了 GRO 模块了开始协议栈投递了。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">gro_normal_one</span>
   <span class="o">|-</span> <span class="n">gro_normal_list</span>
     <span class="o">|-</span> <span class="n">netif_receive_skb_list_internal</span>
