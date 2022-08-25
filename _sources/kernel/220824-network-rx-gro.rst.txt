@@ -1,4 +1,4 @@
-#220824 网络栈接收数据（RX）—— GRO
+#220824 网络栈接收数据 RX —— GRO
 ===========================================
 
 INDIRECT_CALL_* 宏的作用是什么
@@ -77,7 +77,7 @@ GRO 全称 Generic Receive Offload，是 Linux 网络栈里收包侧的一个软
 ``napi_gro_receive`` 的输入是驱动从网卡 ring buffer 收获并构建出的一个个 skb 结构体，要合并就得缓存，GRO 模块会将收到的 skb 缓存到 ``napi->gro_hash`` 中，这是一个大小为 8 的数组，每个元素又分别是个 skb 列表。
 
 .. code-block:: c
-  
+
     struct napi_struct {
       //...
       #define GRO_HASH_BUCKETS	8
