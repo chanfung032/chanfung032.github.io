@@ -164,6 +164,10 @@ sphinx.builders.html.validate_html_static_path = validate_html_static_path
 
 html_static_path = ['_static']
 
+html_js_files = [
+    'custom.js',
+]
+
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
