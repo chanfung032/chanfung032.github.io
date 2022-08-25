@@ -19,6 +19,7 @@ var customize = () => {
         return
     }
 
+/*
     // addUtterances 
     var script = document.createElement("script");
     script.type = "text/javascript";
@@ -33,6 +34,7 @@ var customize = () => {
     if (body !== null) {
         body.appendChild(script);
     }
+*/
 }
 
 runWhenDOMLoaded(customize);
