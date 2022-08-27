@@ -1,0 +1,286 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>#220826 网络栈接收数据 RX | 进入协议栈 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#220824 网络栈接收数据 RX | GRO" href="220824-network-rx-gro.html" />
+    <link rel="prev" title="内核笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="wang-luo-zhan-jie-shou-shu-ju-rx-jin-ru-xie-yi-zhan">
+<h1>#220826 网络栈接收数据 RX | 进入协议栈<a class="headerlink" href="#wang-luo-zhan-jie-shou-shu-ju-rx-jin-ru-xie-yi-zhan" title="Permalink to this headline">¶</a></h1>
+<section id="rps-he-rfs">
+<h2>RPS 和 RFS<a class="headerlink" href="#rps-he-rfs" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">gro_normal_one</span>
+  <span class="o">|-</span> <span class="n">gro_normal_list</span>
+    <span class="o">|-</span> <span class="n">netif_receive_skb_list_internal</span>
+      <span class="o">|-</span> <span class="k">if</span> <span class="n">unlikely</span><span class="p">(</span><span class="n">rps_needed</span><span class="p">):</span>
+      <span class="o">|</span>    <span class="n">foreach</span> <span class="n">skb</span><span class="p">:</span>
+      <span class="o">|</span>      <span class="o">|-</span> <span class="n">cpu</span> <span class="o">=</span> <span class="n">get_rps_cpu</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span>
+      <span class="o">|</span>      <span class="o">|-</span> <span class="n">skb_list_del_init</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span>
+      <span class="o">|</span>      <span class="o">|-</span> <span class="n">enqueue_to_backlog</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="n">cpu</span><span class="p">)</span>
+      <span class="o">|</span>
+      <span class="o">|-</span> <span class="n">__netif_receive_skb_list</span>
+</pre></div>
+</div>
+<p>在 GRO 之后， <code class="docutils literal notranslate"><span class="pre">__netif_receive_skb_list</span></code> 函数中，如果启用 RPS（基本不会），skb 包会被重新均衡到各个 CPU，这是一个软件层面的 RSS 实现，详细可参见：<a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/scaling.txt">https://www.kernel.org/doc/Documentation/networking/scaling.txt</a></p>
+</section>
+<section id="netif-receive-skb-list-core-wang-ge-zhong-xie-yi-ceng-tou-song-bao">
+<h2>__netif_receive_skb_list_core: 往各种协议层投送包<a class="headerlink" href="#netif-receive-skb-list-core-wang-ge-zhong-xie-yi-ceng-tou-song-bao" title="Permalink to this headline">¶</a></h2>
+<p>调用栈：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">|-</span> <span class="n">netif_receive_skb_list_internal</span>
+  <span class="o">|-</span> <span class="n">__netif_receive_skb_list</span>
+    <span class="o">|-</span> <span class="n">__netif_receive_skb_list_core</span>
+      <span class="o">|-</span> <span class="n">foreach</span> <span class="n">skb</span><span class="p">:</span>
+      <span class="o">|</span>   <span class="o">|-</span> <span class="n">__netif_receive_skb_core</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="n">skb_reset_network_header</span>
+      <span class="o">|</span>     <span class="o">|</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="n">do_xdp_generic</span>
+      <span class="o">|</span>     <span class="o">|</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="k">for</span> <span class="n">ptype</span> <span class="ow">in</span> <span class="n">ptype_all</span><span class="p">:</span>
+      <span class="o">|</span>     <span class="o">|</span>    <span class="n">deliver_skb</span><span class="p">(</span><span class="n">ptype</span><span class="p">,</span> <span class="n">skb</span><span class="p">)</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="k">for</span> <span class="n">ptype</span> <span class="ow">in</span> <span class="n">skb</span><span class="o">-&gt;</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">ptype_all</span><span class="p">:</span>
+      <span class="o">|</span>     <span class="o">|</span>    <span class="n">deliver_skb</span><span class="p">(</span><span class="n">ptype</span><span class="p">,</span> <span class="n">skb</span><span class="p">)</span>
+      <span class="o">|</span>     <span class="o">|</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="k">if</span> <span class="n">skb_vlan_tag_present</span><span class="p">(</span><span class="n">skb</span><span class="p">):</span>
+      <span class="o">|</span>     <span class="o">|</span>    <span class="n">vlan_do_receive</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span>
+      <span class="o">|</span>     <span class="o">|</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="n">sch_handle_ingress</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="n">nf_ingress</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="k">if</span> <span class="n">skb</span><span class="o">-&gt;</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">rx_handler</span><span class="p">:</span>
+      <span class="o">|</span>     <span class="o">|</span>    <span class="n">skb</span><span class="o">-&gt;</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">rx_handler</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span>
+      <span class="o">|</span>     <span class="o">|</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="n">deliver_ptype_list_skb</span><span class="p">(</span><span class="n">ptype_base</span><span class="p">[</span><span class="n">ntohs</span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">protocol</span><span class="p">)])</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="n">deliver_ptype_list_skb</span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">ptype_specific</span><span class="p">)</span>
+      <span class="o">|</span>     <span class="o">|</span>
+      <span class="o">|</span>     <span class="o">|-</span> <span class="k">return</span> <span class="n">last</span> <span class="n">ptype</span>
+      <span class="o">|</span>
+      <span class="o">|-</span> <span class="n">__netif_receive_skb_list_ptype</span>
+        <span class="o">|-</span> <span class="n">pt_prev</span><span class="o">-&gt;</span><span class="n">list_func</span><span class="o">/</span><span class="n">ip_list_rcv</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">__netif_receive_skb_list_core</span></code> 承担了将 skb 投送到上层协议栈的工作，这个函数调用栈看起来复杂，尤其是 <code class="docutils literal notranslate"><span class="pre">__netif_receive_skb_list_core</span></code> 函数，做了下面这一堆事：</p>
+<ol class="arabic simple">
+<li><p>设置 iphdr 指针指向了当前 skb-&gt;data。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">do_xdp_generic</span></code>，调用 generic xdp 程序，如果有的话。</p></li>
+<li><p>投送 skb 给抓包程序， <code class="docutils literal notranslate"><span class="pre">deliver_skb</span></code> 给 <code class="docutils literal notranslate"><span class="pre">ptype_all</span></code> （tcpdump -i any）、 <code class="docutils literal notranslate"><span class="pre">skb-&gt;dev-&gt;ptype_all</span></code> （tcpdump -i &lt;dev&gt;） 。</p></li>
+<li><p>如果 mac header 中有 vlan tag，处理 vlan tag。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sch_handle_ingress</span></code>，过 tc 规则，执行 tc-bpf 程序。</p></li>
+<li><p>执行 <code class="docutils literal notranslate"><span class="pre">skb-&gt;dev-&gt;rx_handler</span></code>，bond 之类的网卡设备可能会用到这个 handler。</p></li>
+<li><p>投送 skb 给网络层 <code class="docutils literal notranslate"><span class="pre">ip_rcv/ip6_rcv/arp_rcv</span></code> 函数。这个回调一般不会直接在这个函数中执行，会延后到 <code class="docutils literal notranslate"><span class="pre">__netif_receive_skb_list_ptype</span></code> 函数中去执行，具体后面会详细说。</p></li>
+</ol>
+<p>当然现实大部分情况是：没有抓包程序、没有 tc 规则、没有 tc-bpf 程序、没有 vlan tag、普通网卡，那这个函数就只是找到上层网络协议层的回调函数，然后将其返回。很简单。</p>
+<p><code class="docutils literal notranslate"><span class="pre">__netif_receive_skb_list_core</span></code> 函数记录上面返回的最后那个回调函数，相同回调函数的 skb 会被一起调 <code class="docutils literal notranslate"><span class="pre">__netif_receive_skb_list_ptype</span></code> 函数批量投送给上面网络层，比如 IP 包会调用 <code class="docutils literal notranslate"><span class="pre">ip_list_rcv</span></code> 函数，对，不是 <code class="docutils literal notranslate"><span class="pre">ip_rcv</span></code>，而是 <code class="docutils literal notranslate"><span class="pre">ip_list_rcv</span></code> 这个批量版。</p>
+</section>
+<section id="ptype-wang-luo-ceng-chu-li-han-shu">
+<h2>ptype_* 网络层处理函数<a class="headerlink" href="#ptype-wang-luo-ceng-chu-li-han-shu" title="Permalink to this headline">¶</a></h2>
+<p>网络层的各种处理函数都保存在下面这四个变量中：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// 全局变量</span>
+<span class="c1">// 数组，用 网络协议号 &amp;0xf 作 key，每个元素为一个处理函数列表</span>
+<span class="k">struct</span> <span class="nc">list_head</span><span class="w"> </span><span class="n">ptype_base</span><span class="p">[</span><span class="n">PTYPE_HASH_SIZE</span><span class="p">]</span><span class="w"> </span><span class="n">__read_mostly</span><span class="p">;</span><span class="w"></span>
+<span class="k">struct</span> <span class="nc">list_head</span><span class="w"> </span><span class="n">ptype_all</span><span class="w"> </span><span class="n">__read_mostly</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">// 网络设备关联变量</span>
+<span class="k">struct</span> <span class="nc">net_device</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">//...</span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">list_head</span><span class="w">        </span><span class="n">ptype_all</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">list_head</span><span class="w">        </span><span class="n">ptype_specific</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">//...</span>
+<span class="p">};</span><span class="w"></span>
+</pre></div>
+</div>
+<p>每个网络协议层在初始化的时候会调用 <code class="docutils literal notranslate"><span class="pre">dev_add_pack</span></code> 注册协议的处理函数，比如 IP 协议（ETH_P_IP）注册的处理函数是 <code class="docutils literal notranslate"><span class="pre">ip_rcv/ip_list_rcv</span></code> 函数。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="k">struct</span> <span class="nc">packet_type</span><span class="w"> </span><span class="n">ip_packet_type</span><span class="w"> </span><span class="n">__read_mostly</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cpu_to_be16</span><span class="p">(</span><span class="n">ETH_P_IP</span><span class="p">),</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">func</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ip_rcv</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">list_func</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ip_list_rcv</span><span class="p">,</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">__init</span><span class="w"> </span><span class="n">inet_init</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">//...</span>
+<span class="w">    </span><span class="n">dev_add_pack</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ip_packet_type</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="c1">//...</span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">dev_add_pack</span></code> 会将抓包类的处理函数追加到 <code class="docutils literal notranslate"><span class="pre">ptype_all</span></code> 或者具体网络设备的 <code class="docutils literal notranslate"><span class="pre">dev-&gt;ptype_all</span></code> 中。将具体协议相关的按照协议号注册到 <code class="docutils literal notranslate"><span class="pre">ptype_base</span></code> 中。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">dev_add_pack</span><span class="p">(</span><span class="k">struct</span> <span class="nc">packet_type</span><span class="w"> </span><span class="o">*</span><span class="n">pt</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">list_head</span><span class="w"> </span><span class="o">*</span><span class="n">head</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ptype_head</span><span class="p">(</span><span class="n">pt</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">spin_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ptype_lock</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">list_add_rcu</span><span class="p">(</span><span class="o">&amp;</span><span class="n">pt</span><span class="o">-&gt;</span><span class="n">list</span><span class="p">,</span><span class="w"> </span><span class="n">head</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">spin_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ptype_lock</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="k">struct</span> <span class="nc">list_head</span><span class="w"> </span><span class="o">*</span><span class="n">ptype_head</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">packet_type</span><span class="w"> </span><span class="o">*</span><span class="n">pt</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">pt</span><span class="o">-&gt;</span><span class="n">type</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">htons</span><span class="p">(</span><span class="n">ETH_P_ALL</span><span class="p">))</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">pt</span><span class="o">-&gt;</span><span class="n">dev</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="o">&amp;</span><span class="n">pt</span><span class="o">-&gt;</span><span class="n">dev</span><span class="o">-&gt;</span><span class="nl">ptype_all</span> <span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ptype_all</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">else</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">pt</span><span class="o">-&gt;</span><span class="n">dev</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="o">&amp;</span><span class="n">pt</span><span class="o">-&gt;</span><span class="n">dev</span><span class="o">-&gt;</span><span class="nl">ptype_specific</span> <span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="o">&amp;</span><span class="n">ptype_base</span><span class="p">[</span><span class="n">ntohs</span><span class="p">(</span><span class="n">pt</span><span class="o">-&gt;</span><span class="n">type</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">PTYPE_HASH_MASK</span><span class="p">];</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>我们可以通过 proc 看到这些注册上来的 ptype（只显示了 .func 函数）：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>cat /proc/net/ptype
+<span class="go">Type Device      Function</span>
+<span class="go">0800          ip_rcv</span>
+<span class="go">0806          arp_rcv</span>
+<span class="go">86dd          ipv6_rcv</span>
+</pre></div>
+</div>
+</section>
+<section id="qi-guai-de-pt-prev">
+<h2>奇怪的 pt_prev<a class="headerlink" href="#qi-guai-de-pt-prev" title="Permalink to this headline">¶</a></h2>
+<p>上面说到 <code class="docutils literal notranslate"><span class="pre">__netif_receive_skb_list_core</span></code> 函数中没有调用最后一个 ptype 处理函数，而是将这个处理函数返回，最后在 <code class="docutils literal notranslate"><span class="pre">__netif_receive_skb_list_ptype</span></code> 调用。这个的实现以及为什么和代码中出现的一个奇怪的变量 <code class="docutils literal notranslate"><span class="pre">pt_prev</span></code> 有关。</p>
+<p>看下代码：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">list_for_each_entry_rcu</span><span class="p">(</span><span class="n">ptype</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ptype_all</span><span class="p">,</span><span class="w"> </span><span class="n">list</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">pt_prev</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">deliver_skb</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">pt_prev</span><span class="p">,</span><span class="w"> </span><span class="n">orig_dev</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">pt_prev</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ptype</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="n">list_for_each_entry_rcu</span><span class="p">(</span><span class="n">ptype</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">ptype_all</span><span class="p">,</span><span class="w"> </span><span class="n">list</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">pt_prev</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">deliver_skb</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">pt_prev</span><span class="p">,</span><span class="w"> </span><span class="n">orig_dev</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">pt_prev</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ptype</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>所有 ptype 回调函数都不是直接调用，而是先保存到一个 <code class="docutils literal notranslate"><span class="pre">pt_prev</span></code> 变量中，然后发现新的 ptype 回调函数时，再调用投送函数将 skb 投送给 <code class="docutils literal notranslate"><span class="pre">pt_prev</span></code>，也就是前一个 ptype 回调函数，然后最后一个函数不直接调用，要返回然后再在另外一个函数里执行，为什么？</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// __netif_receive_skb_list_core 函数中</span>
+<span class="n">list_for_each_entry_rcu</span><span class="p">(</span><span class="n">ptype</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ptype_all</span><span class="p">,</span><span class="w"> </span><span class="n">list</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">pt_prev</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">deliver_skb</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">pt_prev</span><span class="p">,</span><span class="w"> </span><span class="n">orig_dev</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">pt_prev</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ptype</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="c1">// __netif_receive_skb_list_ptype 函数中</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">pt_prev</span><span class="o">-&gt;</span><span class="n">list_func</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="n">INDIRECT_CALL_INET</span><span class="p">(</span><span class="n">pt_prev</span><span class="o">-&gt;</span><span class="n">list_func</span><span class="p">,</span><span class="w"> </span><span class="n">ipv6_list_rcv</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="n">ip_list_rcv</span><span class="p">,</span><span class="w"> </span><span class="n">head</span><span class="p">,</span><span class="w"> </span><span class="n">pt_prev</span><span class="p">,</span><span class="w"> </span><span class="n">orig_dev</span><span class="p">);</span><span class="w"></span>
+<span class="k">else</span><span class="w"></span>
+<span class="w">    </span><span class="n">list_for_each_entry_safe</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">next</span><span class="p">,</span><span class="w"> </span><span class="n">head</span><span class="p">,</span><span class="w"> </span><span class="n">list</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">skb_list_del_init</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="n">pt_prev</span><span class="o">-&gt;</span><span class="n">func</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">dev</span><span class="p">,</span><span class="w"> </span><span class="n">pt_prev</span><span class="p">,</span><span class="w"> </span><span class="n">orig_dev</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>这个其实是 Linux 做的一个优化，所有前面的投送都是通过 <code class="docutils literal notranslate"><span class="pre">deliver_skb</span></code> 这个函数，而最后一个是直接调用 ptype 处理函数。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">deliver_skb</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">packet_type</span><span class="w"> </span><span class="o">*</span><span class="n">pt_prev</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">net_device</span><span class="w"> </span><span class="o">*</span><span class="n">orig_dev</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">unlikely</span><span class="p">(</span><span class="n">skb_orphan_frags_rx</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">GFP_ATOMIC</span><span class="p">)))</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="o">-</span><span class="n">ENOMEM</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">refcount_inc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">users</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">pt_prev</span><span class="o">-&gt;</span><span class="n">func</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">dev</span><span class="p">,</span><span class="w"> </span><span class="n">pt_prev</span><span class="p">,</span><span class="w"> </span><span class="n">orig_dev</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>这两个的差别在于 <code class="docutils literal notranslate"><span class="pre">deliver_skb</span></code> 在调用 ptype 处理函数之前会先增加 skb 的引用计数，而所有的 ptype 处理函数在一开始都会调用 <a class="reference external" href="https://www.kernel.org/doc/htmldocs/networking/API-skb-share-check.html">skb_share_check</a> 函数，这个函数的功能就是检查 skb 是不是共享的，共不共享就是通过 skb 的引用计数判断的，如果是共享的， 会先 <code class="docutils literal notranslate"><span class="pre">skb_clone(skb)</span></code> ，后续所有操作都基于 clone 出来的新 skb。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb_share_check</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">gfp_t</span><span class="w"> </span><span class="n">pri</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">skb_shared</span><span class="p">(</span><span class="n">skb</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">nskb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">skb_clone</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">pri</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// 这个会 skb_unref(skb) 导致 skb 引用计数减 1</span>
+<span class="w">        </span><span class="n">consume_skb</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="n">skb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">nskb</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">skb</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>也就是说，优化点是：除了最后一个 ptype 处理函数，前面所有的处理函数都因为 skb 引用计数不为 1，得先 clone 一份 skb 再使用，只有最后一个处理函数引用计数为 1 不用 clone。而在只有一个 ptype 处理函数的一般正常情况下，也就不会有任何 clone。</p>
+<p>References:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://blog.csdn.net/sinat_20184565/article/details/79496663">https://blog.csdn.net/sinat_20184565/article/details/79496663</a></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#220826 网络栈接收数据 RX | 进入协议栈</a><ul>
+<li><a class="reference internal" href="#rps-he-rfs">RPS 和 RFS</a></li>
+<li><a class="reference internal" href="#netif-receive-skb-list-core-wang-ge-zhong-xie-yi-ceng-tou-song-bao">__netif_receive_skb_list_core: 往各种协议层投送包</a></li>
+<li><a class="reference internal" href="#ptype-wang-luo-ceng-chu-li-han-shu">ptype_* 网络层处理函数</a></li>
+<li><a class="reference internal" href="#qi-guai-de-pt-prev">奇怪的 pt_prev</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/kernel/220827-network-rx-skb-deliver.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/kernel/220827-network-rx-skb-deliver.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -16,7 +16,7 @@
     <script src="../_static/custom.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#220824 网络栈接收数据 RX —— GRO" href="220824-network-rx-gro.html" />
+    <link rel="next" title="#220826 网络栈接收数据 RX | 进入协议栈" href="220827-network-rx-skb-deliver.html" />
     <link rel="prev" title="Feng’s blog" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -39,12 +39,19 @@
 <p>内核版本： <a class="reference external" href="https://elixir.bootlin.com/linux/v5.19/source">v5.19</a></p>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="220824-network-rx-gro.html">#220824 网络栈接收数据 RX —— GRO</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="220827-network-rx-skb-deliver.html">#220826 网络栈接收数据 RX | 进入协议栈</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="220827-network-rx-skb-deliver.html#rps-he-rfs">RPS 和 RFS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220827-network-rx-skb-deliver.html#netif-receive-skb-list-core-wang-ge-zhong-xie-yi-ceng-tou-song-bao">__netif_receive_skb_list_core: 往各种协议层投送包</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220827-network-rx-skb-deliver.html#ptype-wang-luo-ceng-chu-li-han-shu">ptype_* 网络层处理函数</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220827-network-rx-skb-deliver.html#qi-guai-de-pt-prev">奇怪的 pt_prev</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="220824-network-rx-gro.html">#220824 网络栈接收数据 RX | GRO</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="220824-network-rx-gro.html#indirect-call-hong-de-zuo-yong-shi-shen-me">INDIRECT_CALL_* 宏的作用是什么</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220824-network-rx-gro.html#cong-napi-gro-receive-dao-netif-receive-skb">从 napi_gro_receive 到 netif_receive_skb</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="220818-network-rx.html">#220817 网络栈接收数据 RX ——从网卡收到包到 net_rx_action</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="220818-network-rx.html">#220817 网络栈接收数据 RX | 从网卡收到包到 net_rx_action</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#chang-jian-de-ji-zhong-intel-wang-ka">常见的几种 intel 网卡</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#shou-bao-guo-cheng">收包过程</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220818-network-rx.html#wang-ka-zhong-duan-chu-li-cheng-xu">网卡中断处理程序</a></li>
