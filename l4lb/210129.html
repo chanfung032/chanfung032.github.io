@@ -60,7 +60,7 @@
 <section id="cuo-pei-de-lu-you-dao-zhi-ru-bao-bei-diu">
 <h2>错配的路由导致入包被丢<a class="headerlink" href="#cuo-pei-de-lu-you-dao-zhi-ru-bao-bei-diu" title="Permalink to this headline">¶</a></h2>
 <p>调试 director 和 glb-redirect 内核模块的时候遇到个奇怪的问题，tcpdump 看到转发的包到目标机器目标网卡了，格式也正确，但是包在到达 glb-redirect 模块之前被丢了，iptables 中除了 glb-redirect 规则外没有其它规则。</p>
-<p>给 iptables glb-redirect 规则前的 <a class="reference external" href="https://upload.wikimedia.org/wikipedia/commons/3/37/Netfilter-packet-flow.svg">表/链</a> 加上 LOG，可以看到在 PREROUTING 阶段能够看到包，但之后就没见了。</p>
+<p>给 iptables glb-redirect 规则前的 <a class="reference external" href="https://upload.wikimedia.org/wikipedia/commons/3/37/Netfilter-packet-flow.svg">表 / 链</a> 加上 LOG，可以看到在 PREROUTING 阶段能够看到包，但之后就没见了。</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>iptables -t raw  -A PREROUTING -p udp --dport <span class="m">19523</span> -j LOG
 <span class="c1"># iptables -t raw -vL 通过前面的 pkts 计数也可以定位包是在哪个阶段丢的</span>
 <span class="c1"># ...</span>
@@ -148,25 +148,41 @@ tshark -i eth0 -V
 <section id="xdp-zai-nei-he-wang-luo-zhan-zhong-zhi-xing-de-wei-zhi">
 <h2>xdp 在内核网络栈中执行的位置<a class="headerlink" href="#xdp-zai-nei-he-wang-luo-zhan-zhong-zhi-xing-de-wei-zhi" title="Permalink to this headline">¶</a></h2>
 <p>4.14 内核：</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>-&gt; net_rx_action()
--&gt; napi_poll()
--&gt; ixgbe_poll()
-    -&gt; ixgbe_clean_rx_irq()
-        -&gt; ixgbe_run_xdp()
-            -&gt; bpf_prog_run_xdp ⬅ driver 模式
-    ...
-    创建 skb 结构体
-    ...
-    -&gt; ixgbe_rx_skb
-        -&gt; napi_gro_receive
-        -&gt; dev_gro_receive
-        -&gt; napi_skb_finish
-            -&gt; netif_receive_skb_internal
-            -&gt; do_xdp_generic
-                -&gt; netif_receive_generic_xdp
-                -&gt; bpf_prog_run_xdp ⬅ generic 模式
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>net_rx_action()
+|- napi_poll()
+   |- ixgbe_poll()
+      |- ixgbe_clean_rx_irq()
+         |- ixgbe_run_xdp()
+         |  |- bpf_prog_run_xdp ⬅ driver 模式
+         |  ...
+         |- 创建 skb 结构体
+         |  ...
+         |- ixgbe_rx_skb
+            |- napi_gro_receive
+               |- dev_gro_receive
+               |- napi_skb_finish
+                  |- netif_receive_skb_internal
+                     |- do_xdp_generic
+                     |  |- netif_receive_generic_xdp
+                     |     |- bpf_prog_run_xdp ⬅ generic 模式
+                     |- __netif_receive_skb
+                       |- __netif_receive_skb_core
+                          |- sch_handle_ingress
+                             |- tcf_classify
+                                |- tp-&gt;classify/cls_bpf_classify
+                                   |- BPF_PROG_RUN ⬅ tc-bpf ingress hook
 </pre></div>
 </div>
+<p>generic 模式相比 driver 模式除了执行点靠后之外，还有一个影响性能的点： <strong>generic 模式会跳过 gro</strong> 。gro 模块一开始会通过 <code class="docutils literal notranslate"><span class="pre">netif_elide_gro</span></code> 判断是否执行 gro，如果设备上有 generic xdp 程序，也会跳过执行。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="nf">netif_elide_gro</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">net_device</span><span class="w"> </span><span class="o">*</span><span class="n">dev</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">features</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">NETIF_F_GRO</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">dev</span><span class="o">-&gt;</span><span class="n">xdp_prog</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>tc-bpf 看到的是 gro 之后的 skb。</p>
 <p>内核协议栈详细的执行过程可以参见：<a class="reference external" href="https://blog.packagecloud.io/eng/2016/06/22/monitoring-tuning-linux-networking-stack-receiving-data/">https://blog.packagecloud.io/eng/2016/06/22/monitoring-tuning-linux-networking-stack-receiving-data/</a></p>
 </section>
 <section id="ru-he-xiu-gai-xdp-cheng-xu-de-jia-zai-mo-shi">

@@ -33,7 +33,7 @@ bond 网口和 xdp
 
 调试 director 和 glb-redirect 内核模块的时候遇到个奇怪的问题，tcpdump 看到转发的包到目标机器目标网卡了，格式也正确，但是包在到达 glb-redirect 模块之前被丢了，iptables 中除了 glb-redirect 规则外没有其它规则。
 
-给 iptables glb-redirect 规则前的 `表/链 <https://upload.wikimedia.org/wikipedia/commons/3/37/Netfilter-packet-flow.svg>`_ 加上 LOG，可以看到在 PREROUTING 阶段能够看到包，但之后就没见了。
+给 iptables glb-redirect 规则前的 `表 / 链 <https://upload.wikimedia.org/wikipedia/commons/3/37/Netfilter-packet-flow.svg>`_ 加上 LOG，可以看到在 PREROUTING 阶段能够看到包，但之后就没见了。
 
 .. code-block:: bash
 
@@ -139,23 +139,42 @@ xdp 在内核网络栈中执行的位置
 
 4.14 内核： ::
 
-    -> net_rx_action()
-    -> napi_poll()
-    -> ixgbe_poll()
-        -> ixgbe_clean_rx_irq()
-            -> ixgbe_run_xdp()
-                -> bpf_prog_run_xdp ⬅ driver 模式
-        ...
-        创建 skb 结构体
-        ...
-        -> ixgbe_rx_skb
-            -> napi_gro_receive
-            -> dev_gro_receive
-            -> napi_skb_finish
-                -> netif_receive_skb_internal
-                -> do_xdp_generic
-                    -> netif_receive_generic_xdp
-                    -> bpf_prog_run_xdp ⬅ generic 模式
+    net_rx_action()
+    |- napi_poll()
+       |- ixgbe_poll()
+          |- ixgbe_clean_rx_irq()
+             |- ixgbe_run_xdp()
+             |  |- bpf_prog_run_xdp ⬅ driver 模式
+             |  ...
+             |- 创建 skb 结构体
+             |  ...
+             |- ixgbe_rx_skb
+                |- napi_gro_receive
+                   |- dev_gro_receive
+                   |- napi_skb_finish
+                      |- netif_receive_skb_internal
+                         |- do_xdp_generic
+                         |  |- netif_receive_generic_xdp
+                         |     |- bpf_prog_run_xdp ⬅ generic 模式
+                         |- __netif_receive_skb
+                           |- __netif_receive_skb_core
+                              |- sch_handle_ingress
+                                 |- tcf_classify
+                                    |- tp->classify/cls_bpf_classify
+                                       |- BPF_PROG_RUN ⬅ tc-bpf ingress hook
+
+generic 模式相比 driver 模式除了执行点靠后之外，还有一个影响性能的点： **generic 模式会跳过 gro** 。gro 模块一开始会通过 ``netif_elide_gro`` 判断是否执行 gro，如果设备上有 generic xdp 程序，也会跳过执行。
+
+.. code-block:: c
+
+    static inline bool netif_elide_gro(const struct net_device *dev)
+    {
+        if (!(dev->features & NETIF_F_GRO) || dev->xdp_prog)
+            return true;
+        return false;
+    }
+
+tc-bpf 看到的是 gro 之后的 skb。
 
 内核协议栈详细的执行过程可以参见：https://blog.packagecloud.io/eng/2016/06/22/monitoring-tuning-linux-networking-stack-receiving-data/
 
