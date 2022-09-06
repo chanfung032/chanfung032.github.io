@@ -1,0 +1,227 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>#220901 socket 和 sock &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#220826 网络栈接收数据 RX | 协议栈" href="220827-network-rx-skb-deliver.html" />
+    <link rel="prev" title="内核笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="socket-he-sock">
+<h1>#220901 socket 和 sock<a class="headerlink" href="#socket-he-sock" title="Permalink to this headline">¶</a></h1>
+<section id="shu-ju-jie-gou">
+<h2>数据结构<a class="headerlink" href="#shu-ju-jie-gou" title="Permalink to this headline">¶</a></h2>
+<p>内核中一个 socket 主要用 <code class="docutils literal notranslate"><span class="pre">socket</span></code>、<code class="docutils literal notranslate"><span class="pre">sock</span></code> 这两个结构体来表示。因为 “In Linux, everything is a file”，所以 socket 会通过 <code class="docutils literal notranslate"><span class="pre">file</span></code> 封装成文件给用户态程序去使用。</p>
+<img alt="../_images/socket.svg" src="../_images/socket.svg" /><section id="struct-sock">
+<h3>struct sock<a class="headerlink" href="#struct-sock" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sock</span></code> 以及这个结构体派生出的各种 <code class="docutils literal notranslate"><span class="pre">xxx_sock</span></code>，实现具体的协议。各种 sock 有以下继承关系。</p>
+<img alt="../_images/sock.svg" src="../_images/sock.svg" /><p>（上图中左侧直接继承自 <code class="docutils literal notranslate"><span class="pre">sock_common</span></code> 的结构体是 TCP 连接建立、关闭时用到的一些特殊 sock 类型，可以先忽略）</p>
+<p>继承通过 embedding 的方式来实现，比如 <code class="docutils literal notranslate"><span class="pre">udp_sock</span></code> 展开就是下面这样：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">udp_sock</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">inet_sock</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">struct</span> <span class="nc">sock</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="k">struct</span> <span class="nc">sock_common</span><span class="w"> </span><span class="n">__sk_common</span><span class="p">,</span><span class="w"></span>
+
+<span class="w">            </span><span class="cp">#define sk_prot __sk_common.skc_prot</span>
+<span class="w">            </span><span class="c1">// sock 属性 ...</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="n">sk</span><span class="p">,</span><span class="w"></span>
+
+<span class="w">        </span><span class="c1">// inet_sock 属性 ....</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="n">inet</span><span class="p">,</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// udp_sock 属性 ...</span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">sk_prot</span></code> 中是接口方法。接口方法的第一个参数是指向结构体的 <code class="docutils literal notranslate"><span class="pre">this</span></code> 指针 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sock*</span> <span class="pre">sk</span></code>。</p>
+<p>所有 sock 类结构体的第一个字段必须是其父结构体。这样接口方法中需要访问具体协议层 sock 的字段和方法时，通过强制转换即可。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">inet_sock</span><span class="w"> </span><span class="o">*</span><span class="n">inet</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">struct</span> <span class="nc">inet_sock</span><span class="o">*</span><span class="p">)</span><span class="n">sk</span><span class="p">;</span><span class="w"></span>
+<span class="k">struct</span> <span class="nc">udp_sock</span><span class="w"> </span><span class="o">*</span><span class="n">up</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">struct</span> <span class="nc">udp_sock</span><span class="o">*</span><span class="p">)</span><span class="n">sk</span><span class="p">;</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="struct-socket">
+<h3>struct socket<a class="headerlink" href="#struct-socket" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">socket</span></code>，将各种协议的细节封装，向上提供一个统一的接口，屏蔽下面各种协议层面的实现细节，其中 <code class="docutils literal notranslate"><span class="pre">sk</span></code> 字段指向具体协议的 sock 结构体，<code class="docutils literal notranslate"><span class="pre">ops</span></code> 中是接口方法。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// general BSD socket</span>
+<span class="k">struct</span> <span class="nc">socket</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">socket_state</span><span class="w">    </span><span class="n">state</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">short</span><span class="w">           </span><span class="n">type</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w">   </span><span class="n">flags</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">file</span><span class="w">     </span><span class="o">*</span><span class="n">file</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">sock</span><span class="w">     </span><span class="o">*</span><span class="n">sk</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">proto_ops</span><span class="w"> </span><span class="o">*</span><span class="n">ops</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">socket_wq</span><span class="w"> </span><span class="n">wq</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="gou-jian-yi-ge-socket-de-guo-cheng">
+<h2>构建一个 socket 的过程<a class="headerlink" href="#gou-jian-yi-ge-socket-de-guo-cheng" title="Permalink to this headline">¶</a></h2>
+<p>调用栈：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">SYSCALL_DEFINE3</span><span class="p">(</span><span class="n">socket</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">family</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">protocol</span><span class="p">)</span>
+<span class="o">|-</span> <span class="n">__sys_socket</span>
+   <span class="o">|-</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span> <span class="o">=</span> <span class="n">__sys_socket_create</span>
+   <span class="o">|</span>  <span class="o">|-</span> <span class="n">sock_create</span>
+   <span class="o">|</span>     <span class="o">|-</span> <span class="n">__sock_create</span>
+   <span class="o">|</span>        <span class="o">|-</span> <span class="n">sock</span> <span class="o">=</span> <span class="n">sock_alloc</span><span class="p">()</span>
+   <span class="o">|</span>        <span class="o">|-</span> <span class="n">sock</span><span class="o">-&gt;</span><span class="nb">type</span> <span class="o">=</span> <span class="nb">type</span>
+   <span class="o">|</span>        <span class="o">|-</span> <span class="n">pf</span> <span class="o">=</span> <span class="n">net_families</span><span class="p">[</span><span class="n">family</span><span class="p">]</span>
+   <span class="o">|</span>        <span class="o">|-</span> <span class="n">pf</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">protocol</span><span class="p">)</span>   <span class="o">--+</span>
+   <span class="o">|</span>        <span class="o">|-</span> <span class="k">return</span> <span class="n">sock</span>                    <span class="o">|</span>
+   <span class="o">|-</span> <span class="k">return</span> <span class="n">sock_map_fd</span><span class="p">(</span><span class="n">sock</span><span class="p">)</span>                <span class="o">|</span>
+                                              <span class="o">|</span>
+        <span class="o">+-------------------------------------+</span>
+        <span class="o">|</span>
+        <span class="n">v</span>
+<span class="n">inet_create</span><span class="p">(</span><span class="n">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span><span class="p">,</span> <span class="nb">int</span> <span class="n">protocol</span><span class="p">)</span>
+<span class="o">|-</span> <span class="k">for</span> <span class="n">answer</span> <span class="ow">in</span> <span class="n">inetsw</span><span class="p">[</span><span class="n">sock</span><span class="o">-&gt;</span><span class="nb">type</span><span class="p">]:</span>
+<span class="o">|</span>      <span class="k">if</span> <span class="n">answer</span> <span class="ow">and</span> <span class="n">protocol</span> <span class="n">match</span><span class="p">:</span>
+<span class="o">|</span>          <span class="k">break</span>
+<span class="o">|-</span> <span class="n">sock</span><span class="o">-&gt;</span><span class="n">ops</span> <span class="o">=</span> <span class="n">answer</span><span class="o">-&gt;</span><span class="n">ops</span>
+<span class="o">|</span>
+<span class="o">|-</span> <span class="n">answer_prot</span> <span class="o">=</span> <span class="n">answer</span><span class="o">-&gt;</span><span class="n">prot</span>
+<span class="o">|-</span> <span class="n">sk</span> <span class="o">=</span> <span class="n">sk_alloc</span><span class="p">(</span><span class="n">PF_INET</span><span class="p">,</span> <span class="n">GFP_KERNEL</span><span class="p">,</span> <span class="n">answer_prot</span><span class="p">)</span>
+<span class="o">|</span>  <span class="o">|-</span> <span class="n">sk_prot_alloc</span>
+<span class="o">|</span>     <span class="o">|-</span> <span class="n">kmem_cache_alloc</span><span class="p">(</span><span class="n">answer_prot</span><span class="o">-&gt;</span><span class="n">slab</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="o">|</span>  <span class="o">|-</span> <span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_prot</span> <span class="o">=</span> <span class="n">answer_prot</span>
+<span class="o">|</span>
+<span class="o">|-</span> <span class="n">sock_init_data</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">sk</span><span class="p">)</span>
+<span class="o">|</span>  <span class="o">|-</span> <span class="n">sk_init_common</span>
+<span class="o">|</span>  <span class="o">|-</span> <span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_blahblah</span> <span class="o">=</span> <span class="n">blahblah</span>
+<span class="o">|-</span> <span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_protocol</span> <span class="o">=</span> <span class="n">protocol</span>
+<span class="o">|</span>
+<span class="o">|-</span> <span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_prot</span><span class="o">-&gt;</span><span class="n">init</span><span class="o">/</span><span class="n">tcp_v4_init_sock</span><span class="o">/</span><span class="n">udp_init_sock</span><span class="p">(</span><span class="n">sk</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>以 <code class="docutils literal notranslate"><span class="pre">socket(AF_INET,</span> <span class="pre">SOCK_DGRAM,</span> <span class="pre">0)</span></code> 为例。</p>
+<ol class="arabic simple">
+<li><p>首先，调用 <code class="docutils literal notranslate"><span class="pre">sock_alloc</span></code> <strong>创建 socket 结构体</strong>。</p></li>
+<li><p>然后，从全局数组 <a class="reference external" href="https://elixir.bootlin.com/linux/v5.19/source/net/socket.c#L224">net_families</a> 中取出 AF_INET 的构建函数 <code class="docutils literal notranslate"><span class="pre">inet_create</span></code> 并调用。这个函数中会调用 <code class="docutils literal notranslate"><span class="pre">sk_alloc</span></code> <strong>创建 sock 结构体</strong> 、<strong>挂载接口方法</strong> 、<strong>初始化结构体</strong> 。接口方法和初始化函数都存在  <a class="reference external" href="https://elixir.bootlin.com/linux/v5.19/source/net/ipv4/af_inet.c#L1119">inetsw</a> 全局列表中，根据 type 和 protocol 查找。</p></li>
+<li><p>最后，调用 <code class="docutils literal notranslate"><span class="pre">sock_map_fd</span></code> <strong>将 socket 封装成文件并返回</strong>。</p></li>
+</ol>
+<img alt="../_images/socket-create.svg" src="../_images/socket-create.svg" /><p><code class="docutils literal notranslate"><span class="pre">inetsw</span></code> 查找方法如下：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">list_for_each_entry_rcu</span><span class="p">(</span><span class="n">answer</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inetsw</span><span class="p">[</span><span class="n">sock</span><span class="o">-&gt;</span><span class="n">type</span><span class="p">],</span><span class="w"> </span><span class="n">list</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">protocol</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">answer</span><span class="o">-&gt;</span><span class="n">protocol</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">protocol</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">IPPROTO_IP</span><span class="p">)</span><span class="w"></span>
+<span class="w">            </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// 判断的是 socket 调用传的 protocol 参数为 是否为 0，</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">protocol</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="n">protocol</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">answer</span><span class="o">-&gt;</span><span class="n">protocol</span><span class="p">;</span><span class="w"></span>
+<span class="w">            </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// 判断的是 inetsw 里注册的协议是否支持通配，目前只有 type=SOCK_RAW 时，protocol 可以是任意的</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">IPPROTO_IP</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">answer</span><span class="o">-&gt;</span><span class="n">protocol</span><span class="p">)</span><span class="w"></span>
+<span class="w">            </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="n">EPROTONOSUPPORT</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>从代码看，TCP 和 UDP 协议可以不用 protocol 参数，直接传 0 就行，SOCK_STREAM 默认协议是 TCP，SOCK_DGRAM 默认协议是 UDP。</p>
+<p>一些常见使用 protocol 参数的场景：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// 使用 SOCK_DGRAM 的非默认协议</span>
+<span class="n">socket</span><span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span><span class="w"> </span><span class="n">SOCK_DGRAM</span><span class="p">,</span><span class="w"> </span><span class="n">PROT_ICMP</span><span class="p">)</span><span class="w"></span>
+<span class="c1">// 创建 raw socket</span>
+<span class="n">socket</span><span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span><span class="w"> </span><span class="n">SOCK_RAW</span><span class="p">,</span><span class="w"> </span><span class="n">PROT_ICMP</span><span class="p">)</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>ping 发送 icmp 包可以使用 raw socket，也可以使用 udp socket，大部分情况下使用 udp socket，因为不需要 root 权限，目前只有使用 <code class="docutils literal notranslate"><span class="pre">-N</span></code> 参数的时候会使用 raw socket。ping 代码会自己判断使用哪个。</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://lwn.net/Articles/422330/">https://lwn.net/Articles/422330/</a></p></li>
+<li><p><a class="reference external" href="https://github.com/iputils/iputils/blob/master/ping/ping.c">https://github.com/iputils/iputils/blob/master/ping/ping.c</a></p></li>
+</ul>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#220901 socket 和 sock</a><ul>
+<li><a class="reference internal" href="#shu-ju-jie-gou">数据结构</a><ul>
+<li><a class="reference internal" href="#struct-sock">struct sock</a></li>
+<li><a class="reference internal" href="#struct-socket">struct socket</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#gou-jian-yi-ge-socket-de-guo-cheng">构建一个 socket 的过程</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/kernel/220905-socket.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/kernel/220905-socket.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

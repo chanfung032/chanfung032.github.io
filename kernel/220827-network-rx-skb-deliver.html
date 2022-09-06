@@ -17,7 +17,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="#220824 网络栈接收数据 RX | GRO" href="220824-network-rx-gro.html" />
-    <link rel="prev" title="内核笔记" href="index.html" />
+    <link rel="prev" title="#220901 socket 和 sock" href="220905-socket.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -344,6 +344,15 @@
 </div>
 <p>至此，一个网络包经过网络栈的层层处理，最终在某一个 socket 的接收队列里静静躺着，等待应用程序调用 <code class="docutils literal notranslate"><span class="pre">recv*</span></code> 函数来消费了。</p>
 <img alt="../_images/sk.svg" src="../_images/sk.svg" /></section>
+<section id="wang-luo-zhan-de-shang-xia-liang-bu-fen">
+<h2>网络栈的上下两部分<a class="headerlink" href="#wang-luo-zhan-de-shang-xia-liang-bu-fen" title="Permalink to this headline">¶</a></h2>
+<p>网络栈一般在逻辑上被分成上下两个部分：</p>
+<ul class="simple">
+<li><p>上半部分（Top Half），也叫控制路径（control path），这部分在进程的内核态中执行，socket 的创建、修改、操作、关闭都在这个部分中执行。</p></li>
+<li><p>下半部分（Bottom Half），也叫数据路径（data path）、fast path，这部分在软中断中执行。负责将数据从网卡送到 socket 的接收队列中，将 socket 发送队列的数据送到网卡发送出去。</p></li>
+</ul>
+<p>有些函数带 <strong>bh</strong> 前缀或者后缀，比如 <code class="docutils literal notranslate"><span class="pre">bh_lock_sock</span></code>，表示这个是给 <strong>B</strong>ottom <strong>H</strong>alf 使用的。</p>
+</section>
 </section>
 
 
@@ -362,6 +371,7 @@
 <li><a class="reference internal" href="#qi-guai-de-pt-prev">奇怪的 pt_prev</a></li>
 <li><a class="reference internal" href="#l3-wang-luo-ceng">L3 网络层</a></li>
 <li><a class="reference internal" href="#l4-chuan-shu-ceng">L4 传输层</a></li>
+<li><a class="reference internal" href="#wang-luo-zhan-de-shang-xia-liang-bu-fen">网络栈的上下两部分</a></li>
 </ul>
 </li>
 </ul>

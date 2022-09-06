@@ -1,0 +1,154 @@
+#220901 socket 和 sock
+===================================
+
+数据结构
+-----------------
+
+内核中一个 socket 主要用 ``socket``、``sock`` 这两个结构体来表示。因为 "In Linux, everything is a file"，所以 socket 会通过 ``file`` 封装成文件给用户态程序去使用。
+
+.. image:: images/socket.svg
+
+struct sock
+``````````````````````
+
+``struct sock`` 以及这个结构体派生出的各种 ``xxx_sock``，实现具体的协议。各种 sock 有以下继承关系。
+
+.. image:: images/sock.svg
+
+（上图中左侧直接继承自 ``sock_common`` 的结构体是 TCP 连接建立、关闭时用到的一些特殊 sock 类型，可以先忽略）
+
+继承通过 embedding 的方式来实现，比如 ``udp_sock`` 展开就是下面这样：
+
+.. code-block:: c
+
+    struct udp_sock {
+        struct inet_sock {
+            struct sock {
+                struct sock_common __sk_common,
+
+                #define sk_prot	__sk_common.skc_prot
+                // sock 属性 ...
+            } sk,
+
+            // inet_sock 属性 ....
+        } inet,
+
+        // udp_sock 属性 ...
+    }
+
+``sk_prot`` 中是接口方法。接口方法的第一个参数是指向结构体的 ``this`` 指针 ``struct sock* sk``。
+
+所有 sock 类结构体的第一个字段必须是其父结构体。这样接口方法中需要访问具体协议层 sock 的字段和方法时，通过强制转换即可。
+
+.. code-block:: c
+
+    struct inet_sock *inet = (struct inet_sock*)sk;
+    struct udp_sock *up = (struct udp_sock*)sk;
+
+struct socket
+``````````````````````
+
+``struct socket``，将各种协议的细节封装，向上提供一个统一的接口，屏蔽下面各种协议层面的实现细节，其中 ``sk`` 字段指向具体协议的 sock 结构体，``ops`` 中是接口方法。
+
+.. code-block:: c
+
+    // general BSD socket
+    struct socket {
+        socket_state	state;
+        short           type;
+        unsigned long	flags;
+        struct file     *file;
+        struct sock     *sk;
+        const struct proto_ops *ops;
+        struct socket_wq wq;
+    }
+
+构建一个 socket 的过程
+-------------------------
+
+调用栈：  ::
+
+    SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
+    |- __sys_socket
+       |- socket *sock = __sys_socket_create
+       |  |- sock_create
+       |     |- __sock_create
+       |        |- sock = sock_alloc()
+       |        |- sock->type = type
+       |        |- pf = net_families[family]
+       |        |- pf->create(sock, protocol)   --+
+       |        |- return sock                    |
+       |- return sock_map_fd(sock)                |
+                                                  |
+            +-------------------------------------+
+            |
+            v
+    inet_create(struct socket *sock, int protocol)
+    |- for answer in inetsw[sock->type]:
+    |      if answer and protocol match:
+    |          break
+    |- sock->ops = answer->ops
+    |
+    |- answer_prot = answer->prot
+    |- sk = sk_alloc(PF_INET, GFP_KERNEL, answer_prot)
+    |  |- sk_prot_alloc
+    |     |- kmem_cache_alloc(answer_prot->slab, ...)
+    |  |- sk->sk_prot = answer_prot
+    |
+    |- sock_init_data(sock, sk)
+    |  |- sk_init_common
+    |  |- sk->sk_blahblah = blahblah
+    |- sk->sk_protocol = protocol
+    |
+    |- sk->sk_prot->init/tcp_v4_init_sock/udp_init_sock(sk)
+
+以 ``socket(AF_INET, SOCK_DGRAM, 0)`` 为例。
+
+1. 首先，调用 ``sock_alloc`` **创建 socket 结构体**。
+2. 然后，从全局数组 `net_families`_ 中取出 AF_INET 的构建函数 ``inet_create`` 并调用。这个函数中会调用 ``sk_alloc`` **创建 sock 结构体** 、**挂载接口方法** 、**初始化结构体** 。接口方法和初始化函数都存在  `inetsw`_ 全局列表中，根据 type 和 protocol 查找。
+3. 最后，调用 ``sock_map_fd`` **将 socket 封装成文件并返回**。
+
+.. image:: images/socket-create.svg
+
+.. _net_families: https://elixir.bootlin.com/linux/v5.19/source/net/socket.c#L224
+.. _inetsw: https://elixir.bootlin.com/linux/v5.19/source/net/ipv4/af_inet.c#L1119
+
+``inetsw`` 查找方法如下：
+
+.. code-block:: c
+
+    list_for_each_entry_rcu(answer, &inetsw[sock->type], list) {
+        err = 0;
+        if (protocol == answer->protocol) {
+            if (protocol != IPPROTO_IP)
+                break;
+        } else {
+            // 判断的是 socket 调用传的 protocol 参数为 是否为 0，
+            if (0 == protocol) {
+                protocol = answer->protocol;
+                break;
+            }
+            // 判断的是 inetsw 里注册的协议是否支持通配，目前只有 type=SOCK_RAW 时，protocol 可以是任意的
+            if (IPPROTO_IP == answer->protocol)
+                break;
+        }
+        err = -EPROTONOSUPPORT;
+    }
+
+从代码看，TCP 和 UDP 协议可以不用 protocol 参数，直接传 0 就行，SOCK_STREAM 默认协议是 TCP，SOCK_DGRAM 默认协议是 UDP。
+
+一些常见使用 protocol 参数的场景：
+
+.. code-block:: c
+
+    // 使用 SOCK_DGRAM 的非默认协议
+    socket(AF_INET, SOCK_DGRAM, PROT_ICMP)
+    // 创建 raw socket
+    socket(AF_INET, SOCK_RAW, PROT_ICMP)
+
+.. note::
+
+   ping 发送 icmp 包可以使用 raw socket，也可以使用 udp socket，大部分情况下使用 udp socket，因为不需要 root 权限，目前只有使用 ``-N`` 参数的时候会使用 raw socket。ping 代码会自己判断使用哪个。
+
+   - https://lwn.net/Articles/422330/
+   - https://github.com/iputils/iputils/blob/master/ping/ping.c
