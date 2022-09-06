@@ -61,7 +61,7 @@ __netif_receive_skb_list_core: 往各种协议层投送包
 3. 投送 skb 给抓包程序， ``deliver_skb`` 给 ``ptype_all`` （tcpdump -i any）、 ``skb->dev->ptype_all`` （tcpdump -i <dev>） 。
 4. 如果 mac header 中有 vlan tag，处理 vlan tag。
 5. ``sch_handle_ingress``，过 tc 规则，执行 tc-bpf 程序。
-6. 执行 ``skb->dev->rx_handler``，bond 之类的网卡设备可能会用到这个 handler。
+6. 执行 ``skb->dev->rx_handler``，桥接（bridge）、bond 之类的网卡设备可能会用到这个 handler。
 7. 投送 skb 给网络层 ``ip_rcv/ip6_rcv/arp_rcv`` 函数。这个回调一般不会直接在这个函数中执行，会延后到 ``__netif_receive_skb_list_ptype`` 函数中去执行，具体后面会详细说。
 
 当然现实大部分情况是：没有抓包程序、没有 tc 规则、没有 tc-bpf 程序、没有 vlan tag、普通网卡，那这个函数就只是找到上层网络协议层的回调函数，然后将其返回。很简单。
@@ -350,3 +350,30 @@ UDP 层做的事主要如下：
 - 上半部分（Top Half），也叫控制路径（control path），这部分在进程的内核态中执行，socket 的创建、修改、操作、关闭都在这个部分中执行。
 
 有些函数带 **bh** 前缀或者后缀，比如 ``bh_lock_sock``，表示这个是给 **B**\ ottom **H**\ alf 使用的。
+
+
+Netfilter 图中链路层的 Hook 哪去了？
+---------------------------------------
+
+上面网络层的分析中我们遇到了 ``NF_INET_PRE_ROUTING``、 ``NF_INET_LOCAL_IN`` 这两个 Hook，这个对应了 Netfilter 收包路径上网络层（绿色）的各种 Hook。那下面链路层（蓝色）的 Hook 哪去了？
+
+答案就是藏在了前面 ``skb->dev->rx_handler`` 中，桥接的处理逻辑在 ``rx_handler`` 中，这里面会执行链路层的各种 Hook。
+
+.. code-block:: c
+
+    int br_add_if(struct net_bridge *br, struct net_device *dev,
+            struct netlink_ext_ack *extack)
+    {
+        //...
+        err = netdev_rx_handler_register(dev, br_get_rx_handler(dev), p)
+        //...
+    }
+
+    rx_handler_func_t *br_get_rx_handler(const struct net_device *dev)
+    {
+        return br_handle_frame;
+    }
+
+.. image:: images/nf.jpg
+
+详细参见： https://elixir.bootlin.com/linux/v5.19/source/net/bridge/br_input.c

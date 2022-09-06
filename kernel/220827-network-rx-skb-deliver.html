@@ -93,7 +93,7 @@
 <li><p>投送 skb 给抓包程序， <code class="docutils literal notranslate"><span class="pre">deliver_skb</span></code> 给 <code class="docutils literal notranslate"><span class="pre">ptype_all</span></code> （tcpdump -i any）、 <code class="docutils literal notranslate"><span class="pre">skb-&gt;dev-&gt;ptype_all</span></code> （tcpdump -i &lt;dev&gt;） 。</p></li>
 <li><p>如果 mac header 中有 vlan tag，处理 vlan tag。</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">sch_handle_ingress</span></code>，过 tc 规则，执行 tc-bpf 程序。</p></li>
-<li><p>执行 <code class="docutils literal notranslate"><span class="pre">skb-&gt;dev-&gt;rx_handler</span></code>，bond 之类的网卡设备可能会用到这个 handler。</p></li>
+<li><p>执行 <code class="docutils literal notranslate"><span class="pre">skb-&gt;dev-&gt;rx_handler</span></code>，桥接（bridge）、bond 之类的网卡设备可能会用到这个 handler。</p></li>
 <li><p>投送 skb 给网络层 <code class="docutils literal notranslate"><span class="pre">ip_rcv/ip6_rcv/arp_rcv</span></code> 函数。这个回调一般不会直接在这个函数中执行，会延后到 <code class="docutils literal notranslate"><span class="pre">__netif_receive_skb_list_ptype</span></code> 函数中去执行，具体后面会详细说。</p></li>
 </ol>
 <p>当然现实大部分情况是：没有抓包程序、没有 tc 规则、没有 tc-bpf 程序、没有 vlan tag、普通网卡，那这个函数就只是找到上层网络协议层的回调函数，然后将其返回。很简单。</p>
@@ -353,6 +353,27 @@
 </ul>
 <p>有些函数带 <strong>bh</strong> 前缀或者后缀，比如 <code class="docutils literal notranslate"><span class="pre">bh_lock_sock</span></code>，表示这个是给 <strong>B</strong>ottom <strong>H</strong>alf 使用的。</p>
 </section>
+<section id="netfilter-tu-zhong-lian-lu-ceng-de-hook-na-qu-le">
+<h2>Netfilter 图中链路层的 Hook 哪去了？<a class="headerlink" href="#netfilter-tu-zhong-lian-lu-ceng-de-hook-na-qu-le" title="Permalink to this headline">¶</a></h2>
+<p>上面网络层的分析中我们遇到了 <code class="docutils literal notranslate"><span class="pre">NF_INET_PRE_ROUTING</span></code>、 <code class="docutils literal notranslate"><span class="pre">NF_INET_LOCAL_IN</span></code> 这两个 Hook，这个对应了 Netfilter 收包路径上网络层（绿色）的各种 Hook。那下面链路层（蓝色）的 Hook 哪去了？</p>
+<p>答案就是藏在了前面 <code class="docutils literal notranslate"><span class="pre">skb-&gt;dev-&gt;rx_handler</span></code> 中，桥接的处理逻辑在 <code class="docutils literal notranslate"><span class="pre">rx_handler</span></code> 中，这里面会执行链路层的各种 Hook。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">br_add_if</span><span class="p">(</span><span class="k">struct</span> <span class="nc">net_bridge</span><span class="w"> </span><span class="o">*</span><span class="n">br</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">net_device</span><span class="w"> </span><span class="o">*</span><span class="n">dev</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="k">struct</span> <span class="nc">netlink_ext_ack</span><span class="w"> </span><span class="o">*</span><span class="n">extack</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">//...</span>
+<span class="w">    </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">netdev_rx_handler_register</span><span class="p">(</span><span class="n">dev</span><span class="p">,</span><span class="w"> </span><span class="n">br_get_rx_handler</span><span class="p">(</span><span class="n">dev</span><span class="p">),</span><span class="w"> </span><span class="n">p</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="c1">//...</span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="n">rx_handler_func_t</span><span class="w"> </span><span class="o">*</span><span class="nf">br_get_rx_handler</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">net_device</span><span class="w"> </span><span class="o">*</span><span class="n">dev</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">br_handle_frame</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<img alt="../_images/nf.jpg" src="../_images/nf.jpg" />
+<p>详细参见： <a class="reference external" href="https://elixir.bootlin.com/linux/v5.19/source/net/bridge/br_input.c">https://elixir.bootlin.com/linux/v5.19/source/net/bridge/br_input.c</a></p>
+</section>
 </section>
 
 
@@ -372,6 +393,7 @@
 <li><a class="reference internal" href="#l3-wang-luo-ceng">L3 网络层</a></li>
 <li><a class="reference internal" href="#l4-chuan-shu-ceng">L4 传输层</a></li>
 <li><a class="reference internal" href="#wang-luo-zhan-de-shang-xia-liang-bu-fen">网络栈的上下两部分</a></li>
+<li><a class="reference internal" href="#netfilter-tu-zhong-lian-lu-ceng-de-hook-na-qu-le">Netfilter 图中链路层的 Hook 哪去了？</a></li>
 </ul>
 </li>
 </ul>
