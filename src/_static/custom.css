@@ -27,3 +27,7 @@ blockquote:before {
 blockquote p {
   display: inline;
 }
+
+div.admonition p.admonition-title {
+  font-size: 18px !important;
+}
