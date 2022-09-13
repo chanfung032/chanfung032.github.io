@@ -1,4 +1,4 @@
-#220826 网络栈接收数据 RX | 协议栈
+#220827 网络栈接收数据 RX | 协议栈
 ===============================================
 
 RPS 和 RFS
@@ -8,16 +8,58 @@ RPS 和 RFS
 
     gro_normal_one
       |- gro_normal_list
-        |- netif_receive_skb_list_internal
-          |- if unlikely(rps_needed):
-          |    foreach skb:
-          |      |- cpu = get_rps_cpu(skb)
-          |      |- skb_list_del_init(skb)
-          |      |- enqueue_to_backlog(skb, cpu)
-          |
-          |- __netif_receive_skb_list
+         |- netif_receive_skb_list_internal
+            |- if unlikely(rps_needed):
+            |    foreach skb:
+            |      |- cpu = get_rps_cpu(skb)
+            |      |- skb_list_del_init(skb)
+            |      |- enqueue_to_backlog(skb, cpu)
+            |
+            |- __netif_receive_skb_list
 
-在 GRO 之后， ``__netif_receive_skb_list`` 函数中，如果启用 RPS（基本不会），skb 包会被重新均衡到各个 CPU，这是一个软件层面的 RSS 实现，详细可参见：https://www.kernel.org/doc/Documentation/networking/scaling.txt
+在 GRO 之后， ``netif_receive_skb_list_internal`` 函数中，如果启用 RPS（基本不会），skb 包会被重新均衡到各个 CPU，这是一个软件层面的 RSS 实现，详细可参见：https://www.kernel.org/doc/Documentation/networking/scaling.txt
+
+----
+
+#220913
+
+还是稍微展开讲下 RPS 的实现，RPS 虽然不常用，但是 RPS 的相关设施在 loopback 设备（127.0.0.1） 和 veth 的实现上有被复用，有时候调用栈中看到 RPS 相关的函数，一般不是 RPS 被启用了，而是 loopback 设备或者 veth 设备。
+
+这些功能实现都用到每个 CPU 中的 backlog 队列。
+
+:ref:`net_dev_init` 这里， 在 ``net_dev_init`` 函数中，每个 CPU 还会注册以下 backlog 队列相关的字段：
+
+.. code-block:: c
+
+    struct softnet_data {
+        // ...
+
+        // backlog 队列
+        struct sk_buff_head	input_pkt_queue;
+        // 和中断一样，每个 CPU 的 backlog 队列也有一个单独的 napi_struct
+        // 这样 backlog 可以直接和网卡中断一样挂到 CPU 的 poll_list 中
+        struct napi_struct	backlog;
+
+        // ...
+    }
+
+backlog 队列的处理函数被设置为了 ``process_backlog`` ：
+
+.. code-block:: diff
+
+      net_dev_init
+      |- for_each_possible_cpu(i)
+      |    struct softnet_data *sd = &per_cpu(softnet_data, i)
+      |    INIT_LIST_HEAD(&sd->poll_list)
+    + |    skb_queue_head_init(&sd->input_pkt_queue);
+    + |    sd->backlog.poll = process_backlog
+      |
+      |- open_softirq(NET_TX_SOFTIRQ, net_tx_action)
+      |- open_softirq(NET_RX_SOFTIRQ, net_rx_action)
+
+backlog 队列的入列函数为 ``enqueue_to_backlog(skb, cpu)``，这个函数负责将 skb 加入到对应 CPU 的 backlog 队列中，并通知对应的处理函数醒来开始处理包。
+
+``process_backlog`` 处理 backlog 队列，收割其中的 skb 包调用 ``_netif_receive_skb`` 往上层送。
 
 __netif_receive_skb_list_core: 往各种协议层投送包
 ------------------------------------------------------

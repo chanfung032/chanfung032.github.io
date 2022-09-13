@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>#220826 网络栈接收数据 RX | 协议栈 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <title>#220827 网络栈接收数据 RX | 协议栈 &#8212; Feng&#39;s blog 1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -35,22 +35,54 @@
           <div class="body" role="main">
             
   <section id="wang-luo-zhan-jie-shou-shu-ju-rx-xie-yi-zhan">
-<h1>#220826 网络栈接收数据 RX | 协议栈<a class="headerlink" href="#wang-luo-zhan-jie-shou-shu-ju-rx-xie-yi-zhan" title="Permalink to this headline">¶</a></h1>
+<h1>#220827 网络栈接收数据 RX | 协议栈<a class="headerlink" href="#wang-luo-zhan-jie-shou-shu-ju-rx-xie-yi-zhan" title="Permalink to this headline">¶</a></h1>
 <section id="rps-he-rfs">
 <h2>RPS 和 RFS<a class="headerlink" href="#rps-he-rfs" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">gro_normal_one</span>
   <span class="o">|-</span> <span class="n">gro_normal_list</span>
-    <span class="o">|-</span> <span class="n">netif_receive_skb_list_internal</span>
-      <span class="o">|-</span> <span class="k">if</span> <span class="n">unlikely</span><span class="p">(</span><span class="n">rps_needed</span><span class="p">):</span>
-      <span class="o">|</span>    <span class="n">foreach</span> <span class="n">skb</span><span class="p">:</span>
-      <span class="o">|</span>      <span class="o">|-</span> <span class="n">cpu</span> <span class="o">=</span> <span class="n">get_rps_cpu</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span>
-      <span class="o">|</span>      <span class="o">|-</span> <span class="n">skb_list_del_init</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span>
-      <span class="o">|</span>      <span class="o">|-</span> <span class="n">enqueue_to_backlog</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="n">cpu</span><span class="p">)</span>
-      <span class="o">|</span>
-      <span class="o">|-</span> <span class="n">__netif_receive_skb_list</span>
+     <span class="o">|-</span> <span class="n">netif_receive_skb_list_internal</span>
+        <span class="o">|-</span> <span class="k">if</span> <span class="n">unlikely</span><span class="p">(</span><span class="n">rps_needed</span><span class="p">):</span>
+        <span class="o">|</span>    <span class="n">foreach</span> <span class="n">skb</span><span class="p">:</span>
+        <span class="o">|</span>      <span class="o">|-</span> <span class="n">cpu</span> <span class="o">=</span> <span class="n">get_rps_cpu</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span>
+        <span class="o">|</span>      <span class="o">|-</span> <span class="n">skb_list_del_init</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span>
+        <span class="o">|</span>      <span class="o">|-</span> <span class="n">enqueue_to_backlog</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="n">cpu</span><span class="p">)</span>
+        <span class="o">|</span>
+        <span class="o">|-</span> <span class="n">__netif_receive_skb_list</span>
 </pre></div>
 </div>
-<p>在 GRO 之后， <code class="docutils literal notranslate"><span class="pre">__netif_receive_skb_list</span></code> 函数中，如果启用 RPS（基本不会），skb 包会被重新均衡到各个 CPU，这是一个软件层面的 RSS 实现，详细可参见：<a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/scaling.txt">https://www.kernel.org/doc/Documentation/networking/scaling.txt</a></p>
+<p>在 GRO 之后， <code class="docutils literal notranslate"><span class="pre">netif_receive_skb_list_internal</span></code> 函数中，如果启用 RPS（基本不会），skb 包会被重新均衡到各个 CPU，这是一个软件层面的 RSS 实现，详细可参见：<a class="reference external" href="https://www.kernel.org/doc/Documentation/networking/scaling.txt">https://www.kernel.org/doc/Documentation/networking/scaling.txt</a></p>
+<hr class="docutils" />
+<p>#220913</p>
+<p>还是稍微展开讲下 RPS 的实现，RPS 虽然不常用，但是 RPS 的相关设施在 loopback 设备（127.0.0.1） 和 veth 的实现上有被复用，有时候调用栈中看到 RPS 相关的函数，一般不是 RPS 被启用了，而是 loopback 设备或者 veth 设备。</p>
+<p>这些功能实现都用到每个 CPU 中的 backlog 队列。</p>
+<p><a class="reference internal" href="220818-network-rx.html#net-dev-init"><span class="std std-ref">各种处理函数、poll 函数都是怎么来的</span></a> 这里， 在 <code class="docutils literal notranslate"><span class="pre">net_dev_init</span></code> 函数中，每个 CPU 还会注册以下 backlog 队列相关的字段：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">softnet_data</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ...</span>
+
+<span class="w">    </span><span class="c1">// backlog 队列</span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">sk_buff_head</span><span class="w">     </span><span class="n">input_pkt_queue</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 和中断一样，每个 CPU 的 backlog 队列也有一个单独的 napi_struct</span>
+<span class="w">    </span><span class="c1">// 这样 backlog 可以直接和网卡中断一样挂到 CPU 的 poll_list 中</span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">napi_struct</span><span class="w">      </span><span class="n">backlog</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>backlog 队列的处理函数被设置为了 <code class="docutils literal notranslate"><span class="pre">process_backlog</span></code> ：</p>
+<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span>  net_dev_init
+  |- for_each_possible_cpu(i)
+  |    struct softnet_data *sd = &amp;per_cpu(softnet_data, i)
+  |    INIT_LIST_HEAD(&amp;sd-&gt;poll_list)
+<span class="gi">+ |    skb_queue_head_init(&amp;sd-&gt;input_pkt_queue);</span>
+<span class="gi">+ |    sd-&gt;backlog.poll = process_backlog</span>
+  |
+  |- open_softirq(NET_TX_SOFTIRQ, net_tx_action)
+  |- open_softirq(NET_RX_SOFTIRQ, net_rx_action)
+</pre></div>
+</div>
+<p>backlog 队列的入列函数为 <code class="docutils literal notranslate"><span class="pre">enqueue_to_backlog(skb,</span> <span class="pre">cpu)</span></code>，这个函数负责将 skb 加入到对应 CPU 的 backlog 队列中，并通知对应的处理函数醒来开始处理包。</p>
+<p><code class="docutils literal notranslate"><span class="pre">process_backlog</span></code> 处理 backlog 队列，收割其中的 skb 包调用 <code class="docutils literal notranslate"><span class="pre">_netif_receive_skb</span></code> 往上层送。</p>
 </section>
 <section id="netif-receive-skb-list-core-wang-ge-zhong-xie-yi-ceng-tou-song-bao">
 <h2>__netif_receive_skb_list_core: 往各种协议层投送包<a class="headerlink" href="#netif-receive-skb-list-core-wang-ge-zhong-xie-yi-ceng-tou-song-bao" title="Permalink to this headline">¶</a></h2>
@@ -385,7 +417,7 @@
         <div class="sphinxsidebarwrapper">
   <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">#220826 网络栈接收数据 RX | 协议栈</a><ul>
+<li><a class="reference internal" href="#">#220827 网络栈接收数据 RX | 协议栈</a><ul>
 <li><a class="reference internal" href="#rps-he-rfs">RPS 和 RFS</a></li>
 <li><a class="reference internal" href="#netif-receive-skb-list-core-wang-ge-zhong-xie-yi-ceng-tou-song-bao">__netif_receive_skb_list_core: 往各种协议层投送包</a></li>
 <li><a class="reference internal" href="#ptype-wang-luo-ceng-chu-li-han-shu">ptype_* 网络层处理函数</a></li>

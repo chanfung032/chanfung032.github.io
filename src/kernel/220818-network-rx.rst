@@ -63,6 +63,8 @@ ksoftirqd 是软中断处理进程， ``ps`` 可以看到， ``/`` 后面的数�
 
 ``NET_RX_SOFTIRQ`` 类型的软中断对应的处理函数是 ``net_rx_action``。这个函数做的事就是遍历本 CPU 的 ``softnet->poll_list`` ，对于链表里所有的 ``napi_struct``，调用其 ``poll`` 函数。 ``poll`` 函数是网卡驱动初始化的时候注册的，比如 ixgbe 网卡的 ``poll`` 函数就是 ``ixgbe_poll``，这个函数实际从 ``napi_struct`` 指向的 ring buffer 中收割包并封装成一个一个的 skb 结构，最终调用  ``napi_gro_receive`` 函数进入网络设备子系统作进一步处理。
 
+.. _net_dev_init:
+
 各种处理函数、poll 函数都是怎么来的
 --------------------------------------
 
