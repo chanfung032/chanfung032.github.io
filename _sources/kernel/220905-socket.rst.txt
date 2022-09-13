@@ -156,3 +156,53 @@ struct socket
 
    - https://lwn.net/Articles/422330/
    - https://github.com/iputils/iputils/blob/master/ping/ping.c
+
+从 socket 中接收数据
+-------------------------------
+
+以 udp socket 的 recvfrom 系统调用来说。
+
+首先，这个系统调用是 ``recvmsg`` 系统调用的一个包装（wrapper）， ``__sys_recvfrom`` 负责参数适配、返回值转换。 ``recvmsg`` 属于 socket 特有的方法，所有没有走文件操作 ::
+
+    SYSCALL_DEFINE6(recvfrom, int, fd, void __user *, ubuf, size_t, size,
+       unsigned int, flags, struct sockaddr __user *, addr,
+       int __user *, addr_len)
+    |- __sys_recvfrom
+      |- struct sockaddr_storage address
+      |- struct msghdr msg = {
+      |    .msg_name = (struct sockaddr *)&address
+      |- }
+      |- struct iovec iov;
+      |- err = import_single_range(READ, ubuf, size, &iov, &msg.msg_iter);
+      |
+      |- struct socket *sock = sockfd_lookup_light(fd)
+      |- if sock->file->f_flags & O_NONBLOCK
+      |    flags |= MSG_DONTWAIT
+      |- sock_recvmsg(sock, &msg, flags);
+      |
+      |- move_addr_to_user(&address, msg.msg_namelen, addr, addr_len)
+
+两个系统调用底层都是调用 ``sock_recvmsg`` 函数。这个函数中进行一下安全检查，然后调用 ``sock_recvmsg_nosec`` （nosec 是 no security 的缩写）。这个函数再依次调用 ``struct socket`` 和 ``struct sock`` 的 ``recvmsg`` 方法来进行真正的消息接收。 ::
+
+    sock_recvmsg(struct socket *sock, struct msghdr *msg, int flags)
+    |- security_socket_recvmsg
+    |- sock_recvmsg_nosec
+       |- sock->ops->recvmsg/inet_recvmsg/inet6_recvmsg
+          |- struct sock *sk = sock->sk
+          |- sk->sk_prot->recvmsg/tcp_recvmsg/udp_recvmsg
+
+对于 udp 协议来说，最后调用的就是 ``udp_recv`` 这个函数。 ::
+
+    udp_recvmsg
+    |- int off = 0;
+    |- skb = __skb_recv_udp(sk, flags, &off, &err)
+    |- if udp_skb_is_linear(skb)
+    |    copy_linear_skb(skb, copied, off, &msg->msg_iter)
+    |- else
+    |    skb_copy_datagram_msg(skb, off, msg, copied)
+    |- ...
+    |- skb_consume_udp
+
+``udp_recv`` 函数中调用 ``__skb_recv_udp`` 从接收队列 ``sk->sk_receive_queue`` 中取出一个 skb（如果队列为空，可能会阻塞，直到有新 skb 到来时被 ``sk->sk_data_ready()`` 唤醒）。然后根据是否是线性 skb 调用不同的函数将数据 copy 到用户 buffer 中，最后通过 ``skb_consume_udp`` 将消费完的 skb free 掉。
+
+``__skb_recv_udp`` 中为了避免频繁对 ``sk->sk_receive_queue`` 加锁，会先将 ``sk_receive_queue`` 队列中的 skb 一次性全部获取到 ``sk->reader_queue`` 中（这个过程会对 ``sk_receive_queue`` 加锁），然后再一个一个消费 ``sk->reader_queue`` 中的 skb（此时只对 ``reader_queue`` 加锁），如此保证网络栈下半部分接收包时的性能。

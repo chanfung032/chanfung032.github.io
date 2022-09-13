@@ -16,7 +16,7 @@
     <script src="../_static/custom.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#220826 网络栈接收数据 RX | 协议栈" href="220827-network-rx-skb-deliver.html" />
+    <link rel="next" title="#220827 网络栈接收数据 RX | 协议栈" href="220827-network-rx-skb-deliver.html" />
     <link rel="prev" title="内核笔记" href="index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -169,6 +169,53 @@
 </ul>
 </div>
 </section>
+<section id="cong-socket-zhong-jie-shou-shu-ju">
+<h2>从 socket 中接收数据<a class="headerlink" href="#cong-socket-zhong-jie-shou-shu-ju" title="Permalink to this headline">¶</a></h2>
+<p>以 udp socket 的 recvfrom 系统调用来说。</p>
+<p>首先，这个系统调用是 <code class="docutils literal notranslate"><span class="pre">recvmsg</span></code> 系统调用的一个包装（wrapper）， <code class="docutils literal notranslate"><span class="pre">__sys_recvfrom</span></code> 负责参数适配、返回值转换。 <code class="docutils literal notranslate"><span class="pre">recvmsg</span></code> 属于 socket 特有的方法，所有没有走文件操作</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">SYSCALL_DEFINE6</span><span class="p">(</span><span class="n">recvfrom</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">void</span> <span class="n">__user</span> <span class="o">*</span><span class="p">,</span> <span class="n">ubuf</span><span class="p">,</span> <span class="n">size_t</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span>
+   <span class="n">unsigned</span> <span class="nb">int</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">struct</span> <span class="n">sockaddr</span> <span class="n">__user</span> <span class="o">*</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span>
+   <span class="nb">int</span> <span class="n">__user</span> <span class="o">*</span><span class="p">,</span> <span class="n">addr_len</span><span class="p">)</span>
+<span class="o">|-</span> <span class="n">__sys_recvfrom</span>
+  <span class="o">|-</span> <span class="n">struct</span> <span class="n">sockaddr_storage</span> <span class="n">address</span>
+  <span class="o">|-</span> <span class="n">struct</span> <span class="n">msghdr</span> <span class="n">msg</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="o">|</span>    <span class="o">.</span><span class="n">msg_name</span> <span class="o">=</span> <span class="p">(</span><span class="n">struct</span> <span class="n">sockaddr</span> <span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">address</span>
+  <span class="o">|-</span> <span class="p">}</span>
+  <span class="o">|-</span> <span class="n">struct</span> <span class="n">iovec</span> <span class="n">iov</span><span class="p">;</span>
+  <span class="o">|-</span> <span class="n">err</span> <span class="o">=</span> <span class="n">import_single_range</span><span class="p">(</span><span class="n">READ</span><span class="p">,</span> <span class="n">ubuf</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">iov</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">msg</span><span class="o">.</span><span class="n">msg_iter</span><span class="p">);</span>
+  <span class="o">|</span>
+  <span class="o">|-</span> <span class="n">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span> <span class="o">=</span> <span class="n">sockfd_lookup_light</span><span class="p">(</span><span class="n">fd</span><span class="p">)</span>
+  <span class="o">|-</span> <span class="k">if</span> <span class="n">sock</span><span class="o">-&gt;</span><span class="n">file</span><span class="o">-&gt;</span><span class="n">f_flags</span> <span class="o">&amp;</span> <span class="n">O_NONBLOCK</span>
+  <span class="o">|</span>    <span class="n">flags</span> <span class="o">|=</span> <span class="n">MSG_DONTWAIT</span>
+  <span class="o">|-</span> <span class="n">sock_recvmsg</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">msg</span><span class="p">,</span> <span class="n">flags</span><span class="p">);</span>
+  <span class="o">|</span>
+  <span class="o">|-</span> <span class="n">move_addr_to_user</span><span class="p">(</span><span class="o">&amp;</span><span class="n">address</span><span class="p">,</span> <span class="n">msg</span><span class="o">.</span><span class="n">msg_namelen</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">addr_len</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>两个系统调用底层都是调用 <code class="docutils literal notranslate"><span class="pre">sock_recvmsg</span></code> 函数。这个函数中进行一下安全检查，然后调用 <code class="docutils literal notranslate"><span class="pre">sock_recvmsg_nosec</span></code> （nosec 是 no security 的缩写）。这个函数再依次调用 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">socket</span></code> 和 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sock</span></code> 的 <code class="docutils literal notranslate"><span class="pre">recvmsg</span></code> 方法来进行真正的消息接收。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sock_recvmsg</span><span class="p">(</span><span class="n">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span><span class="p">,</span> <span class="n">struct</span> <span class="n">msghdr</span> <span class="o">*</span><span class="n">msg</span><span class="p">,</span> <span class="nb">int</span> <span class="n">flags</span><span class="p">)</span>
+<span class="o">|-</span> <span class="n">security_socket_recvmsg</span>
+<span class="o">|-</span> <span class="n">sock_recvmsg_nosec</span>
+   <span class="o">|-</span> <span class="n">sock</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">recvmsg</span><span class="o">/</span><span class="n">inet_recvmsg</span><span class="o">/</span><span class="n">inet6_recvmsg</span>
+      <span class="o">|-</span> <span class="n">struct</span> <span class="n">sock</span> <span class="o">*</span><span class="n">sk</span> <span class="o">=</span> <span class="n">sock</span><span class="o">-&gt;</span><span class="n">sk</span>
+      <span class="o">|-</span> <span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_prot</span><span class="o">-&gt;</span><span class="n">recvmsg</span><span class="o">/</span><span class="n">tcp_recvmsg</span><span class="o">/</span><span class="n">udp_recvmsg</span>
+</pre></div>
+</div>
+<p>对于 udp 协议来说，最后调用的就是 <code class="docutils literal notranslate"><span class="pre">udp_recv</span></code> 这个函数。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">udp_recvmsg</span>
+<span class="o">|-</span> <span class="nb">int</span> <span class="n">off</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="o">|-</span> <span class="n">skb</span> <span class="o">=</span> <span class="n">__skb_recv_udp</span><span class="p">(</span><span class="n">sk</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">off</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">err</span><span class="p">)</span>
+<span class="o">|-</span> <span class="k">if</span> <span class="n">udp_skb_is_linear</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span>
+<span class="o">|</span>    <span class="n">copy_linear_skb</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="n">copied</span><span class="p">,</span> <span class="n">off</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">msg</span><span class="o">-&gt;</span><span class="n">msg_iter</span><span class="p">)</span>
+<span class="o">|-</span> <span class="k">else</span>
+<span class="o">|</span>    <span class="n">skb_copy_datagram_msg</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="n">off</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">copied</span><span class="p">)</span>
+<span class="o">|-</span> <span class="o">...</span>
+<span class="o">|-</span> <span class="n">skb_consume_udp</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">udp_recv</span></code> 函数中调用 <code class="docutils literal notranslate"><span class="pre">__skb_recv_udp</span></code> 从接收队列 <code class="docutils literal notranslate"><span class="pre">sk-&gt;sk_receive_queue</span></code> 中取出一个 skb（如果队列为空，可能会阻塞，直到有新 skb 到来时被 <code class="docutils literal notranslate"><span class="pre">sk-&gt;sk_data_ready()</span></code> 唤醒）。然后根据是否是线性 skb 调用不同的函数将数据 copy 到用户 buffer 中，最后通过 <code class="docutils literal notranslate"><span class="pre">skb_consume_udp</span></code> 将消费完的 skb free 掉。</p>
+<p><code class="docutils literal notranslate"><span class="pre">__skb_recv_udp</span></code> 中为了避免频繁对 <code class="docutils literal notranslate"><span class="pre">sk-&gt;sk_receive_queue</span></code> 加锁，会先将 <code class="docutils literal notranslate"><span class="pre">sk_receive_queue</span></code> 队列中的 skb 一次性全部获取到 <code class="docutils literal notranslate"><span class="pre">sk-&gt;reader_queue</span></code> 中（这个过程会对 <code class="docutils literal notranslate"><span class="pre">sk_receive_queue</span></code> 加锁），然后再一个一个消费 <code class="docutils literal notranslate"><span class="pre">sk-&gt;reader_queue</span></code> 中的 skb（此时只对 <code class="docutils literal notranslate"><span class="pre">reader_queue</span></code> 加锁），如此保证网络栈下半部分接收包时的性能。</p>
+</section>
 </section>
 
 
@@ -187,6 +234,7 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#gou-jian-yi-ge-socket-de-guo-cheng">构建一个 socket 的过程</a></li>
+<li><a class="reference internal" href="#cong-socket-zhong-jie-shou-shu-ju">从 socket 中接收数据</a></li>
 </ul>
 </li>
 </ul>
