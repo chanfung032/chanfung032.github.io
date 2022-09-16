@@ -1,5 +1,8 @@
-#220330 ixgbe Detected Tx Unit Hang
-=========================================
+#220330 问题
+===================
+
+ixgbe Detected Tx Unit Hang
+----------------------------------
 
 现象是网卡不断重启，查看 ``/var/log/message`` 可以看到以下错误信息： ::
 
@@ -56,3 +59,104 @@
 BUG 在 4.20-rc1 已经修复。参见：https://github.com/torvalds/linux/commit/8d7179b1e2d64b3493c0114916486fe92e6109a9
 
 另一个解决问题的方法是设定 XDP 加载模式为 skb 模式，同样会影响性能，但是不需要升级内核。
+
+i40e/X722 unable to handle kernel NULL pointer dereference
+-----------------------------------------------------------------
+
+i40e 驱动，网卡是 X722 型号的，在加载 xdp 的时候会报这个错误。
+
+.. code-block:: console
+
+    # ethtool -i enp61s0f0
+    driver: i40e
+    version: 2.3.2-k
+    ...
+    # lshw -class network -short
+    H/W path         Device      Class          Description
+    =======================================================
+    /0/0/0/3/0       enp61s0f0   network        Ethernet Connection X722 for 10GbE SFP+
+    /0/0/0/3/0.1     enp61s0f1   network        Ethernet Connection X722 for 10GbE SFP+
+    /3               bond0       network        Ethernet interface
+
+错误信息如下： ::
+
+	i40e 0000:3d:00.0: failed to get tracking for 256 queues for VSI 0 err -12
+	i40e 0000:3d:00.0: setup of MAIN VSI failed
+	i40e 0000:3d:00.0: can't remove VEB 160 with 0 VSIs left
+	BUG: unable to handle kernel NULL pointer dereference at 0000000000000000
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	PGD 1fe4ee7067 P4D 1fe4ee7067 PUD 1ef96f8067 PMD 0
+	Oops: 0000 [#1] SMP NOPTI
+	CPU: 21 PID: 809441 Comm: l4lb Tainted: G           OE     4.19.113-88.6bs.el7.x86_64 #1
+	Hardware name: Sugon I420-G30/60P16-US, BIOS 0JGST219 05/30/2019
+	RIP: 0010:i40e_xdp+0xae/0x110 [i40e]
+	i40e 0000:3d:00.0: failed to get tracking for 256 queues for VSI 0 err -12
+	i40e 0000:3d:00.0: setup of MAIN VSI failed
+	i40e 0000:3d:00.0: can't remove VEB 160 with 0 VSIs left
+	BUG: unable to handle kernel NULL pointer dereference at 0000000000000000
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	PGD 1fe4ee7067 P4D 1fe4ee7067 PUD 1ef96f8067 PMD 0
+	Oops: 0000 [#1] SMP NOPTI
+	Oops: 0000 [#1] SMP NOPTI
+	CPU: 21 PID: 809441 Comm: l4lb Tainted: G           OE     4.19.113-88.6bs.el7.x86_64 #1
+	Hardware name: Sugon I420-G30/60P16-US, BIOS 0JGST219 05/30/2019
+	RIP: 0010:i40e_xdp+0xae/0x110 [i40e]
+	Code: 87 ab d0 0c 00 00 84 c0 75 60 31 c0 66 83 bb f6 0c 00 00 00 74 27 48 8b 93 90 0c 00 00 48 63 f0 48 8b 8b d0 0c 00 00 83 c0 01 <48> 8b 14 f2 48 89 4a 20 0f b7 93 f6 0c 00 00 39 d0 7c d9 48 85 ed
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	RSP: 0018:ffff9d00ea6af8c0 EFLAGS: 00010202
+	RAX: 0000000000000001 RBX: ffff88f5f75fc000 RCX: ffff9d00c01ef000
+	RDX: 0000000000000000 RSI: 0000000000000000 RDI: ffff88f5ffcd68f0
+	RBP: 0000000000000000 R08: 0000000000000070 R09: 0000000000027e7c
+	R10: ffff89063ff468c0 R11: 0000000000000707 R12: ffff88f5f7600000
+	R13: ffffffffc0308aa0 R14: ffffffffc032c5a0 R15: 000000000000000f
+	FS:  00007f25f9ffb700(0000) GS:ffff88f5ffcc0000(0000) knlGS:0000000000000000
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+	CR2: 0000000000000000 CR3: 0000001fb3828004 CR4: 00000000007606e0
+	DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+	DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+	PKRU: 55555554
+	Call Trace:
+	 dev_xdp_install+0x4f/0x70
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	 dev_change_xdp_fd+0x103/0x210
+	 ? dev_disable_lro+0xa0/0xa0
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	 do_setlink+0xd63/0xd90
+	 ? cpumask_next+0x16/0x20
+	 ? do_kernel_range_flush+0x50/0x50
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	 ? nla_parse+0xa4/0x120
+	 rtnl_setlink+0xd7/0x140
+	 ? security_capset+0x50/0x70
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	 rtnetlink_rcv_msg+0x28f/0x350
+	 ? _cond_resched+0x15/0x30
+	 ? __kmalloc_node_track_caller+0x188/0x280
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	 ? rtnl_calcit.isra.27+0x110/0x110
+	 netlink_rcv_skb+0xd4/0x110
+	 netlink_unicast+0x182/0x230
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	 netlink_sendmsg+0x2ed/0x3e0
+	 sock_sendmsg+0x36/0x50
+	 __sys_sendto+0xdc/0x160
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	 ? sock_setsockopt+0x3b9/0xc80
+	 ? syscall_trace_enter+0x1c9/0x2c0
+	 ? __audit_syscall_exit+0x213/0x350
+	 __x64_sys_sendto+0x24/0x30
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	 do_syscall_64+0x5b/0x1a0
+	 entry_SYSCALL_64_after_hwframe+0x44/0xa9
+	RIP: 0033:0x4aeeea
+	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+	Code: e8 5b 9c fb ff 48 8b 7c 24 10 48 8b 74 24 18 48 8b 54 24 20 4c 8b 54 24 28 4c 8b 44 24 30 4c 8b 4c 24 38 48 8b 44 24 08 0f 05 <48> 3d 01 f0 ff ff 76 20 48 c7 44 24 40 ff ff ff ff 48 c7 44 24 4
+
+	RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
+
+这个是驱动 BUG，升级驱动可解决。
+
+- 驱动下载：https://www.intel.com/content/www/us/en/download/18026/intel-network-adapter-driver-for-pcie-40-gigabit-ethernet-network-connections-under-linux.html
+- 邮件列表同样问题讨论：https://www.spinics.net/lists/xdp-newbies/msg01780.html
+- 修复补丁：https://github.com/torvalds/linux/commit/92947844b8beee988c0ce17082b705c2f75f0742
