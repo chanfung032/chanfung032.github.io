@@ -34,6 +34,17 @@
 
 ``local`` 路由表中的路由都是走 lo 的，127.0.0.1、本机 IP 等都是通过 local 表路由到 lo 的（对，本机 IP 也是走 lo 的，无论绑定的是哪个网卡）。
 
+主机每添加一个 IP，会插入一条其对应子网的路由条目到 ``main`` 表中，添加一条 IP 地址的路由条目到 ``local`` 表中。
+
+比如， ``ip addr add dev eth0 10.0.2.15/24`` 会添加下面这两条路由：
+
+.. code-block:: console
+
+   # ip route list table local
+   local 10.0.2.15 dev eth0 proto kernel scope host src 10.0.2.15
+   # ip route
+   10.0.2.0/24 dev eth0 proto kernel scope link src 10.0.2.15 metric 100
+
 老内核中路由查询时会先查 ``local`` 表，匹配不到再查 ``main`` 表。4.1 内核 `commit 0ddcf43d5d4a <https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0ddcf43d5d4a03ded1ee3f6b3b72a0cbed4e90b1>`_ 之后，为了提升性能，这两张表在底层实现上被合并成了一张表，只查询 ``main`` 表即可。上层显示路由表的各种接口没有变，还是会分开展示这两个表，遍历表的时候按照表 id 再对路由条目进行过滤，过滤出要展示的表的。
 
 入和出的路由相关逻辑封装在了下面这两个函数中，这个里面最终查询路由表是通过 ``fib_lookup`` 这个函数，其它都是围绕路由而进行的一系列校验、决策。 ::
@@ -89,7 +100,7 @@
 
 （trie 中检测的比特一致，但是跳过的比特不一致）
 
-在路径压缩的基础上，层级压缩检测 trie 有哪些部分是节点密集的（densily populated），然后将这些部分的多个节点替换成单个节点，这个节点直接处理 k 个比特，也就有 2\ :sup:`k` 个孩子节点，下面是层级压缩后的 trie：
+在路径压缩的基础上，层级压缩检测 trie 有哪些部分是节点密集的（densily populated），然后将这些部分的多个节点替换成单个节点，这个节点直接处理 k 个比特，也就最多可以有 2\ :sup:`k` 个孩子节点，下面是层级压缩后的 trie：
 
 .. image:: images/lpc-trie-lpc-trie.svg
 

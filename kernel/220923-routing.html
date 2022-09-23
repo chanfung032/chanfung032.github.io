@@ -16,7 +16,7 @@
     <script src="../_static/custom.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#220915 UDP 隧道" href="220915-udp-tunnel.html" />
+    <link rel="next" title="#220919 配置" href="220919-devconf.html" />
     <link rel="prev" title="内核笔记" href="index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -62,6 +62,14 @@
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">local</span></code> 路由表中的路由都是走 lo 的，127.0.0.1、本机 IP 等都是通过 local 表路由到 lo 的（对，本机 IP 也是走 lo 的，无论绑定的是哪个网卡）。</p>
+<p>主机每添加一个 IP，会插入一条其对应子网的路由条目到 <code class="docutils literal notranslate"><span class="pre">main</span></code> 表中，添加一条 IP 地址的路由条目到 <code class="docutils literal notranslate"><span class="pre">local</span></code> 表中。</p>
+<p>比如， <code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">addr</span> <span class="pre">add</span> <span class="pre">dev</span> <span class="pre">eth0</span> <span class="pre">10.0.2.15/24</span></code> 会添加下面这两条路由：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ip route list table <span class="nb">local</span>
+<span class="go">local 10.0.2.15 dev eth0 proto kernel scope host src 10.0.2.15</span>
+<span class="gp"># </span>ip route
+<span class="go">10.0.2.0/24 dev eth0 proto kernel scope link src 10.0.2.15 metric 100</span>
+</pre></div>
+</div>
 <p>老内核中路由查询时会先查 <code class="docutils literal notranslate"><span class="pre">local</span></code> 表，匹配不到再查 <code class="docutils literal notranslate"><span class="pre">main</span></code> 表。4.1 内核 <a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0ddcf43d5d4a03ded1ee3f6b3b72a0cbed4e90b1">commit 0ddcf43d5d4a</a> 之后，为了提升性能，这两张表在底层实现上被合并成了一张表，只查询 <code class="docutils literal notranslate"><span class="pre">main</span></code> 表即可。上层显示路由表的各种接口没有变，还是会分开展示这两个表，遍历表的时候按照表 id 再对路由条目进行过滤，过滤出要展示的表的。</p>
 <p>入和出的路由相关逻辑封装在了下面这两个函数中，这个里面最终查询路由表是通过 <code class="docutils literal notranslate"><span class="pre">fib_lookup</span></code> 这个函数，其它都是围绕路由而进行的一系列校验、决策。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ip_route_input_noref</span>
@@ -100,7 +108,7 @@
 <p>上面的 trie 中很多节点都只有一个孩子节点，这些节点可以删除（除非节点指向了一个路由条目）省下一些比较过程和内存，剩余的节点添加一个 skip 属性告知下一次比较需要跳过多少个比特（对应有多少个节点被删除了）。这个删除节点的过程就是 <strong>路径压缩</strong> ，这样压缩后的 trie，也叫 <a class="reference external" href="https://en.wikipedia.org/wiki/Radix_tree">radix tree</a> ，压缩后的 trie 如下：</p>
 <img alt="../_images/lpc-trie-radix-tree.svg" src="../_images/lpc-trie-radix-tree.svg" /><p>因为上面有一些比特跳过了比较，所以最后还需要再比较下下确保这些比特是匹配的，否则可能是个假匹配，仍然需要回溯。比如下图中的两个 IP 都匹配了叶子节点 <code class="docutils literal notranslate"><span class="pre">192.0.2.48/32</span></code>，显然 <code class="docutils literal notranslate"><span class="pre">205.17.42.180</span></code> 是个假匹配。</p>
 <img alt="../_images/lpc-trie-lookup-mismatch.svg" src="../_images/lpc-trie-lookup-mismatch.svg" /><p>（trie 中检测的比特一致，但是跳过的比特不一致）</p>
-<p>在路径压缩的基础上，层级压缩检测 trie 有哪些部分是节点密集的（densily populated），然后将这些部分的多个节点替换成单个节点，这个节点直接处理 k 个比特，也就有 2<sup>k</sup> 个孩子节点，下面是层级压缩后的 trie：</p>
+<p>在路径压缩的基础上，层级压缩检测 trie 有哪些部分是节点密集的（densily populated），然后将这些部分的多个节点替换成单个节点，这个节点直接处理 k 个比特，也就最多可以有 2<sup>k</sup> 个孩子节点，下面是层级压缩后的 trie：</p>
 <img alt="../_images/lpc-trie-lpc-trie.svg" src="../_images/lpc-trie-lpc-trie.svg" /><p>这样的树就叫做 <strong>LPC-trie</strong> 或 LC-trie，可以提供比 radix tree 更好的查找性能。</p>
 <p>LPC-trie 在内核中的真实结构：</p>
 <img alt="../_images/lpc-trie-struct.svg" src="../_images/lpc-trie-struct.svg" /><p>主要包含以下几种类型的结构体：</p>
