@@ -1,0 +1,200 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>#220923 路由 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#220915 UDP 隧道" href="220915-udp-tunnel.html" />
+    <link rel="prev" title="内核笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="lu-you">
+<h1>#220923 路由<a class="headerlink" href="#lu-you" title="Permalink to this headline">¶</a></h1>
+<section id="gong-neng">
+<h2>功能<a class="headerlink" href="#gong-neng" title="Permalink to this headline">¶</a></h2>
+<p>内核中进出的包都需要经过路由这一步。路由决定接下去如何处理这个包。</p>
+<p>对于进的包，路由确定网络包是要：</p>
+<ul class="simple">
+<li><p><strong>本地接收 RTN_LOCAL</strong> 确定本地接收后会校验 IP 源，也就是执行 rp_filter，检查 <em>如果发送一个包给收到的包的源地址的话，这个包是不是从收到的网卡出去</em> 。如果不是，包会被丢弃掉。防止 IP Spoofing。</p></li>
+<li><p><strong>转发给下一跳 RTN_UNICAST</strong> Linux 默认不开启转发功能 （<code class="docutils literal notranslate"><span class="pre">sysctl</span> <span class="pre">net.ipv4.ip_forward</span></code> 控制），会直接给源端回一个 type=ICMP_DEST_UNREACH，code=EHOSTUNREACH 的 ICMP 包。</p></li>
+<li><p><strong>丢弃 RTN_BLACKHOLE</strong> 。</p></li>
+</ul>
+<p>对于出的包，路由确定这个包要从哪个网卡出去，能直接发给目的主机吗还是要走网关，走哪个网关。</p>
+<img alt="../_images/nf-routing.png" src="../_images/nf-routing.png" />
+</section>
+<section id="dao-di-liang-ge-hai-shi-yi-ge-lu-you-biao">
+<h2>到底两个还是一个路由表<a class="headerlink" href="#dao-di-liang-ge-hai-shi-yi-ge-lu-you-biao" title="Permalink to this headline">¶</a></h2>
+<p>现在的内核默认支持多路由表（<code class="docutils literal notranslate"><span class="pre">CONFIG_IP_MULTIPLE_TABLES</span></code>），一般至少会有 <code class="docutils literal notranslate"><span class="pre">local</span></code> 、 <code class="docutils literal notranslate"><span class="pre">main</span></code> 两个路由表，<code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">route</span></code> 不加任何参数显示的就是 <code class="docutils literal notranslate"><span class="pre">main</span></code> 路由表的条目。如果需要显示 <code class="docutils literal notranslate"><span class="pre">local</span></code> 路由表的内容需要通过 table 参数指定。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ip route list table <span class="nb">local</span>
+<span class="go">broadcast 10.0.2.0 dev eth0 proto kernel scope link src 10.0.2.15</span>
+<span class="go">local 10.0.2.15 dev eth0 proto kernel scope host src 10.0.2.15</span>
+<span class="go">broadcast 10.0.2.255 dev eth0 proto kernel scope link src 10.0.2.15</span>
+<span class="go">broadcast 127.0.0.0 dev lo proto kernel scope link src 127.0.0.1</span>
+<span class="go">local 127.0.0.0/8 dev lo proto kernel scope host src 127.0.0.1</span>
+<span class="go">local 127.0.0.1 dev lo proto kernel scope host src 127.0.0.1</span>
+<span class="go">broadcast 127.255.255.255 dev lo proto kernel scope link src 127.0.0.1</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">local</span></code> 路由表中的路由都是走 lo 的，127.0.0.1、本机 IP 等都是通过 local 表路由到 lo 的（对，本机 IP 也是走 lo 的，无论绑定的是哪个网卡）。</p>
+<p>老内核中路由查询时会先查 <code class="docutils literal notranslate"><span class="pre">local</span></code> 表，匹配不到再查 <code class="docutils literal notranslate"><span class="pre">main</span></code> 表。4.1 内核 <a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0ddcf43d5d4a03ded1ee3f6b3b72a0cbed4e90b1">commit 0ddcf43d5d4a</a> 之后，为了提升性能，这两张表在底层实现上被合并成了一张表，只查询 <code class="docutils literal notranslate"><span class="pre">main</span></code> 表即可。上层显示路由表的各种接口没有变，还是会分开展示这两个表，遍历表的时候按照表 id 再对路由条目进行过滤，过滤出要展示的表的。</p>
+<p>入和出的路由相关逻辑封装在了下面这两个函数中，这个里面最终查询路由表是通过 <code class="docutils literal notranslate"><span class="pre">fib_lookup</span></code> 这个函数，其它都是围绕路由而进行的一系列校验、决策。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ip_route_input_noref</span>
+<span class="o">|-</span> <span class="n">ip_route_input_rcu</span>
+   <span class="o">|-</span> <span class="n">ip_route_input_slow</span>
+      <span class="o">|-</span> <span class="n">fib_lookup</span>
+
+<span class="n">ip_route_output_ports</span>
+<span class="o">|-</span> <span class="n">ip_route_output_flow</span>
+   <span class="o">|-</span> <span class="n">__ip_route_output_key</span>
+      <span class="o">|-</span> <span class="n">ip_route_output_key_hash</span>
+         <span class="o">|-</span> <span class="n">ip_route_output_key_hash_rcu</span>
+            <span class="o">|-</span> <span class="n">fib_lookup</span>
+</pre></div>
+</div>
+</section>
+<section id="lu-you-biao-de-cun-chu-shu-ju-jie-gou-lpc-trie">
+<h2>路由表的存储数据结构 LPC-trie<a class="headerlink" href="#lu-you-biao-de-cun-chu-shu-ju-jie-gou-lpc-trie" title="Permalink to this headline">¶</a></h2>
+<p>内核使用 LPC-trie 来存储一个路由表，LPC-trie 全称 <strong>L</strong>evel <strong>P</strong>ath <strong>C</strong>ompressed <strong>trie</strong>，也就是一个经过路径（Path）、层级（Level）压缩的 trie。</p>
+<p>我们通过下面这个路由表的压缩过程来看看这两个压缩是什么意思，理解了压缩过程也就理解了这个数据结构。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ip route
+<span class="go">default via 203.0.113.5 dev out2</span>
+<span class="go">192.0.2.0/25</span>
+<span class="go">   nexthop via 203.0.113.7  dev out3 weight 1</span>
+<span class="go">   nexthop via 203.0.113.9  dev out4 weight 1</span>
+<span class="go">192.0.2.47 via 203.0.113.3 dev out1</span>
+<span class="go">192.0.2.48 via 203.0.113.3 dev out1</span>
+<span class="go">192.0.2.49 via 203.0.113.3 dev out1</span>
+<span class="go">192.0.2.50 via 203.0.113.3 dev out1</span>
+</pre></div>
+</div>
+<p>首先，它是一个 trie，上面的路由表用 trie 表示出来就是这样：</p>
+<img alt="../_images/lpc-trie-simple-trie.svg" src="../_images/lpc-trie-simple-trie.svg" /><p>（trie 比较长所以拆成了左右两半显示，有些节点带有箭头，这些箭头指向路由表条目）</p>
+<p>查找路由的过程如下：从根节点 <code class="docutils literal notranslate"><span class="pre">0.0.0.0/0</span></code> 开始，每次取 IP 地址的一个比特位，如果为 0，沿着左子树前进一个节点继续，如果为 1，沿着右子树前进一个节点继续，如果子树缺失，则回溯至最近的一个有路由条目箭头的节点，其指向的路由条目就是要找的路由。</p>
+<p>比如对于 IP 地址 <code class="docutils literal notranslate"><span class="pre">192.0.2.50</span></code>，直接叶子节点就能找到对应的路由，但是对于 <code class="docutils literal notranslate"><span class="pre">192.0.2.51</span></code>，找到 <code class="docutils literal notranslate"><span class="pre">192.0.2.50/31</span></code> 之后，下一个比特位为 1，需要沿着右子树前进，但是没有右子树，这个时候就得回溯到 <code class="docutils literal notranslate"><span class="pre">192.0.2.0/25</span></code> 节点才找到对应的路由。</p>
+<p>上面的 trie 中很多节点都只有一个孩子节点，这些节点可以删除（除非节点指向了一个路由条目）省下一些比较过程和内存，剩余的节点添加一个 skip 属性告知下一次比较需要跳过多少个比特（对应有多少个节点被删除了）。这个删除节点的过程就是 <strong>路径压缩</strong> ，这样压缩后的 trie，也叫 <a class="reference external" href="https://en.wikipedia.org/wiki/Radix_tree">radix tree</a> ，压缩后的 trie 如下：</p>
+<img alt="../_images/lpc-trie-radix-tree.svg" src="../_images/lpc-trie-radix-tree.svg" /><p>因为上面有一些比特跳过了比较，所以最后还需要再比较下下确保这些比特是匹配的，否则可能是个假匹配，仍然需要回溯。比如下图中的两个 IP 都匹配了叶子节点 <code class="docutils literal notranslate"><span class="pre">192.0.2.48/32</span></code>，显然 <code class="docutils literal notranslate"><span class="pre">205.17.42.180</span></code> 是个假匹配。</p>
+<img alt="../_images/lpc-trie-lookup-mismatch.svg" src="../_images/lpc-trie-lookup-mismatch.svg" /><p>（trie 中检测的比特一致，但是跳过的比特不一致）</p>
+<p>在路径压缩的基础上，层级压缩检测 trie 有哪些部分是节点密集的（densily populated），然后将这些部分的多个节点替换成单个节点，这个节点直接处理 k 个比特，也就有 2<sup>k</sup> 个孩子节点，下面是层级压缩后的 trie：</p>
+<img alt="../_images/lpc-trie-lpc-trie.svg" src="../_images/lpc-trie-lpc-trie.svg" /><p>这样的树就叫做 <strong>LPC-trie</strong> 或 LC-trie，可以提供比 radix tree 更好的查找性能。</p>
+<p>LPC-trie 在内核中的真实结构：</p>
+<img alt="../_images/lpc-trie-struct.svg" src="../_images/lpc-trie-struct.svg" /><p>主要包含以下几种类型的结构体：</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">fib_table</span></code> 表示一个路由表。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">trie</span></code> 表示一个 LPC-trie。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">key_vector</span></code> 表示 trie 上的一个节点，如果 <code class="docutils literal notranslate"><span class="pre">bits</span></code> 为 0，则为一个叶子节点。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">fib_info</span></code> 表示一条或者几条路由共同的一些属性（下一跳网关地址啊、出口网卡啊）。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">fib_alias</span></code> 将 trie 上有箭头的节点和 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">fib_info</span></code> 关联起来。</p></li>
+</ul>
+<p>LPC-trie 可以通过下面的命令打印出来：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>cat /proc/net/fib_trie
+<span class="go">Main:</span>
+<span class="go">+-- 0.0.0.0/0 2 0 2</span>
+<span class="go">   |-- 0.0.0.0</span>
+<span class="go">      /0 universe UNICAST</span>
+<span class="go">   +-- 192.0.2.0/26 2 0 1</span>
+<span class="go">      |-- 192.0.2.0</span>
+<span class="go">         /25 universe UNICAST</span>
+<span class="go">      |-- 192.0.2.47</span>
+<span class="go">         /32 universe UNICAST</span>
+<span class="go">      +-- 192.0.2.48/30 2 0 1</span>
+<span class="go">         |-- 192.0.2.48</span>
+<span class="go">            /32 universe UNICAST</span>
+<span class="go">         |-- 192.0.2.49</span>
+<span class="go">            /32 universe UNICAST</span>
+<span class="go">         |-- 192.0.2.50</span>
+<span class="go">            /32 universe UNICAST</span>
+<span class="go">Local:</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+<p>其中 <code class="docutils literal notranslate"><span class="pre">|--</span></code> 后面的是叶子节点。</p>
+<p>更多关于性能数据以及 IPv6 的路由实现请参见：</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://vincent.bernat.ch/en/blog/2017-ipv4-route-lookup-linux">https://vincent.bernat.ch/en/blog/2017-ipv4-route-lookup-linux</a>
+本文中 LPC-trie 这部分主要翻译自这篇文章。</p></li>
+<li><p><a class="reference external" href="https://vincent.bernat.ch/en/blog/2017-ipv6-route-lookup-linux">https://vincent.bernat.ch/en/blog/2017-ipv6-route-lookup-linux</a></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#220923 路由</a><ul>
+<li><a class="reference internal" href="#gong-neng">功能</a></li>
+<li><a class="reference internal" href="#dao-di-liang-ge-hai-shi-yi-ge-lu-you-biao">到底两个还是一个路由表</a></li>
+<li><a class="reference internal" href="#lu-you-biao-de-cun-chu-shu-ju-jie-gou-lpc-trie">路由表的存储数据结构 LPC-trie</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/kernel/220923-routing.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/kernel/220923-routing.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
