@@ -61,6 +61,20 @@
             |- ip_route_output_key_hash_rcu
                |- fib_lookup
 
+路由 tracing
+----------------------
+
+可以通过 ``echo 1 >/sys/kernel/debug/tracing/events/fib/enable`` 打开路由的 tracing 日志。
+
+.. code-block:: console
+
+   # cat /sys/kernel/debug/tracing/trace
+   <...>-311708 [040] ..s1 7951180.957825: fib_table_lookup: table 254 oif 0 iif 1 src 10.53.180.130 dst 10.53.180.130 tos 0 scope 0 flags 0 
+   <...>-311708 [040] ..s1 7951180.957826: fib_table_lookup_nh: nexthop dev eth0 oif 4 src 10.53.180.130
+   ...
+
+``fib_table_lookup`` 和 ``fib_table_lookup_nh`` 分别是进入和离开 fib_table_lookup 的时候打印的，分别打印查询信息和结果信息。详细可以 https://elixir.bootlin.com/linux/v5.19/source/net/ipv4/fib_trie.c 里搜 trace_fib_table_lookup 关键词查看。
+
 路由表的存储数据结构 LPC-trie
 ----------------------------------
 

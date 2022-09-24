@@ -8,7 +8,7 @@ Feng's blog
 .. toctree::
    :maxdepth: 1
 
-   kernel/index.rst
+   network/index.rst
    l4lb/index.rst
    aho-corasick-algo.rst
    tcpdump-bpf-filter-vlan-tagged-and-untagged-traffic.rst
