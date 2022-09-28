@@ -188,6 +188,13 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><p>邮件列表同样问题讨论：<a class="reference external" href="https://www.spinics.net/lists/xdp-newbies/msg01780.html">https://www.spinics.net/lists/xdp-newbies/msg01780.html</a></p></li>
 <li><p>修复补丁：<a class="reference external" href="https://github.com/torvalds/linux/commit/92947844b8beee988c0ce17082b705c2f75f0742">https://github.com/torvalds/linux/commit/92947844b8beee988c0ce17082b705c2f75f0742</a></p></li>
 </ul>
+<hr class="docutils" />
+<p>线上升级的时候是新内核和新驱动一起升级，默认情况下需要重启两次新驱动才生效，第一次新内核生效，第二次新驱动才生效，因为新驱动安装的时候最后 postinstall 脚本里的 <code class="docutils literal notranslate"><span class="pre">depmod</span></code> 执行还是在老内核上，所以第一次重启还是使用的新内核默认自带的老驱动。解决方法是新驱动里添加一个 <code class="docutils literal notranslate"><span class="pre">/etc/depmod.d/</span></code> 配置文件。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>cat /etc/depmod.d/kmod-i40e.conf
+<span class="go">override i40e * weak-updates/i40e</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://linux.die.net/man/8/depmod">https://linux.die.net/man/8/depmod</a></p>
 </section>
 </section>
 

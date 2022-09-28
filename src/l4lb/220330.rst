@@ -160,3 +160,14 @@ i40e 驱动，网卡是 X722 型号的，在加载 xdp 的时候会报这个错�
 - 驱动下载：https://www.intel.com/content/www/us/en/download/18026/intel-network-adapter-driver-for-pcie-40-gigabit-ethernet-network-connections-under-linux.html
 - 邮件列表同样问题讨论：https://www.spinics.net/lists/xdp-newbies/msg01780.html
 - 修复补丁：https://github.com/torvalds/linux/commit/92947844b8beee988c0ce17082b705c2f75f0742
+
+----
+
+线上升级的时候是新内核和新驱动一起升级，默认情况下需要重启两次新驱动才生效，第一次新内核生效，第二次新驱动才生效，因为新驱动安装的时候最后 postinstall 脚本里的 ``depmod`` 执行还是在老内核上，所以第一次重启还是使用的新内核默认自带的老驱动。解决方法是新驱动里添加一个 ``/etc/depmod.d/`` 配置文件。
+
+.. code-block:: console
+
+	# cat /etc/depmod.d/kmod-i40e.conf
+	override i40e * weak-updates/i40e
+
+https://linux.die.net/man/8/depmod
