@@ -118,6 +118,38 @@ skb_push 的反操作是 skb_pull，这个操作在解包的时候经常使用�
       printk("skb is NOT linear, skb_len is %d", skb->len);
     }
 
+三个长度字段
+----------------
+
+- ``len`` 是整个网络包数据的长度。
+- ``data_len`` 是非线性区网络包数据的长度。
+
+除了这两个长度之外，skb 中还有一个 ``truesize`` 长度字段。
+
+- ``truesize`` 是网络包数据加上元数据结构体 ``struct sk_buff`` 的大小，这个字段主要用于后面 socket buffer 统计计算（accounting）用。
+
+skb 在放入某个 socket 的接收队列的时候，会调用 ``skb_set_owner_r`` 函数，这个函数会将 skb 消耗的内存记到这个 socket 的读 buffer 头上。发送 skb 的时候记到写 buffer 头上。
+
+.. code-block:: c
+
+    static inline void skb_set_owner_r(struct sk_buff *skb, struct sock *sk)
+    {
+        skb->sk = sk;
+        skb->destructor = sock_rfree;
+        atomic_add(skb->truesize, &sk->sk_rmem_alloc);
+    }
+
+    void sock_rfree(struct sk_buff *skb)
+    {
+        struct sock *sk = skb->sk;
+
+        atomic_sub(skb->truesize, &sk->sk_rmem_alloc);
+    }
+
+从统计使用的字段来看，socket buffer 计算已使用的 buffer 大小的时候，不仅仅算了网络包的大小，还包括了存储这个数据包而使用的元数据结构的大小。
+
+http://vger.kernel.org/~davem/skb_sk.html
+
 skb_clone、skb_copy 复制 skb 的差别
 -------------------------------------
 
@@ -157,6 +189,7 @@ skb headroom 如果不够用，可以通过 skb_realloc_headroom 扩大 headroom
 https://elixir.bootlin.com/linux/v5.19/source/net/core/skbuff.c#L1767
 
 skb 不释放也就不会调用其析构函数 skb->destructor，有些资源释放是在这个析构函数里做的，之前写一个内核隧道模块的时候遇到的问题就是 ping 隧道对端 IP 大概 10 次左右之后就报 ``ping: sendmsg: No buffer space available`` 错误，查了半天发现有 skb 泄漏，没调析构函数 `sock_wfree <https://elixir.bootlin.com/linux/v5.19/source/net/core/sock.c#L2349>`_ 。
+
 
 References:
 

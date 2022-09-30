@@ -109,6 +109,35 @@
 </pre></div>
 </div>
 </section>
+<section id="san-ge-chang-du-zi-duan">
+<h2>三个长度字段<a class="headerlink" href="#san-ge-chang-du-zi-duan" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">len</span></code> 是整个网络包数据的长度。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">data_len</span></code> 是非线性区网络包数据的长度。</p></li>
+</ul>
+<p>除了这两个长度之外，skb 中还有一个 <code class="docutils literal notranslate"><span class="pre">truesize</span></code> 长度字段。</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">truesize</span></code> 是网络包数据加上元数据结构体 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sk_buff</span></code> 的大小，这个字段主要用于后面 socket buffer 统计计算（accounting）用。</p></li>
+</ul>
+<p>skb 在放入某个 socket 的接收队列的时候，会调用 <code class="docutils literal notranslate"><span class="pre">skb_set_owner_r</span></code> 函数，这个函数会将 skb 消耗的内存记到这个 socket 的读 buffer 头上。发送 skb 的时候记到写 buffer 头上。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">skb_set_owner_r</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">sock</span><span class="w"> </span><span class="o">*</span><span class="n">sk</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">sk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sk</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">destructor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sock_rfree</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">atomic_add</span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">truesize</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_rmem_alloc</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">sock_rfree</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">sock</span><span class="w"> </span><span class="o">*</span><span class="n">sk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">sk</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">atomic_sub</span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">truesize</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_rmem_alloc</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>从统计使用的字段来看，socket buffer 计算已使用的 buffer 大小的时候，不仅仅算了网络包的大小，还包括了存储这个数据包而使用的元数据结构的大小。</p>
+<p><a class="reference external" href="http://vger.kernel.org/~davem/skb_sk.html">http://vger.kernel.org/~davem/skb_sk.html</a></p>
+</section>
 <section id="skb-cloneskb-copy-fu-zhi-skb-de-cha-bie">
 <h2>skb_clone、skb_copy 复制 skb 的差别<a class="headerlink" href="#skb-cloneskb-copy-fu-zhi-skb-de-cha-bie" title="Permalink to this headline">¶</a></h2>
 <p>skb_clone 是浅拷贝，skb_clone 只是复制了 sk_buff 这个元结构体，其它关联的 buffer 都没复制，而是通过 skb_shared_info 中的 dataref 作为数据 buffer 的引用计数，保证 kfree_skb 的时候不会误删除还有引用的数据 buffer。</p>
@@ -162,6 +191,7 @@
 <li><a class="reference internal" href="#zhe-ge-jie-gou-shi-shen-me-gan-shen-me-yong-de">这个结构是什么干什么用的</a></li>
 <li><a class="reference internal" href="#ru-he-shi-yong-sk-buff-gou-jian-wang-luo-bao">如何使用 sk_buff 构建网络包</a></li>
 <li><a class="reference internal" href="#xian-xing-skb-he-fei-xian-xing-skb">线性 skb 和非线性 skb</a></li>
+<li><a class="reference internal" href="#san-ge-chang-du-zi-duan">三个长度字段</a></li>
 <li><a class="reference internal" href="#skb-cloneskb-copy-fu-zhi-skb-de-cha-bie">skb_clone、skb_copy 复制 skb 的差别</a></li>
 <li><a class="reference internal" href="#skb-realloc-headroom-bu-hui-shi-fang-yuan-lai-de-skb">skb_realloc_headroom 不会释放原来的 skb</a></li>
 </ul>
