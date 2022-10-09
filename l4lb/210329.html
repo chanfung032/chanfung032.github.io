@@ -137,11 +137,63 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 </ul>
 <p>添加节点的方法和前面安装配置启动服务一样，另外把新的节点 IP 加到 retry_join 中，bootstrap_expect 不用变（这个参数只在第一次部署集群的时候才有意思，其它时候没有意义）。</p>
 <p>查看 server 角色机器的健康状态：</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>consul operator  autopilot state
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>consul operator autopilot state
 </pre></div>
 </div>
 <p>autopilot 判定的节点健康的标准大概就是节点状态是 alive，并且 raft 日志没有落后 leader 太多，详细可见：<a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations#server-health-checking">https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations#server-health-checking</a></p>
 <p>更多可以参见官方文档以及：<a class="reference external" href="https://imaginea.gitbooks.io/consul-devops-handbook/content/">https://imaginea.gitbooks.io/consul-devops-handbook/content/</a></p>
+</section>
+<section id="gu-zhang-chu-li">
+<h2>故障处理<a class="headerlink" href="#gu-zhang-chu-li" title="Permalink to this headline">¶</a></h2>
+<section id="autopilot-chu-li-ji-zhi">
+<h3>autopilot 处理机制<a class="headerlink" href="#autopilot-chu-li-ji-zhi" title="Permalink to this headline">¶</a></h3>
+<p>Consul 集群并不是超过 N/2 的 server 节点挂就一定会导致整个集群不可用，而是 <strong>一次性同时挂</strong> 的 server 节点不能超过节点总数的 1/2，否则会导致集群不可用。</p>
+<p>Consul 的 autopilot 会定时将挂掉的节点从 raft server 节点里移除。这个配置由 autopilot 的 CleanupDeadServers 配置控制，默认开启。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>consul operator autopilot get-config
+<span class="go">CleanupDeadServers = true</span>
+<span class="go">LastContactThreshold = 200ms</span>
+<span class="go">MaxTrailingLogs = 250</span>
+<span class="go">MinQuorum = 0</span>
+<span class="go">ServerStabilizationTime = 10s</span>
+<span class="go">RedundancyZoneTag = &quot;&quot;</span>
+<span class="go">DisableUpgradeMigration = false</span>
+<span class="go">UpgradeVersionTag = &quot;&quot;</span>
+<span class="gp"># </span>consul operator autopilot set-config -cleanup-dead-servers<span class="o">=</span><span class="nb">false</span>
+<span class="go">Configuration updated!</span>
+</pre></div>
+</div>
+<p>比如一开始有 5 个 server 节点，如果同时挂掉 3 个节点，此时集群会不可用，但是如果是先挂 2 个节点，然后 autopilot 清理掉挂掉的节点，此时就变成了 3 个 server 节点，此时再挂 1 个节点，就不影响服务。最好不要动 CleanupDeadServers 这个配置。</p>
+<p><a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations">https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations</a></p>
+</section>
+<section id="ji-qun-gu-zhang-wei-shen-me-consul-members-ming-ling-hai-zheng-chang-xian-shi">
+<h3>集群故障为什么 consul members 命令还正常显示<a class="headerlink" href="#ji-qun-gu-zhang-wei-shen-me-consul-members-ming-ling-hai-zheng-chang-xian-shi" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">members</span></code> 命令展示的是 serf 节点发现的节点，即使 raft 实例有问题，也能正常展示。</p>
+</section>
+<section id="ru-he-ti-huan-server-jie-dian">
+<h3>如何替换 server 节点<a class="headerlink" href="#ru-he-ti-huan-server-jie-dian" title="Permalink to this headline">¶</a></h3>
+<p>如果要替换 server 节点，需要先添加新 server 节点，在新 server 节点状态变为健康之后再移除旧节点。节点状态可以通过 <code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">operator</span> <span class="pre">autopilot</span> <span class="pre">state</span></code> 或者 <code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">operator</span> <span class="pre">raft</span> <span class="pre">list-peers</span></code> 查看。</p>
+</section>
+<section id="ji-qun-gu-zhang-chu-li">
+<h3>集群故障处理<a class="headerlink" href="#ji-qun-gu-zhang-chu-li" title="Permalink to this headline">¶</a></h3>
+<p>如果集群故障导致命令执行出现 <code class="docutils literal notranslate"><span class="pre">Unexpected</span> <span class="pre">response</span> <span class="pre">code:</span> <span class="pre">500</span> <span class="pre">(No</span> <span class="pre">cluster</span> <span class="pre">leader)</span></code> 这样的错误信息，此时 raft 配置变更命令 <code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">leave</span></code>、 <code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">force-leave</span></code> 也就无法使用了（需要有 leader 才能执行），也就没办法移除故障节点让集群恢复服务。</p>
+<p>此时，只能通过 <code class="docutils literal notranslate"><span class="pre">raft/peers.json</span></code> 文件来恢复集群。</p>
+<p>找一个健康的 server 节点，在其 consul 数据目录的 raft 子目录下，添加一个 peers.json 文件，文件内容如下：</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>
+  <span class="p">{</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;adf4238a-882b-9ddc-4a9d-5b6758e4159e&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;address&quot;</span><span class="p">:</span> <span class="s2">&quot;10.1.0.1:8300&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;non_voter&quot;</span><span class="p">:</span> <span class="kc">false</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>其中 id 为节点的 node-id，可以参见数据目录下的 <code class="docutils literal notranslate"><span class="pre">node-id</span></code> 文件，address 是节点的 IP 和端口，端口为节点的 RPC 服务端口。</p>
+<p>添加完成后保存，然后重启 consul 服务，就可以恢复服务了。重启完成完成 <code class="docutils literal notranslate"><span class="pre">peers.json</span></code> 文件会被删除。</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/recovery-outage">https://learn.hashicorp.com/tutorials/consul/recovery-outage</a></p></li>
+<li><p><a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/add-remove-servers">https://learn.hashicorp.com/tutorials/consul/add-remove-servers</a></p></li>
+</ul>
+</section>
 </section>
 <section id="go-api-examples">
 <h2>Go API Examples<a class="headerlink" href="#go-api-examples" title="Permalink to this headline">¶</a></h2>
@@ -321,6 +373,13 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 <li><a class="reference internal" href="#qi-dong-kai-fa-ce-shi-yong-agent">启动开发测试用 agent</a></li>
 <li><a class="reference internal" href="#kai-fa-ce-shi-yong-ben-di-ji-qun">开发测试用本地集群</a></li>
 <li><a class="reference internal" href="#qi-ta-chang-jian-yun-wei-cao-zuo">其它常见运维操作</a></li>
+<li><a class="reference internal" href="#gu-zhang-chu-li">故障处理</a><ul>
+<li><a class="reference internal" href="#autopilot-chu-li-ji-zhi">autopilot 处理机制</a></li>
+<li><a class="reference internal" href="#ji-qun-gu-zhang-wei-shen-me-consul-members-ming-ling-hai-zheng-chang-xian-shi">集群故障为什么 consul members 命令还正常显示</a></li>
+<li><a class="reference internal" href="#ru-he-ti-huan-server-jie-dian">如何替换 server 节点</a></li>
+<li><a class="reference internal" href="#ji-qun-gu-zhang-chu-li">集群故障处理</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#go-api-examples">Go API Examples</a><ul>
 <li><a class="reference internal" href="#dao-ru-bao">导入包</a></li>
 <li><a class="reference internal" href="#kv-cun-chu">KV 存储</a></li>

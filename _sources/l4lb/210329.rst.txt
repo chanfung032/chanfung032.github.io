@@ -127,11 +127,75 @@ consul 参数也可以通过配置文件配置，见：https://www.consul.io/doc
 
 .. code-block:: console
 
-    # consul operator  autopilot state
+    # consul operator autopilot state
 
 autopilot 判定的节点健康的标准大概就是节点状态是 alive，并且 raft 日志没有落后 leader 太多，详细可见：https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations#server-health-checking
 
 更多可以参见官方文档以及：https://imaginea.gitbooks.io/consul-devops-handbook/content/
+
+故障处理
+-------------
+
+autopilot 处理机制
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Consul 集群并不是超过 N/2 的 server 节点挂就一定会导致整个集群不可用，而是 **一次性同时挂** 的 server 节点不能超过节点总数的 1/2，否则会导致集群不可用。
+
+Consul 的 autopilot 会定时将挂掉的节点从 raft server 节点里移除。这个配置由 autopilot 的 CleanupDeadServers 配置控制，默认开启。
+
+.. code-block:: console
+
+    # consul operator autopilot get-config
+    CleanupDeadServers = true
+    LastContactThreshold = 200ms
+    MaxTrailingLogs = 250
+    MinQuorum = 0
+    ServerStabilizationTime = 10s
+    RedundancyZoneTag = ""
+    DisableUpgradeMigration = false
+    UpgradeVersionTag = ""
+    # consul operator autopilot set-config -cleanup-dead-servers=false
+    Configuration updated!
+
+比如一开始有 5 个 server 节点，如果同时挂掉 3 个节点，此时集群会不可用，但是如果是先挂 2 个节点，然后 autopilot 清理掉挂掉的节点，此时就变成了 3 个 server 节点，此时再挂 1 个节点，就不影响服务。最好不要动 CleanupDeadServers 这个配置。
+
+https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations
+
+集群故障为什么 consul members 命令还正常显示
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``consul members`` 命令展示的是 serf 节点发现的节点，即使 raft 实例有问题，也能正常展示。
+
+如何替换 server 节点
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+如果要替换 server 节点，需要先添加新 server 节点，在新 server 节点状态变为健康之后再移除旧节点。节点状态可以通过 ``consul operator autopilot state`` 或者 ``consul operator raft list-peers`` 查看。
+
+集群故障处理
+^^^^^^^^^^^^^^^^^^^^
+
+如果集群故障导致命令执行出现 ``Unexpected response code: 500 (No cluster leader)`` 这样的错误信息，此时 raft 配置变更命令 ``consul leave``、 ``consul force-leave`` 也就无法使用了（需要有 leader 才能执行），也就没办法移除故障节点让集群恢复服务。
+
+此时，只能通过 ``raft/peers.json`` 文件来恢复集群。
+
+找一个健康的 server 节点，在其 consul 数据目录的 raft 子目录下，添加一个 peers.json 文件，文件内容如下：
+
+.. code-block:: json
+
+    [
+      {
+        "id": "adf4238a-882b-9ddc-4a9d-5b6758e4159e",
+        "address": "10.1.0.1:8300",
+        "non_voter": false
+      }
+    ]
+
+其中 id 为节点的 node-id，可以参见数据目录下的 ``node-id`` 文件，address 是节点的 IP 和端口，端口为节点的 RPC 服务端口。
+
+添加完成后保存，然后重启 consul 服务，就可以恢复服务了。重启完成完成 ``peers.json`` 文件会被删除。
+
+- https://learn.hashicorp.com/tutorials/consul/recovery-outage
+- https://learn.hashicorp.com/tutorials/consul/add-remove-servers
 
 Go API Examples
 ----------------------------------
