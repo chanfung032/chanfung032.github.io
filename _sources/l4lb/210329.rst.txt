@@ -164,12 +164,7 @@ https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations
 集群故障为什么 consul members 命令还正常显示
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``consul members`` 命令展示的是 serf 节点发现的节点，即使 raft 实例有问题，也能正常展示。
-
-如何替换 server 节点
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-如果要替换 server 节点，需要先添加新 server 节点，在新 server 节点状态变为健康之后再移除旧节点。节点状态可以通过 ``consul operator autopilot state`` 或者 ``consul operator raft list-peers`` 查看。
+``consul members`` 命令展示的是 serf 节点发现的节点，serf 是基于 gossip 的协议，即使 raft 实例有问题，也能正常展示。
 
 集群故障处理
 ^^^^^^^^^^^^^^^^^^^^
@@ -196,6 +191,22 @@ https://learn.hashicorp.com/tutorials/consul/autopilot-datacenter-operations
 
 - https://learn.hashicorp.com/tutorials/consul/recovery-outage
 - https://learn.hashicorp.com/tutorials/consul/add-remove-servers
+
+修改配置文件中 Gossip 加密的 Key 为什么没生效
+-----------------------------------------------
+
+修改配置文件中的 ``encrypt`` 为新 Key 后并重启了 Consul，但是 Key 没有生效，原因是 Consul 会在 ``serf/local.keyring`` 中缓存当前使用的 Key，这个 Key 后续只能通过 ``consul keyring`` 命令来更新，直接改配置文件重启 Consul 没有用。
+
+.. code-block:: console
+
+    # cat /opt/consul/serf/local.keyring
+    ["Atmv2ENPBeGGR9/neXPIaIkbf+JSKe+Q2nIxYhnawsA="]
+
+可以通过配置 ``disable_keyring_file`` 设置为 ``true`` 改变默认行为（但没必要）。
+
+https://discuss.hashicorp.com/t/failed-to-join-no-installed-keys-could-decrypt-the-message/33324/2
+
+``consul keyring`` 的使用方法参见：https://learn.hashicorp.com/tutorials/consul/gossip-encryption-rotate
 
 Go API Examples
 ----------------------------------

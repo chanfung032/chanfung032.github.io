@@ -167,11 +167,7 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 </section>
 <section id="ji-qun-gu-zhang-wei-shen-me-consul-members-ming-ling-hai-zheng-chang-xian-shi">
 <h3>集群故障为什么 consul members 命令还正常显示<a class="headerlink" href="#ji-qun-gu-zhang-wei-shen-me-consul-members-ming-ling-hai-zheng-chang-xian-shi" title="Permalink to this headline">¶</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">members</span></code> 命令展示的是 serf 节点发现的节点，即使 raft 实例有问题，也能正常展示。</p>
-</section>
-<section id="ru-he-ti-huan-server-jie-dian">
-<h3>如何替换 server 节点<a class="headerlink" href="#ru-he-ti-huan-server-jie-dian" title="Permalink to this headline">¶</a></h3>
-<p>如果要替换 server 节点，需要先添加新 server 节点，在新 server 节点状态变为健康之后再移除旧节点。节点状态可以通过 <code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">operator</span> <span class="pre">autopilot</span> <span class="pre">state</span></code> 或者 <code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">operator</span> <span class="pre">raft</span> <span class="pre">list-peers</span></code> 查看。</p>
+<p><code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">members</span></code> 命令展示的是 serf 节点发现的节点，serf 是基于 gossip 的协议，即使 raft 实例有问题，也能正常展示。</p>
 </section>
 <section id="ji-qun-gu-zhang-chu-li">
 <h3>集群故障处理<a class="headerlink" href="#ji-qun-gu-zhang-chu-li" title="Permalink to this headline">¶</a></h3>
@@ -194,6 +190,17 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 <li><p><a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/add-remove-servers">https://learn.hashicorp.com/tutorials/consul/add-remove-servers</a></p></li>
 </ul>
 </section>
+</section>
+<section id="xiu-gai-pei-zhi-wen-jian-zhong-gossip-jia-mi-de-key-wei-shen-me-mei-sheng-xiao">
+<h2>修改配置文件中 Gossip 加密的 Key 为什么没生效<a class="headerlink" href="#xiu-gai-pei-zhi-wen-jian-zhong-gossip-jia-mi-de-key-wei-shen-me-mei-sheng-xiao" title="Permalink to this headline">¶</a></h2>
+<p>修改配置文件中的 <code class="docutils literal notranslate"><span class="pre">encrypt</span></code> 为新 Key 后并重启了 Consul，但是 Key 没有生效，原因是 Consul 会在 <code class="docutils literal notranslate"><span class="pre">serf/local.keyring</span></code> 中缓存当前使用的 Key，这个 Key 后续只能通过 <code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">keyring</span></code> 命令来更新，直接改配置文件重启 Consul 没有用。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>cat /opt/consul/serf/local.keyring
+<span class="go">[&quot;Atmv2ENPBeGGR9/neXPIaIkbf+JSKe+Q2nIxYhnawsA=&quot;]</span>
+</pre></div>
+</div>
+<p>可以通过配置 <code class="docutils literal notranslate"><span class="pre">disable_keyring_file</span></code> 设置为 <code class="docutils literal notranslate"><span class="pre">true</span></code> 改变默认行为（但没必要）。</p>
+<p><a class="reference external" href="https://discuss.hashicorp.com/t/failed-to-join-no-installed-keys-could-decrypt-the-message/33324/2">https://discuss.hashicorp.com/t/failed-to-join-no-installed-keys-could-decrypt-the-message/33324/2</a></p>
+<p><code class="docutils literal notranslate"><span class="pre">consul</span> <span class="pre">keyring</span></code> 的使用方法参见：<a class="reference external" href="https://learn.hashicorp.com/tutorials/consul/gossip-encryption-rotate">https://learn.hashicorp.com/tutorials/consul/gossip-encryption-rotate</a></p>
 </section>
 <section id="go-api-examples">
 <h2>Go API Examples<a class="headerlink" href="#go-api-examples" title="Permalink to this headline">¶</a></h2>
@@ -376,10 +383,10 @@ consul agent -server --bootstrap-expect<span class="o">=</span><span class="m">1
 <li><a class="reference internal" href="#gu-zhang-chu-li">故障处理</a><ul>
 <li><a class="reference internal" href="#autopilot-chu-li-ji-zhi">autopilot 处理机制</a></li>
 <li><a class="reference internal" href="#ji-qun-gu-zhang-wei-shen-me-consul-members-ming-ling-hai-zheng-chang-xian-shi">集群故障为什么 consul members 命令还正常显示</a></li>
-<li><a class="reference internal" href="#ru-he-ti-huan-server-jie-dian">如何替换 server 节点</a></li>
 <li><a class="reference internal" href="#ji-qun-gu-zhang-chu-li">集群故障处理</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#xiu-gai-pei-zhi-wen-jian-zhong-gossip-jia-mi-de-key-wei-shen-me-mei-sheng-xiao">修改配置文件中 Gossip 加密的 Key 为什么没生效</a></li>
 <li><a class="reference internal" href="#go-api-examples">Go API Examples</a><ul>
 <li><a class="reference internal" href="#dao-ru-bao">导入包</a></li>
 <li><a class="reference internal" href="#kv-cun-chu">KV 存储</a></li>
