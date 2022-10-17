@@ -117,6 +117,31 @@ ethtool -K eth0 gso off
 <p>术语。网络中东西向指的是数据中心服务器之间的流量，南北向指的是客户端和数据中心之间的流量。</p>
 <a class="reference internal image-reference" href="../_images/sn-ew-traffic.png"><img alt="../_images/sn-ew-traffic.png" src="../_images/sn-ew-traffic.png" style="width: 400px;" /></a>
 </section>
+<section id="tcpdump-da-yin-chu-de-ji-ge-bu-tong-length-zhi-jian-de-huan-suan">
+<h2>tcpdump 打印出的几个不同 length 之间的换算<a class="headerlink" href="#tcpdump-da-yin-chu-de-ji-ge-bu-tong-length-zhi-jian-de-huan-suan" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>l4lb tcpdump <span class="s2">&quot;ip[2:2] &gt; 1460&quot;</span> -v
+<span class="go">xdpcap /sys/fs/bpf/xdpcap-hook - &quot;$(bpfoff 54 &quot;ip[2:2] &gt; 1460&quot;)&quot;| tcpdump -r - -lnnn -v</span>
+<span class="go">reading from file -, link-type EN10MB (Ethernet)</span>
+<span class="go">19:16:05.402446 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto UDP (17), length 1540)</span>
+<span class="go">    113.240.91.27.56266 &gt; 113.240.91.33.19523: UDP, length 1512</span>
+</pre></div>
+</div>
+<p>首先， <code class="docutils literal notranslate"><span class="pre">ip[2:2]</span></code> 是 iphdr 中的 total length 字段，是整个 ip 包的长度，通过其来过滤是否有大于默认 1500 mtu 的包，因为 xdpcap hook 抓的包都是转发封装后的包，GUE 整个封装 40 个字节，只要原始的包大于 1460 字节，封装转发的时候就会大于 1500 mtu。</p>
+<p>这个里面每个转发包有 2 个 length 字段：</p>
+<ol class="arabic simple">
+<li><p>IP 行最后的 length 是 IP 包的整个长度，也就是 <code class="docutils literal notranslate"><span class="pre">ip[2:2]</span></code> ，这一行默认不显示，通过 <code class="docutils literal notranslate"><span class="pre">-v</span></code> 选项显示这行。</p></li>
+<li><p>UDP 行最后的 length 是 UDP 包 payload 的长度。1540 减去 20 个字节的 iphdr，再减去 8 个字节的 udphdr，就是 UDP 包 payload 的长度 1512。1512 个字节中 12 个字节是 guehdr 的长度，剩下的原始的 IP 包 1500 个字节。</p></li>
+</ol>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>l4lb tcpdump <span class="s1">&#39;ip[2:2] &gt; 1460&#39;</span>  -v -decap
+<span class="go">xdpcap /sys/fs/bpf/xdpcap-hook - &quot;$(bpfoff 54 &quot;ip[2:2] &gt; 1460&quot;)&quot;| l4lb tcpdump decap-ng| tcpdump -r - -lnnn -v</span>
+<span class="go">reading from file -, link-type EN10MB (Ethernet)</span>
+<span class="go">19:20:14.983555 IP (tos 0x0, ttl 53, id 20654, offset 0, flags [DF], proto TCP (6), length 1500)</span>
+<span class="go">183.60.152.38.38877 &gt; 113.240.91.53.10443: Flags [.], cksum 0xb7e9 (correct), seq 2744982456:2744983916, ack 3619310159, win 4497, length 1460</span>
+</pre></div>
+</div>
+<p>原始的转发包是一个 TCP 包，长度为 1460，这个长度是 TCP payload 的长度，加上 tcphdr 20 个字节，再加上 iphdr 20 个字节，正好 1500 个字节。</p>
+<p><a class="reference external" href="https://www.tcpdump.org/manpages/pcap-filter.7.html">https://www.tcpdump.org/manpages/pcap-filter.7.html</a></p>
+</section>
 </section>
 
 
@@ -134,6 +159,7 @@ ethtool -K eth0 gso off
 <li><a class="reference internal" href="#tcpdump-chu-de-bao-de-da-xiao-wei-shen-me-da-yu-mtu">tcpdump 出的包的大小为什么大于 MTU？</a></li>
 <li><a class="reference internal" href="#li-yong-lu-you-gui-ze-fen-bie-pei-zhi-shu-ju-zhong-xin-nei-wai-liu-liang-de-mtu">利用路由规则分别配置数据中心内外流量的 MTU</a></li>
 <li><a class="reference internal" href="#dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si">东西向/南北向流量是什么意思？</a></li>
+<li><a class="reference internal" href="#tcpdump-da-yin-chu-de-ji-ge-bu-tong-length-zhi-jian-de-huan-suan">tcpdump 打印出的几个不同 length 之间的换算</a></li>
 </ul>
 </li>
 </ul>

@@ -102,3 +102,33 @@ tcpdump 出的包的大小为什么大于 MTU？
 
 .. image:: images/sn-ew-traffic.png
    :width: 400px
+
+tcpdump 打印出的几个不同 length 之间的换算
+--------------------------------------------
+
+.. code-block:: console
+
+    # l4lb tcpdump "ip[2:2] > 1460" -v
+    xdpcap /sys/fs/bpf/xdpcap-hook - "$(bpfoff 54 "ip[2:2] > 1460")"| tcpdump -r - -lnnn -v
+    reading from file -, link-type EN10MB (Ethernet)
+    19:16:05.402446 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto UDP (17), length 1540)
+        113.240.91.27.56266 > 113.240.91.33.19523: UDP, length 1512
+
+首先， ``ip[2:2]`` 是 iphdr 中的 total length 字段，是整个 ip 包的长度，通过其来过滤是否有大于默认 1500 mtu 的包，因为 xdpcap hook 抓的包都是转发封装后的包，GUE 整个封装 40 个字节，只要原始的包大于 1460 字节，封装转发的时候就会大于 1500 mtu。
+
+这个里面每个转发包有 2 个 length 字段：
+
+1. IP 行最后的 length 是 IP 包的整个长度，也就是 ``ip[2:2]`` ，这一行默认不显示，通过 ``-v`` 选项显示这行。
+2. UDP 行最后的 length 是 UDP 包 payload 的长度。1540 减去 20 个字节的 iphdr，再减去 8 个字节的 udphdr，就是 UDP 包 payload 的长度 1512。1512 个字节中 12 个字节是 guehdr 的长度，剩下的原始的 IP 包 1500 个字节。
+
+.. code-block:: console
+
+    # l4lb tcpdump 'ip[2:2] > 1460'  -v -decap
+    xdpcap /sys/fs/bpf/xdpcap-hook - "$(bpfoff 54 "ip[2:2] > 1460")"| l4lb tcpdump decap-ng| tcpdump -r - -lnnn -v
+    reading from file -, link-type EN10MB (Ethernet)
+    19:20:14.983555 IP (tos 0x0, ttl 53, id 20654, offset 0, flags [DF], proto TCP (6), length 1500)
+    183.60.152.38.38877 > 113.240.91.53.10443: Flags [.], cksum 0xb7e9 (correct), seq 2744982456:2744983916, ack 3619310159, win 4497, length 1460
+
+原始的转发包是一个 TCP 包，长度为 1460，这个长度是 TCP payload 的长度，加上 tcphdr 20 个字节，再加上 iphdr 20 个字节，正好 1500 个字节。
+
+https://www.tcpdump.org/manpages/pcap-filter.7.html
