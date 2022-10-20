@@ -114,12 +114,12 @@ tcpdump 打印出的几个不同 length 之间的换算
     19:16:05.402446 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto UDP (17), length 1540)
         113.240.91.27.56266 > 113.240.91.33.19523: UDP, length 1512
 
-首先， ``ip[2:2]`` 是 iphdr 中的 total length 字段，是整个 ip 包的长度，通过其来过滤是否有大于默认 1500 mtu 的包，因为 xdpcap hook 抓的包都是转发封装后的包，GUE 整个封装 40 个字节，只要原始的包大于 1460 字节，封装转发的时候就会大于 1500 mtu。
+首先， ``ip[2:2]`` 是 IP 头中的 total length 字段，是整个 IP 包的长度，可以通过其来过滤是否有大于默认 1500 mtu 的包，因为 xdpcap 抓的包都是转发封装后的包，GUE 整个封装 40 个字节，只要原始的包大于 1460 字节，封装转发的时候就会大于 1500 mtu。
 
 这个里面每个转发包有 2 个 length 字段：
 
 1. IP 行最后的 length 是 IP 包的整个长度，也就是 ``ip[2:2]`` ，这一行默认不显示，通过 ``-v`` 选项显示这行。
-2. UDP 行最后的 length 是 UDP 包 payload 的长度。1540 减去 20 个字节的 iphdr，再减去 8 个字节的 udphdr，就是 UDP 包 payload 的长度 1512。1512 个字节中 12 个字节是 guehdr 的长度，剩下的原始的 IP 包 1500 个字节。
+2. UDP 行最后的 length 是 UDP 包数据的长度。IP 包 1540 减去 20 个字节的 IP 头，再减去 8 个字节的 UDP 头，就是 UDP 包数据的长度 1512。1512 个字节中 12 个字节是 GUE 头的长度，剩下的是原始的 IP 包 1500 个字节。
 
 .. code-block:: console
 
@@ -129,6 +129,49 @@ tcpdump 打印出的几个不同 length 之间的换算
     19:20:14.983555 IP (tos 0x0, ttl 53, id 20654, offset 0, flags [DF], proto TCP (6), length 1500)
     183.60.152.38.38877 > 113.240.91.53.10443: Flags [.], cksum 0xb7e9 (correct), seq 2744982456:2744983916, ack 3619310159, win 4497, length 1460
 
-原始的转发包是一个 TCP 包，长度为 1460，这个长度是 TCP payload 的长度，加上 tcphdr 20 个字节，再加上 iphdr 20 个字节，正好 1500 个字节。
+原始的转发包是一个 TCP 包，TCP 信息显示行的最后有一个 length 为 1460，这个长度是 TCP 数据的长度，加上 TCP 头 20 个字节，再加上 IP 头 20 个字节，正好 1500 个字节。
+
+常见的协议头大小：
+
+================ ===================
+协议              大小（字节）
+================ ===================
+ETH              14
+IP               20
+IPv6             40
+TCP              20
+UDP              8
+================ ===================
 
 https://www.tcpdump.org/manpages/pcap-filter.7.html
+
+通过 ipset + iptables 修改部分 IP 的 TCP MSS
+---------------------------------------------------
+
+特殊情况无法修改交换机的 MTU 为 9000 大包模式的情况下，可以通过以下 iptables 规则让客户端缩小上行的 TCP 包，让封包后整个 IP 包也不会超过 1500 字节。
+
+.. code-block:: bash
+
+   ipset create l4lb-vips hash:ip
+   iptables -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m set --match-set l4lb-vips src -j TCPMSS --set-mss 1420
+
+   ipset create l4lb-vips6 hash:ip family inet6
+   iptables -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m set --match-set l4lb-vips6 src -j TCPMSS --set-mss 1400
+
+通过以下 tcpdump 命令可以观察上面的规则是否确实修改了 syn-ack 包的 mss。
+
+.. code-block:: console
+
+    # 过滤 syn，syn-ack 包
+    tcpdump "tcp[tcpflags] & tcp-syn != 0"
+    # 过滤 syn-ack 包
+    tcpdump "tcp[tcpflags] & (tcp-syn|tcp-ack) != tcp-syn|tcp-ack"
+
+- https://ipset.netfilter.org/ipset.man.html
+- https://www.linuxtopia.org/Linux_Firewall_iptables/x4700.html
+
+还有一些其它方法可以参见： https://blog.cloudflare.com/path-mtu-discovery-in-practice/ 这篇文章。
+
+.. note::
+
+   iptables 也可以直接按 IP 段过滤，通过 ``-m iprange --src-range IP-IP`` 来过滤，我们需要能够动态修改 IP 的能力，所以使用了 ipset。

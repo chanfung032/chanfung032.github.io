@@ -126,11 +126,11 @@ ethtool -K eth0 gso off
 <span class="go">    113.240.91.27.56266 &gt; 113.240.91.33.19523: UDP, length 1512</span>
 </pre></div>
 </div>
-<p>首先， <code class="docutils literal notranslate"><span class="pre">ip[2:2]</span></code> 是 iphdr 中的 total length 字段，是整个 ip 包的长度，通过其来过滤是否有大于默认 1500 mtu 的包，因为 xdpcap hook 抓的包都是转发封装后的包，GUE 整个封装 40 个字节，只要原始的包大于 1460 字节，封装转发的时候就会大于 1500 mtu。</p>
+<p>首先， <code class="docutils literal notranslate"><span class="pre">ip[2:2]</span></code> 是 IP 头中的 total length 字段，是整个 IP 包的长度，可以通过其来过滤是否有大于默认 1500 mtu 的包，因为 xdpcap 抓的包都是转发封装后的包，GUE 整个封装 40 个字节，只要原始的包大于 1460 字节，封装转发的时候就会大于 1500 mtu。</p>
 <p>这个里面每个转发包有 2 个 length 字段：</p>
 <ol class="arabic simple">
 <li><p>IP 行最后的 length 是 IP 包的整个长度，也就是 <code class="docutils literal notranslate"><span class="pre">ip[2:2]</span></code> ，这一行默认不显示，通过 <code class="docutils literal notranslate"><span class="pre">-v</span></code> 选项显示这行。</p></li>
-<li><p>UDP 行最后的 length 是 UDP 包 payload 的长度。1540 减去 20 个字节的 iphdr，再减去 8 个字节的 udphdr，就是 UDP 包 payload 的长度 1512。1512 个字节中 12 个字节是 guehdr 的长度，剩下的原始的 IP 包 1500 个字节。</p></li>
+<li><p>UDP 行最后的 length 是 UDP 包数据的长度。IP 包 1540 减去 20 个字节的 IP 头，再减去 8 个字节的 UDP 头，就是 UDP 包数据的长度 1512。1512 个字节中 12 个字节是 GUE 头的长度，剩下的是原始的 IP 包 1500 个字节。</p></li>
 </ol>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>l4lb tcpdump <span class="s1">&#39;ip[2:2] &gt; 1460&#39;</span>  -v -decap
 <span class="go">xdpcap /sys/fs/bpf/xdpcap-hook - &quot;$(bpfoff 54 &quot;ip[2:2] &gt; 1460&quot;)&quot;| l4lb tcpdump decap-ng| tcpdump -r - -lnnn -v</span>
@@ -139,8 +139,64 @@ ethtool -K eth0 gso off
 <span class="go">183.60.152.38.38877 &gt; 113.240.91.53.10443: Flags [.], cksum 0xb7e9 (correct), seq 2744982456:2744983916, ack 3619310159, win 4497, length 1460</span>
 </pre></div>
 </div>
-<p>原始的转发包是一个 TCP 包，长度为 1460，这个长度是 TCP payload 的长度，加上 tcphdr 20 个字节，再加上 iphdr 20 个字节，正好 1500 个字节。</p>
+<p>原始的转发包是一个 TCP 包，TCP 信息显示行的最后有一个 length 为 1460，这个长度是 TCP 数据的长度，加上 TCP 头 20 个字节，再加上 IP 头 20 个字节，正好 1500 个字节。</p>
+<p>常见的协议头大小：</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 46%" />
+<col style="width: 54%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>协议</p></th>
+<th class="head"><p>大小（字节）</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>ETH</p></td>
+<td><p>14</p></td>
+</tr>
+<tr class="row-odd"><td><p>IP</p></td>
+<td><p>20</p></td>
+</tr>
+<tr class="row-even"><td><p>IPv6</p></td>
+<td><p>40</p></td>
+</tr>
+<tr class="row-odd"><td><p>TCP</p></td>
+<td><p>20</p></td>
+</tr>
+<tr class="row-even"><td><p>UDP</p></td>
+<td><p>8</p></td>
+</tr>
+</tbody>
+</table>
 <p><a class="reference external" href="https://www.tcpdump.org/manpages/pcap-filter.7.html">https://www.tcpdump.org/manpages/pcap-filter.7.html</a></p>
+</section>
+<section id="tong-guo-ipset-iptables-xiu-gai-bu-fen-ip-de-tcp-mss">
+<h2>通过 ipset + iptables 修改部分 IP 的 TCP MSS<a class="headerlink" href="#tong-guo-ipset-iptables-xiu-gai-bu-fen-ip-de-tcp-mss" title="Permalink to this headline">¶</a></h2>
+<p>特殊情况无法修改交换机的 MTU 为 9000 大包模式的情况下，可以通过以下 iptables 规则让客户端缩小上行的 TCP 包，让封包后整个 IP 包也不会超过 1500 字节。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ipset create l4lb-vips hash:ip
+iptables -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m <span class="nb">set</span> --match-set l4lb-vips src -j TCPMSS --set-mss <span class="m">1420</span>
+
+ipset create l4lb-vips6 hash:ip family inet6
+iptables -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m <span class="nb">set</span> --match-set l4lb-vips6 src -j TCPMSS --set-mss <span class="m">1400</span>
+</pre></div>
+</div>
+<p>通过以下 tcpdump 命令可以观察上面的规则是否确实修改了 syn-ack 包的 mss。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>过滤 syn，syn-ack 包
+<span class="go">tcpdump &quot;tcp[tcpflags] &amp; tcp-syn != 0&quot;</span>
+<span class="gp"># </span>过滤 syn-ack 包
+<span class="go">tcpdump &quot;tcp[tcpflags] &amp; (tcp-syn|tcp-ack) != tcp-syn|tcp-ack&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><a class="reference external" href="https://ipset.netfilter.org/ipset.man.html">https://ipset.netfilter.org/ipset.man.html</a></p></li>
+<li><p><a class="reference external" href="https://www.linuxtopia.org/Linux_Firewall_iptables/x4700.html">https://www.linuxtopia.org/Linux_Firewall_iptables/x4700.html</a></p></li>
+</ul>
+<p>还有一些其它方法可以参见： <a class="reference external" href="https://blog.cloudflare.com/path-mtu-discovery-in-practice/">https://blog.cloudflare.com/path-mtu-discovery-in-practice/</a> 这篇文章。</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>iptables 也可以直接按 IP 段过滤，通过 <code class="docutils literal notranslate"><span class="pre">-m</span> <span class="pre">iprange</span> <span class="pre">--src-range</span> <span class="pre">IP-IP</span></code> 来过滤，我们需要能够动态修改 IP 的能力，所以使用了 ipset。</p>
+</div>
 </section>
 </section>
 
@@ -160,6 +216,7 @@ ethtool -K eth0 gso off
 <li><a class="reference internal" href="#li-yong-lu-you-gui-ze-fen-bie-pei-zhi-shu-ju-zhong-xin-nei-wai-liu-liang-de-mtu">利用路由规则分别配置数据中心内外流量的 MTU</a></li>
 <li><a class="reference internal" href="#dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si">东西向/南北向流量是什么意思？</a></li>
 <li><a class="reference internal" href="#tcpdump-da-yin-chu-de-ji-ge-bu-tong-length-zhi-jian-de-huan-suan">tcpdump 打印出的几个不同 length 之间的换算</a></li>
+<li><a class="reference internal" href="#tong-guo-ipset-iptables-xiu-gai-bu-fen-ip-de-tcp-mss">通过 ipset + iptables 修改部分 IP 的 TCP MSS</a></li>
 </ul>
 </li>
 </ul>
