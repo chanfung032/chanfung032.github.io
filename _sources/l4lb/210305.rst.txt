@@ -165,7 +165,7 @@ https://www.tcpdump.org/manpages/pcap-filter.7.html
     # 过滤 syn，syn-ack 包
     tcpdump "tcp[tcpflags] & tcp-syn != 0"
     # 过滤 syn-ack 包
-    tcpdump "tcp[tcpflags] & (tcp-syn|tcp-ack) != tcp-syn|tcp-ack"
+    tcpdump "tcp[tcpflags] & (tcp-syn|tcp-ack) == tcp-syn|tcp-ack"
 
 - https://ipset.netfilter.org/ipset.man.html
 - https://www.linuxtopia.org/Linux_Firewall_iptables/x4700.html

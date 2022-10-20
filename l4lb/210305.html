@@ -185,7 +185,7 @@ iptables -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m <
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>过滤 syn，syn-ack 包
 <span class="go">tcpdump &quot;tcp[tcpflags] &amp; tcp-syn != 0&quot;</span>
 <span class="gp"># </span>过滤 syn-ack 包
-<span class="go">tcpdump &quot;tcp[tcpflags] &amp; (tcp-syn|tcp-ack) != tcp-syn|tcp-ack&quot;</span>
+<span class="go">tcpdump &quot;tcp[tcpflags] &amp; (tcp-syn|tcp-ack) == tcp-syn|tcp-ack&quot;</span>
 </pre></div>
 </div>
 <ul class="simple">
