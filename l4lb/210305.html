@@ -104,13 +104,46 @@ ethtool -K eth0 gso off
 <p>服务器部分配置方法如下：</p>
 <ol class="arabic simple">
 <li><p>使用 <code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">link</span> <span class="pre">set</span> <span class="pre">&lt;iface&gt;</span> <span class="pre">mtu</span> <span class="pre">9000</span></code> 提高服务器的 MTU 硬限制。</p></li>
-<li><p>使用 <code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">route</span> <span class="pre">add</span> <span class="pre">default</span> <span class="pre">via</span> <span class="pre">&lt;gateway&gt;</span> <span class="pre">mtu</span> <span class="pre">1500</span></code> 修改默认路由的 MTU 为 1500，再添加路由修改东西向流量的 MTU 为 9000 <code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">route</span> <span class="pre">add</span> <span class="pre">&lt;cidr&gt;</span> <span class="pre">via</span> <span class="pre">&lt;gateway&gt;</span> <span class="pre">mtu</span> <span class="pre">9000</span></code> 。</p></li>
+<li><p>使用 <code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">route</span> <span class="pre">add</span> <span class="pre">default</span> <span class="pre">via</span> <span class="pre">&lt;gateway&gt;</span> <span class="pre">mtu</span> <span class="pre">1500</span></code> 修改默认路由的 MTU 为 1500。</p></li>
+<li><p>添加路由修改东西向流量的 MTU 为 9000 <code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">route</span> <span class="pre">add</span> <span class="pre">&lt;cidr&gt;</span> <span class="pre">via</span> <span class="pre">&lt;gateway&gt;</span> <span class="pre">mtu</span> <span class="pre">9000</span></code> 。</p></li>
 </ol>
 <p>数据中心的交换机/路由器也需要相应的配置。</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://wiki.archlinux.org/index.php/jumbo_frames">https://wiki.archlinux.org/index.php/jumbo_frames</a></p></li>
 <li><p><a class="reference external" href="https://tldp.org/HOWTO/Adv-Routing-HOWTO/lartc.cookbook.mtu-discovery.html">https://tldp.org/HOWTO/Adv-Routing-HOWTO/lartc.cookbook.mtu-discovery.html</a></p></li>
 </ul>
+<hr class="docutils" />
+<p>如果不需要开启大包模式，服务器也需要执行上面的前 2 步，否则超过 1500 包会被网卡丢弃。</p>
+<p>网卡驱动在初始化的时候会根据网卡的 mtu 计算网卡的 MFS（Max Frame Size） 并写入网卡的配置寄存器中，网卡收包的时候大于 MFS 的包会被丢弃。发送不受限制。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">ixgbe_set_rx_buffer_len</span><span class="p">(</span><span class="k">struct</span> <span class="nc">ixgbe_adapter</span><span class="w"> </span><span class="o">*</span><span class="n">adapter</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">max_frame</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">netdev</span><span class="o">-&gt;</span><span class="n">mtu</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">ETH_HLEN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">ETH_FCS_LEN</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">max_frame</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="p">(</span><span class="n">ETH_FRAME_LEN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">ETH_FCS_LEN</span><span class="p">))</span><span class="w"></span>
+<span class="w">        </span><span class="n">max_frame</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">ETH_FRAME_LEN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">ETH_FCS_LEN</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// #define IXGBE_MHADD     0x04268</span>
+<span class="w">    </span><span class="n">mhadd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">IXGBE_READ_REG</span><span class="p">(</span><span class="n">hw</span><span class="p">,</span><span class="w"> </span><span class="n">IXGBE_MHADD</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">max_frame</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="p">(</span><span class="n">mhadd</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">IXGBE_MHADD_MFS_SHIFT</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">mhadd</span><span class="w"> </span><span class="o">&amp;=</span><span class="w"> </span><span class="o">~</span><span class="n">IXGBE_MHADD_MFS_MASK</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">mhadd</span><span class="w"> </span><span class="o">|=</span><span class="w"> </span><span class="n">max_frame</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">IXGBE_MHADD_MFS_SHIFT</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">        </span><span class="n">IXGBE_WRITE_REG</span><span class="p">(</span><span class="n">hw</span><span class="p">,</span><span class="w"> </span><span class="n">IXGBE_MHADD</span><span class="p">,</span><span class="w"> </span><span class="n">mhadd</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://elixir.bootlin.com/linux/v5.19/source/drivers/net/ethernet/intel/ixgbe/ixgbe_main.c#L4253">https://elixir.bootlin.com/linux/v5.19/source/drivers/net/ethernet/intel/ixgbe/ixgbe_main.c#L4253</a></p>
+<p>这个里面读写的就是下面这个配置寄存器，用来控制网卡能够接收的最大包的大小。</p>
+<blockquote>
+<div><p><em>Max Frame Size — MAXFRS (0x04268; RW)</em></p>
+<p>This field defines the maximum frame size in bytes units from Ethernet MAC Addresses up to inclusive the CRC. Frames received that are larger than this value are dropped. This field is meaningful when jumbo frames are enabled (HLREG0.JUMBOEN = 1b). When jumbo frames are not enabled the 82599 uses a hardwired value of 1518 for this field.</p>
+<p>The MFS does not include the 4 bytes of the VLAN header. Packets with VLAN header can be as large as MFS + 4. When double VLAN is enabled, the device adds 8 to the MFS for any packets.</p>
+<p>This value has no effect on transmit frames; it is the responsibility of software to limit the size of transmit frames.</p>
+<p><a class="reference external" href="https://www.intel.com/content/www/us/en/embedded/products/networking/82599-10-gbe-controller-datasheet.html?asset=2377">Intel 82599 datasheet.pdf 中搜 0x04268</a></p>
+</div></blockquote>
 </section>
 <section id="dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si">
 <h2>东西向/南北向流量是什么意思？<a class="headerlink" href="#dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si" title="Permalink to this headline">¶</a></h2>

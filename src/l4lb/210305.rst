@@ -82,18 +82,59 @@ tcpdump 出的包的大小为什么大于 MTU？
 利用路由规则分别配置数据中心内外流量的 MTU
 -------------------------------------------------
 
-
 数据中心配置大包模式（Jumbo Frame）需要配置成数据中心内部 MTU 9000，但是出数据中心的包仍然需要是 MTU 1500。
 
 服务器部分配置方法如下：
 
 1. 使用 ``ip link set <iface> mtu 9000`` 提高服务器的 MTU 硬限制。
-2. 使用 ``ip route add default via <gateway> mtu 1500`` 修改默认路由的 MTU 为 1500，再添加路由修改东西向流量的 MTU 为 9000 ``ip route add <cidr> via <gateway> mtu 9000`` 。
+2. 使用 ``ip route add default via <gateway> mtu 1500`` 修改默认路由的 MTU 为 1500。
+3. 添加路由修改东西向流量的 MTU 为 9000 ``ip route add <cidr> via <gateway> mtu 9000`` 。
 
 数据中心的交换机/路由器也需要相应的配置。
 
 - https://wiki.archlinux.org/index.php/jumbo_frames
 - https://tldp.org/HOWTO/Adv-Routing-HOWTO/lartc.cookbook.mtu-discovery.html
+
+----
+
+如果不需要开启大包模式，服务器也需要执行上面的前 2 步，否则超过 1500 包会被网卡丢弃。
+
+网卡驱动在初始化的时候会根据网卡的 mtu 计算网卡的 MFS（Max Frame Size） 并写入网卡的配置寄存器中，网卡收包的时候大于 MFS 的包会被丢弃。发送不受限制。
+
+.. code-block:: c
+
+    static void ixgbe_set_rx_buffer_len(struct ixgbe_adapter *adapter)
+    {
+        int max_frame = netdev->mtu + ETH_HLEN + ETH_FCS_LEN;
+
+        if (max_frame < (ETH_FRAME_LEN + ETH_FCS_LEN))
+            max_frame = (ETH_FRAME_LEN + ETH_FCS_LEN);
+
+        // #define IXGBE_MHADD     0x04268
+        mhadd = IXGBE_READ_REG(hw, IXGBE_MHADD);
+        if (max_frame != (mhadd >> IXGBE_MHADD_MFS_SHIFT)) {
+            mhadd &= ~IXGBE_MHADD_MFS_MASK;
+            mhadd |= max_frame << IXGBE_MHADD_MFS_SHIFT;
+
+            IXGBE_WRITE_REG(hw, IXGBE_MHADD, mhadd);
+        }
+
+        ...
+    }
+
+https://elixir.bootlin.com/linux/v5.19/source/drivers/net/ethernet/intel/ixgbe/ixgbe_main.c#L4253
+
+这个里面读写的就是下面这个配置寄存器，用来控制网卡能够接收的最大包的大小。
+
+    *Max Frame Size — MAXFRS (0x04268; RW)*
+
+    This field defines the maximum frame size in bytes units from Ethernet MAC Addresses up to inclusive the CRC. Frames received that are larger than this value are dropped. This field is meaningful when jumbo frames are enabled (HLREG0.JUMBOEN = 1b). When jumbo frames are not enabled the 82599 uses a hardwired value of 1518 for this field.
+
+    The MFS does not include the 4 bytes of the VLAN header. Packets with VLAN header can be as large as MFS + 4. When double VLAN is enabled, the device adds 8 to the MFS for any packets.
+
+    This value has no effect on transmit frames; it is the responsibility of software to limit the size of transmit frames.
+
+    `Intel 82599 datasheet.pdf 中搜 0x04268 <https://www.intel.com/content/www/us/en/embedded/products/networking/82599-10-gbe-controller-datasheet.html?asset=2377>`_
 
 东西向/南北向流量是什么意思？
 ------------------------------
