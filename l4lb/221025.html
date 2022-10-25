@@ -1,0 +1,359 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>#221025 直接使用 bpf_map_lookup_elem helper 函数返回的指针指向的数据安全吗？ &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#220721 探活、TIME_WAIT 以及 SO_LINGER" href="220721.html" />
+    <link rel="prev" title="基于 xdp 的 L4LB 开发笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="zhi-jie-shi-yong-bpf-map-lookup-elem-helper-han-shu-fan-hui-de-zhi-zhen-zhi-xiang-de-shu-ju-an-quan-ma">
+<h1>#221025 直接使用 bpf_map_lookup_elem helper 函数返回的指针指向的数据安全吗？<a class="headerlink" href="#zhi-jie-shi-yong-bpf-map-lookup-elem-helper-han-shu-fan-hui-de-zhi-zhen-zhi-xiang-de-shu-ju-an-quan-ma" title="Permalink to this headline">¶</a></h1>
+<p>TL;DR 可以，必须的。</p>
+<section id="yong-hu-kong-jian-de-ku-han-shu">
+<h2>用户空间的库函数<a class="headerlink" href="#yong-hu-kong-jian-de-ku-han-shu" title="Permalink to this headline">¶</a></h2>
+<p>虽然名字一样，但用户空间和 bpf 程序调用的 bpf_map_lookup_elem 函数不一样。</p>
+<p>先看用户空间的 bpf_map_lookup_elem 函数，这个函数由 libbpf 库提供，定义位于 <em>tools/lib/bpf/bpf.h</em> 文件中。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">LIBBPF_API</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">bpf_map_lookup_elem</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">fd</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">value</span><span class="p">);</span><span class="w"></span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">bpf_map_lookup_elem</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">fd</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">value</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">union</span> <span class="nc">bpf_attr</span><span class="w"> </span><span class="n">attr</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">attr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">attr</span><span class="p">));</span><span class="w"></span>
+<span class="w">    </span><span class="n">attr</span><span class="p">.</span><span class="n">map_fd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fd</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">attr</span><span class="p">.</span><span class="n">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ptr_to_u64</span><span class="p">(</span><span class="n">key</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">attr</span><span class="p">.</span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ptr_to_u64</span><span class="p">(</span><span class="n">value</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">sys_bpf</span><span class="p">(</span><span class="n">BPF_MAP_LOOKUP_ELEM</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">attr</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">attr</span><span class="p">));</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">sys_bpf</span><span class="p">(</span><span class="k">enum</span><span class="w"> </span><span class="n">bpf_cmd</span><span class="w"> </span><span class="n">cmd</span><span class="p">,</span><span class="w"> </span><span class="k">union</span> <span class="nc">bpf_attr</span><span class="w"> </span><span class="o">*</span><span class="n">attr</span><span class="p">,</span><span class="w"></span>
+<span class="w">                        </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">syscall</span><span class="p">(</span><span class="n">__NR_bpf</span><span class="p">,</span><span class="w"> </span><span class="n">cmd</span><span class="p">,</span><span class="w"> </span><span class="n">attr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>这个函数比 bpf 程序调用的 helper 函数多了一个 value 参数，这个参数指向一块 buffer，这块 buffer 由调用方申请，用来保存返回的 value 数据。跟 helper 函数直接返回 map 中 value 的指针不一样。</p>
+<p>而且这个函数是对 bpf 系统调用的封装，所有的用户空间 bpf 函数最终都是通过 bpf 系统调用和内核的 bpf 系统打交道。不同功能对应不同的 cmd，参数通过 attr 这个 union struct 传递。</p>
+<p>内核中根据 cmd 调用到上层指定的功能函数。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">SYSCALL_DEFINE3</span><span class="p">(</span><span class="n">bpf</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="n">cmd</span><span class="p">,</span><span class="w"> </span><span class="k">union</span> <span class="nc">bpf_attr</span><span class="w"> </span><span class="n">__user</span><span class="w"> </span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="n">uattr</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">__sys_bpf</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="k">switch</span><span class="w"> </span><span class="n">cmd</span><span class="w"></span>
+<span class="w">   </span><span class="k">case</span><span class="w"> </span><span class="nl">BPF_MAP_CREATE</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">map_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">attr</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="k">case</span><span class="w"> </span><span class="nl">BPF_MAP_LOOKUP_ELEM</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">map_lookup_elem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">attr</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="w">   </span><span class="k">case</span><span class="w"> </span><span class="nl">BPF_PROG_LOAD</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_prog_load</span><span class="p">(</span><span class="o">&amp;</span><span class="n">attr</span><span class="p">,</span><span class="w"> </span><span class="n">uattr</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">break</span><span class="w"></span>
+</pre></div>
+</div>
+<p>根据 cmd bpf_map_lookup_elem 函数会调用下面这个函数来完成：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">map_lookup_elem</span><span class="p">(</span><span class="k">union</span> <span class="nc">bpf_attr</span><span class="w"> </span><span class="o">*</span><span class="n">attr</span><span class="p">)</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ufd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">attr</span><span class="o">-&gt;</span><span class="n">map_fd</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="k">struct</span> <span class="nc">fd</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fdget</span><span class="p">(</span><span class="n">ufd</span><span class="p">)</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="k">struct</span> <span class="nc">bpf_map</span><span class="w"> </span><span class="o">*</span><span class="n">map</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__bpf_map_get</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">bpf_map_copy_value</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|-</span><span class="w"> </span><span class="n">rcu_read_lock</span><span class="p">()</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|-</span><span class="w"> </span><span class="n">map</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">map_lookup_elem</span><span class="p">(</span><span class="n">map</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">)</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|-</span><span class="w"> </span><span class="n">rcu_read_unlock</span><span class="p">()</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="p">...</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">copy_to_user</span><span class="p">(</span><span class="n">uvalue</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">value_size</span><span class="p">)</span><span class="w"></span>
+</pre></div>
+</div>
+<p>如果是 BPF_MAP_TYPE_HASH 类型的 map，最后就是调用 <strong>htab_map_lookup_elem</strong> 这个函数。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">bpf_htab</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">bpf_map</span><span class="w"> </span><span class="n">map</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">struct</span> <span class="nc">bpf_map</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">bpf_map_ops</span><span class="w"> </span><span class="o">*</span><span class="n">ops</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">bpf_map_ops</span><span class="w"> </span><span class="n">htab_map_ops</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">map_lookup_elem</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">htab_map_lookup_elem</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+</pre></div>
+</div>
+<p>对于用户空间的 bpf_map_lookup_elem，它是复制数据返回（不可能直接访问到内核的数据嘛），所以没有安全问题。</p>
+</section>
+<section id="bpf-cheng-xu-te-gong-ban-helper-han-shu">
+<h2>BPF 程序特供版：Helper 函数<a class="headerlink" href="#bpf-cheng-xu-te-gong-ban-helper-han-shu" title="Permalink to this headline">¶</a></h2>
+<p>接下来，来看 bpf 程序调用的 helper 函数，helper 函数在 <em>tools/lib/bpf/bpf_helpers.h</em> 中定义，bpf 程序需要 include 这个头文件，这个头文件里 include 了一个 <em>bpf_helper_defs.h</em> 文件，这个文件是脚本根据 <em>include/uapi/linux/bpf.h</em> 文件自动生成的。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// bpf_helpers.h</span>
+<span class="c1">// include/uapi/linux/bpf.h + scripts/bpf_doc.py 自动生成下面这个文件</span>
+<span class="c1">// scripts/bpf_doc.py&quot; --header --file include/uapi/linux/bpf.h &gt; src/bpf_helper_defs.h</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;bpf_helper_defs.h&quot;</span><span class="cp"></span>
+</pre></div>
+</div>
+<p><em>include/uapi/linux/bpf.h</em> 中和 Helper 函数相关的主要是下面这些内容：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cm">/* Start of BPF helper function descriptions:</span>
+<span class="cm">* ...</span>
+<span class="cm">* void *bpf_map_lookup_elem(struct bpf_map *map, const void *key)</span>
+<span class="cm">*   Description</span>
+<span class="cm">*           Perform a lookup in *map* for an entry associated to *key*.</span>
+<span class="cm">*   Return</span>
+<span class="cm">*           Map value associated to *key*, or **NULL** if no entry was</span>
+<span class="cm">*           found.</span>
+<span class="cm">* ...</span>
+<span class="cm">*/</span><span class="w"></span>
+
+<span class="c1">//</span>
+<span class="cp">#define ___BPF_FUNC_MAPPER(FN, ctx...)  \</span>
+<span class="cp">    FN(unspec, 0, ##ctx)                \</span>
+<span class="cp">    FN(map_lookup_elem, 1, ##ctx)       \</span>
+<span class="cp">    ...</span>
+
+<span class="cp">#define __BPF_FUNC_MAPPER_APPLY(name, value, FN) FN(name),</span>
+<span class="cp">#define __BPF_FUNC_MAPPER(FN) ___BPF_FUNC_MAPPER(__BPF_FUNC_MAPPER_APPLY, FN)</span>
+
+<span class="cp">#define __BPF_ENUM_FN(x, y) BPF_FUNC_ ## x = y,</span>
+<span class="k">enum</span><span class="w"> </span><span class="n">bpf_func_id</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">___BPF_FUNC_MAPPER</span><span class="p">(</span><span class="n">__BPF_ENUM_FN</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="n">__BPF_FUNC_MAX_ID</span><span class="p">,</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+<span class="c1">// 上面这一大堆宏最终会给每个 Helper 函数定义一个如下的函数 id。</span>
+<span class="c1">// enum bpf_func_id {</span>
+<span class="c1">//     BPF_FUNC_bpf_map_lookup_elem = 1</span>
+<span class="c1">//     ...</span>
+<span class="c1">//  }</span>
+</pre></div>
+</div>
+<p><em>scripts/bpf_doc.py</em> 脚本会将上面注释中的 Helper 函数定义说明和 Helper 函数 ID 定义合并生成下面给 bpf 程序用的头文件。其中 bpf_map_lookup_elem 定义如下：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// bpf_helper_defs.h</span>
+<span class="k">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">bpf_map_lookup_elem</span><span class="p">)(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">map</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">key</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+</pre></div>
+</div>
+<p>这样，编译出来的 bpf 程序的 call 指令 BPF_CALL 的函数地址就被替换成了一个函数 id。</p>
+<p>bpf 程序加载的时候会在 verifer 中验证 bpf 指令是否安全以及将 bpf 指令即时向下编译为原生指令，这个过程中会执行函数的 link，将函数 id 翻译成最终实际的函数地址。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">bpf_prog_load</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">bpf_check</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">do_misc_fixups</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|-</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|-</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">bpf_map_ops</span><span class="w"> </span><span class="o">*</span><span class="n">ops</span><span class="p">;</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|-</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|-</span><span class="w"> </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">insn</span><span class="o">-&gt;</span><span class="n">imm</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|</span><span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="nl">BPF_FUNC_map_lookup_elem</span><span class="p">:</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|</span><span class="w">     </span><span class="n">insn</span><span class="o">-&gt;</span><span class="n">imm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">BPF_CALL_IMM</span><span class="p">(</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">map_lookup_elem</span><span class="p">);</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|</span><span class="w">     </span><span class="c1">// #define BPF_CALL_IMM(x) ((void *)(x) - (void *)__bpf_call_base)</span>
+<span class="o">|</span><span class="w">  </span><span class="o">|</span><span class="w">     </span><span class="k">continue</span><span class="p">;</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">fixup_call_args</span><span class="w"></span>
+<span class="w">    </span><span class="o">|-</span><span class="w"> </span><span class="n">jit_subprogs</span><span class="w"></span>
+<span class="w">        </span><span class="o">|-</span><span class="w"> </span><span class="n">bpf_int_jit_compile</span><span class="w"> </span><span class="c1">// arch/x86/net/bpf_jit_comp.c</span>
+<span class="w">            </span><span class="o">|-</span><span class="w"> </span><span class="n">do_jit</span><span class="w"></span>
+<span class="w">               </span><span class="o">|-</span><span class="w"> </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">insn</span><span class="o">-&gt;</span><span class="n">code</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                  </span><span class="k">case</span><span class="w"> </span><span class="n">BPF_JMP</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nl">BPF_CALL</span><span class="p">:</span><span class="w"></span>
+<span class="w">                       </span><span class="n">func</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">u8</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">__bpf_call_base</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">imm32</span><span class="p">;</span><span class="w"></span>
+<span class="w">                       </span><span class="n">emit_call</span><span class="p">(</span><span class="o">&amp;</span><span class="n">prog</span><span class="p">,</span><span class="w"> </span><span class="n">func</span><span class="p">,</span><span class="w"> </span><span class="n">image</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">addrs</span><span class="p">[</span><span class="n">i</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">])</span><span class="w"></span>
+</pre></div>
+</div>
+<p>对于 BPF_MAP_TYPE_HASH 类型的 map，这个 call 的函数地址最终被翻译成了 <code class="docutils literal notranslate"><span class="pre">htab_map_lookup_elem</span></code> 函数。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">bpf_map_ops</span><span class="w"> </span><span class="n">htab_map_ops</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">map_lookup_elem</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">htab_map_lookup_elem</span><span class="p">,</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="wen-ti-he-jie-lun">
+<h2>问题和结论<a class="headerlink" href="#wen-ti-he-jie-lun" title="Permalink to this headline">¶</a></h2>
+<p>从上面的分析来看，bpf 程序调用 bpf_map_lookup_elem （实际调用的是 htab_map_lookup_elem 函数）的时候，并没有加 rcu 读锁，而且就算加了读锁，返回的是 map 中原始数据的指针，这个指针指向的数据在函数调用结束后还能安全的使用吗？不会被更新或者删除掉吗？</p>
+<p>答案是肯定的，安全。因为虽然 bpf 程序调用 helper 函数的时候没有加读锁，但整个 bpf 程序的执行都在一个更大范围的 rcu 读锁中。这个读锁保证了 xdp 程序中访问 map 数据的安全性。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">local_bh_disable</span><span class="p">();</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+<span class="n">act</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_prog_run_xdp</span><span class="p">(</span><span class="n">xdp_prog</span><span class="p">,</span><span class="w"> </span><span class="n">xdp</span><span class="p">);</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+<span class="n">local_bh_enable</span><span class="p">();</span><span class="w"></span>
+</pre></div>
+</div>
+<p>local_bh_disable/local_bh_enable 对标记了一个 rcu 的读临界区（critical section)。</p>
+<blockquote>
+<div><p>BPF relies heavily on RCU protection for its data structures, but because the BPF program invocation happens entirely within a single local_bh_disable() section in a NAPI poll cycle, this usage is safe. The reason that this usage is safe is that readers can use anything that disables BH when updaters use call_rcu() or synchronize_rcu(). anything that disables bottom halves also marks an RCU-bh read-side critical section, including local_bh_disable() and local_bh_enable(), local_irq_save() and local_irq_restore(), and so on</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://lwn.net/ml/bpf/20210624160609.292325-2-toke&#64;redhat.com/">https://lwn.net/ml/bpf/20210624160609.292325-2-toke&#64;redhat.com/</a></p></li>
+<li><p><a class="reference external" href="https://github.com/torvalds/linux/blob/master/Documentation/RCU/Design/Requirements/Requirements.rst#bottom-half-flavor-historical">https://github.com/torvalds/linux/blob/master/Documentation/RCU/Design/Requirements/Requirements.rst#bottom-half-flavor-historical</a></p></li>
+</ul>
+</div></blockquote>
+<img alt="../_images/bpf-map-rcu.svg" src="../_images/bpf-map-rcu.svg" /><p>References:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://man7.org/linux/man-pages/man2/bpf.2.html">https://man7.org/linux/man-pages/man2/bpf.2.html</a></p></li>
+<li><p><a class="reference external" href="https://man7.org/linux/man-pages/man7/bpf-helpers.7.html">https://man7.org/linux/man-pages/man7/bpf-helpers.7.html</a></p></li>
+<li><p><a class="reference external" href="https://github.com/xdp-project/xdp-tutorial/issues/203#issuecomment-817695271">https://github.com/xdp-project/xdp-tutorial/issues/203#issuecomment-817695271</a></p></li>
+<li><p><a class="reference external" href="https://open-nfp.org/the-classroom/demystify-bpf-jit-compiler/">https://open-nfp.org/the-classroom/demystify-bpf-jit-compiler/</a></p></li>
+</ul>
+</section>
+<section id="ru-he-tian-jia-yi-ge-xin-de-bpf-helper-han-shu">
+<h2>如何添加一个新的 BPF Helper 函数<a class="headerlink" href="#ru-he-tian-jia-yi-ge-xin-de-bpf-helper-han-shu" title="Permalink to this headline">¶</a></h2>
+<p>bpf_ktime_get_tai_ns 这个函数比较简单，以其为例。<a class="reference external" href="https://github.com/torvalds/linux/commit/c8996c98f703b09afe77a1d247dae691c9849dc1">https://github.com/torvalds/linux/commit/c8996c98f703b09afe77a1d247dae691c9849dc1</a></p>
+<p>第一步，如前所述，在 <em>include/uapi/linux/bpf.h</em> 中添加新 Helper 函数的调用描述文档以及 函数 ID。</p>
+<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span><span class="gh">diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h</span>
+<span class="gu">@@ -5341,6 +5341,18 @@ union bpf_attr {</span>
+  *         **-EACCES** if the SYN cookie is not valid.
+  *
+  *         **-EPROTONOSUPPORT** if CONFIG_IPV6 is not builtin.
+<span class="gi">+ *</span>
+<span class="gi">+ * u64 bpf_ktime_get_tai_ns(void)</span>
+<span class="gi">+ * Description</span>
+<span class="gi">+ *         A nonsettable system-wide clock derived from wall-clock time but</span>
+<span class="gi">+ *         ignoring leap seconds.  This clock does not experience</span>
+<span class="gi">+ *         discontinuities and backwards jumps caused by NTP inserting leap</span>
+<span class="gi">+ *         seconds as CLOCK_REALTIME does.</span>
+<span class="gi">+ *</span>
+<span class="gi">+ *         See: **clock_gettime**\ (**CLOCK_TAI**)</span>
+<span class="gi">+ * Return</span>
+<span class="gi">+ *         Current *ktime*.</span>
+<span class="gi">+ *</span>
+  */
+ #define __BPF_FUNC_MAPPER(FN)              \
+    FN(unspec),                     \
+<span class="gu">@@ -5551,6 +5563,7 @@</span>
+    FN(tcp_raw_gen_syncookie_ipv6), \
+    FN(tcp_raw_check_syncookie_ipv4),       \
+    FN(tcp_raw_check_syncookie_ipv6),       \
+<span class="gi">+   FN(ktime_get_tai_ns),           \</span>
+    /* */
+</pre></div>
+</div>
+<p>第二步，实现这个函数，这部分一般通过 <code class="docutils literal notranslate"><span class="pre">BPF_CALL_*</span></code> 宏来定义并实现。<code class="docutils literal notranslate"><span class="pre">bpf_ktime_get_tai_ns</span></code> 比较简单，没有参数，直接使用 <code class="docutils literal notranslate"><span class="pre">BPF_CALL_0</span></code> 宏就行。</p>
+<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span><span class="gh">diff --git a/kernel/bpf/helpers.c b/kernel/bpf/helpers.c</span>
+<span class="gu">@@ -198,6 +198,18 @@</span>
+<span class="gi">+BPF_CALL_0(bpf_ktime_get_tai_ns)</span>
+<span class="gi">+{</span>
+<span class="gi">+   /* NMI safe access to clock tai */</span>
+<span class="gi">+   return ktime_get_tai_fast_ns();</span>
+<span class="gi">+}</span>
+<span class="gi">+</span>
+</pre></div>
+</div>
+<p>第三步，通过一个 <code class="docutils literal notranslate"><span class="pre">bpf_func_proto</span></code> 类型的结构体将这个 BPF Helper 函数详细的调用方法：有几个参数、参数是什么类型的、参数大小限制啊、返回值是什么样的……这些信息提供给 BPF Verifier，Verfier 加载 BPF 程序遇到 <code class="docutils literal notranslate"><span class="pre">bpf_ktime_get_tai_ns</span></code> 调用的时候，需要这些信息来判断调用是否正确合法。</p>
+<p>另外，每种类型的 BPF 程序都有一个 <code class="docutils literal notranslate"><span class="pre">*_func_proto</span></code> 函数（比如 XDP 就是 <code class="docutils literal notranslate"><span class="pre">xdp_func_proto</span></code>），这个函数传入函数 ID 返回该 ID 对应的 Helper 函数的 <code class="docutils literal notranslate"><span class="pre">bpf_func_proto</span></code> 结构体指针，Helper 函数可以在哪些类型的 BPF 程序中调用，就需要在这些类型对应的 <code class="docutils literal notranslate"><span class="pre">*_func_proto</span></code> 函数中添加一个 switch 分支将新加的函数加上。如果所有的 BPF 类型程序都可以调用，可以加入特殊的 <code class="docutils literal notranslate"><span class="pre">bpf_base_func_proto</span></code> 函数中，不用所有的 <code class="docutils literal notranslate"><span class="pre">*_func_proto</span></code> 中都加一遍。</p>
+<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span><span class="gh">diff --git a/include/linux/bpf.h b/include/linux/bpf.h</span>
+<span class="gu">@@ -2349,6 +2349,7 @@</span>
+ extern const struct bpf_func_proto bpf_tail_call_proto;
+<span class="gi">+extern const struct bpf_func_proto bpf_ktime_get_tai_ns_proto;</span>
+ extern const struct bpf_func_proto bpf_get_current_comm_proto;
+
+<span class="gh">diff --git a/kernel/bpf/core.c b/kernel/bpf/core.c</span>
+<span class="gu">@@ -2623,6 +2623,7 @@</span>
+ const struct bpf_func_proto bpf_ktime_get_coarse_ns_proto __weak;
+<span class="gi">+const struct bpf_func_proto bpf_ktime_get_tai_ns_proto __weak;</span>
+
+ const struct bpf_func_proto bpf_get_current_uid_gid_proto __weak;
+
+<span class="gh">diff --git a/kernel/bpf/helpers.c b/kernel/bpf/helpers.c</span>
+<span class="gu">@@ -198,6 +198,18 @@</span>
+<span class="gi">+const struct bpf_func_proto bpf_ktime_get_tai_ns_proto = {</span>
+<span class="gi">+   .func           = bpf_ktime_get_tai_ns,</span>
+<span class="gi">+   .gpl_only       = false,</span>
+<span class="gi">+   .ret_type       = RET_INTEGER,</span>
+<span class="gi">+};</span>
+<span class="gi">+</span>
+<span class="gu">@@ -1617,6 +1629,8 @@ bpf_base_func_proto(enum bpf_func_id func_id)</span>
+        return &amp;bpf_ktime_get_ns_proto;
+    case BPF_FUNC_ktime_get_boot_ns:
+        return &amp;bpf_ktime_get_boot_ns_proto;
+<span class="gi">+   case BPF_FUNC_ktime_get_tai_ns:</span>
+<span class="gi">+           return &amp;bpf_ktime_get_tai_ns_proto;</span>
+    case BPF_FUNC_ringbuf_output:
+        return &amp;bpf_ringbuf_output_proto;
+    case BPF_FUNC_ringbuf_reserve:
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#221025 直接使用 bpf_map_lookup_elem helper 函数返回的指针指向的数据安全吗？</a><ul>
+<li><a class="reference internal" href="#yong-hu-kong-jian-de-ku-han-shu">用户空间的库函数</a></li>
+<li><a class="reference internal" href="#bpf-cheng-xu-te-gong-ban-helper-han-shu">BPF 程序特供版：Helper 函数</a></li>
+<li><a class="reference internal" href="#wen-ti-he-jie-lun">问题和结论</a></li>
+<li><a class="reference internal" href="#ru-he-tian-jia-yi-ge-xin-de-bpf-helper-han-shu">如何添加一个新的 BPF Helper 函数</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/221025.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/221025.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
