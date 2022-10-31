@@ -20,10 +20,10 @@ Unimog/GLB 文档中对于大包模式的说明
     -- GLB https://github.com/github/glb-director/blob/master/docs/README.md
 
 
-MTU 和 MSS 
+MTU 和 MSS
 --------------
 
-MTU(Maximum Transmission Unit)，是一个以太网包/IP 包能够传输的最大数据长度。MSS(TCP Maximum Segment Size)，是一个 TCP 包能够传输的最大数据长度。它们的关系如下图所示：
+MTU(Maximum Transmission Unit)，是一个以太网包 /IP 包能够传输的最大数据长度。MSS(TCP Maximum Segment Size)，是一个 TCP 包能够传输的最大数据长度。它们的关系如下图所示：
 
 .. image:: images/mtu-mss.png
 
@@ -90,7 +90,7 @@ tcpdump 出的包的大小为什么大于 MTU？
 2. 使用 ``ip route add default via <gateway> mtu 1500`` 修改默认路由的 MTU 为 1500。
 3. 添加路由修改东西向流量的 MTU 为 9000 ``ip route add <cidr> via <gateway> mtu 9000`` 。
 
-数据中心的交换机/路由器也需要相应的配置。
+数据中心的交换机 / 路由器也需要相应的配置。
 
 - https://wiki.archlinux.org/index.php/jumbo_frames
 - https://tldp.org/HOWTO/Adv-Routing-HOWTO/lartc.cookbook.mtu-discovery.html
@@ -136,7 +136,7 @@ https://elixir.bootlin.com/linux/v5.19/source/drivers/net/ethernet/intel/ixgbe/i
 
     `Intel 82599 datasheet.pdf 中搜 0x04268 <https://www.intel.com/content/www/us/en/embedded/products/networking/82599-10-gbe-controller-datasheet.html?asset=2377>`_
 
-东西向/南北向流量是什么意思？
+东西向 / 南北向流量是什么意思？
 ------------------------------
 
 术语。网络中东西向指的是数据中心服务器之间的流量，南北向指的是客户端和数据中心之间的流量。
@@ -201,12 +201,15 @@ https://www.tcpdump.org/manpages/pcap-filter.7.html
 
 通过以下 tcpdump 命令可以观察上面的规则是否确实修改了 syn-ack 包的 mss。
 
-.. code-block:: console
+.. code-block:: bash
 
     # 过滤 syn，syn-ack 包
-    tcpdump "tcp[tcpflags] & tcp-syn != 0"
+    tcpdump "tcp[tcpflags]&tcp-syn != 0"
     # 过滤 syn-ack 包
-    tcpdump "tcp[tcpflags] & (tcp-syn|tcp-ack) == tcp-syn|tcp-ack"
+    tcpdump "tcp[tcpflags]&(tcp-syn|tcp-ack) == tcp-syn|tcp-ack"
+    # 过滤 ipv6 的 syn-ack 包，tcp[tcpflags] 不支持 ipv6
+    # 40 是默认 IPv6 头的长度，13 是 tcpflags 相对于 tcp 头开始的偏移量
+    tcpdump "tcp and ip6[40+13]&(tcp-syn|tcp-ack) == tcp-syn|tcp-ack"
 
 - https://ipset.netfilter.org/ipset.man.html
 - https://www.linuxtopia.org/Linux_Firewall_iptables/x4700.html
@@ -216,3 +219,38 @@ https://www.tcpdump.org/manpages/pcap-filter.7.html
 .. note::
 
    iptables 也可以直接按 IP 段过滤，通过 ``-m iprange --src-range IP-IP`` 来过滤，我们需要能够动态修改 IP 的能力，所以使用了 ipset。
+
+pmtud 不同系统不一样的默认行为
+-----------------------------------
+
+Mac OSX 的 TCP 协议栈默认开启了 pmtud，可以自适应调节 mss。
+
+.. code-block:: console
+
+   $ sysctl -a|grep pmtu
+   net.inet.tcp.pmtud_blackhole_detection: 1
+   net.inet.tcp.pmtud_blackhole_mss: 1200
+
+如下是一个 OSX 的 POST 请求，可以看到协议栈在等待一段时间没有 ack 回来后，降低了 mss 并重传了 POST 的数据包。
+
+.. code-block:: console
+
+   17:20:14.267665 IP 172.19.124.27.65277 > 113.240.91.50.80: Flags [P.], seq 5003:5573, ack 24460, win 4096, length 570: HTTP: POST /tc700/jpyadmin/files/uploads.html HTTP/1.1
+
+   17:20:14.267763 IP 172.19.124.27.65277 > 113.240.91.50.80: Flags [.], seq 5573:7025, ack 24460, win 4096, length 1452: HTTP
+   17:20:14.267765 IP 172.19.124.27.65277 > 113.240.91.50.80: Flags [.], seq 7025:8477, ack 24460, win 4096, length 1452: HTTP
+   17:20:14.267766 IP 172.19.124.27.65277 > 113.240.91.50.80: Flags [.], seq 8477:9929, ack 24460, win 4096, length 1452: HTTP
+   17:20:14.267767 IP 172.19.124.27.65277 > 113.240.91.50.80: Flags [.], seq 9929:11381, ack 24460, win 4096, length 1452: HTTP
+   17:20:14.267768 IP 172.19.124.27.65277 > 113.240.91.50.80: Flags [.], seq 11381:12833, ack 24460, win 4096, length 1452: HTTP
+   17:20:14.267769 IP 172.19.124.27.65277 > 113.240.91.50.80: Flags [.], seq 12833:14285, ack 24460, win 4096, length 1452: HTTP
+   17:20:14.301647 IP 113.240.91.50.80 > 172.19.124.27.65277: Flags [.], ack 5573, win 210, length 0
+   17:20:14.349390 IP 172.19.124.27.65277 > 113.240.91.50.80: Flags [.], seq 14285:15737, ack 24460, win 4096, length 1452: HTTP
+   17:20:14.600227 IP 172.19.124.27.65277 > 113.240.91.50.80: Flags [.], seq 5573:7025, ack 24460, win 4096, length 1452: HTTP
+
+   17:20:14.901363 IP 172.19.124.27.65277 > 113.240.91.50.80: Flags [.], seq 5573:6773, ack 24460, win 4096, length 1200: HTTP
+   17:20:14.936257 IP 113.240.91.50.80 > 172.19.124.27.65277: Flags [.], ack 6773, win 206, length 0
+   ...
+
+Linux 默认没有开启，如果是实现的服务端，客户端不在我们的控制下，应该假定客户端没有开启 pmtud。
+
+不同的默认行为可能会导致一些请求在有些系统上失败，但在另外的系统上的却可以成功。

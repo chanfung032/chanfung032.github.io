@@ -52,7 +52,7 @@
 </section>
 <section id="mtu-he-mss">
 <h2>MTU 和 MSS<a class="headerlink" href="#mtu-he-mss" title="Permalink to this headline">¶</a></h2>
-<p>MTU(Maximum Transmission Unit)，是一个以太网包/IP 包能够传输的最大数据长度。MSS(TCP Maximum Segment Size)，是一个 TCP 包能够传输的最大数据长度。它们的关系如下图所示：</p>
+<p>MTU(Maximum Transmission Unit)，是一个以太网包 /IP 包能够传输的最大数据长度。MSS(TCP Maximum Segment Size)，是一个 TCP 包能够传输的最大数据长度。它们的关系如下图所示：</p>
 <img alt="../_images/mtu-mss.png" src="../_images/mtu-mss.png" />
 <p>默认以太网包的 MTU 为 1500，查看网卡当前的 MTU：</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ip link
@@ -107,7 +107,7 @@ ethtool -K eth0 gso off
 <li><p>使用 <code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">route</span> <span class="pre">add</span> <span class="pre">default</span> <span class="pre">via</span> <span class="pre">&lt;gateway&gt;</span> <span class="pre">mtu</span> <span class="pre">1500</span></code> 修改默认路由的 MTU 为 1500。</p></li>
 <li><p>添加路由修改东西向流量的 MTU 为 9000 <code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">route</span> <span class="pre">add</span> <span class="pre">&lt;cidr&gt;</span> <span class="pre">via</span> <span class="pre">&lt;gateway&gt;</span> <span class="pre">mtu</span> <span class="pre">9000</span></code> 。</p></li>
 </ol>
-<p>数据中心的交换机/路由器也需要相应的配置。</p>
+<p>数据中心的交换机 / 路由器也需要相应的配置。</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://wiki.archlinux.org/index.php/jumbo_frames">https://wiki.archlinux.org/index.php/jumbo_frames</a></p></li>
 <li><p><a class="reference external" href="https://tldp.org/HOWTO/Adv-Routing-HOWTO/lartc.cookbook.mtu-discovery.html">https://tldp.org/HOWTO/Adv-Routing-HOWTO/lartc.cookbook.mtu-discovery.html</a></p></li>
@@ -146,7 +146,7 @@ ethtool -K eth0 gso off
 </div></blockquote>
 </section>
 <section id="dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si">
-<h2>东西向/南北向流量是什么意思？<a class="headerlink" href="#dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si" title="Permalink to this headline">¶</a></h2>
+<h2>东西向 / 南北向流量是什么意思？<a class="headerlink" href="#dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si" title="Permalink to this headline">¶</a></h2>
 <p>术语。网络中东西向指的是数据中心服务器之间的流量，南北向指的是客户端和数据中心之间的流量。</p>
 <a class="reference internal image-reference" href="../_images/sn-ew-traffic.png"><img alt="../_images/sn-ew-traffic.png" src="../_images/sn-ew-traffic.png" style="width: 400px;" /></a>
 </section>
@@ -215,10 +215,13 @@ iptables -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m <
 </pre></div>
 </div>
 <p>通过以下 tcpdump 命令可以观察上面的规则是否确实修改了 syn-ack 包的 mss。</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>过滤 syn，syn-ack 包
-<span class="go">tcpdump &quot;tcp[tcpflags] &amp; tcp-syn != 0&quot;</span>
-<span class="gp"># </span>过滤 syn-ack 包
-<span class="go">tcpdump &quot;tcp[tcpflags] &amp; (tcp-syn|tcp-ack) == tcp-syn|tcp-ack&quot;</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 过滤 syn，syn-ack 包</span>
+tcpdump <span class="s2">&quot;tcp[tcpflags]&amp;tcp-syn != 0&quot;</span>
+<span class="c1"># 过滤 syn-ack 包</span>
+tcpdump <span class="s2">&quot;tcp[tcpflags]&amp;(tcp-syn|tcp-ack) == tcp-syn|tcp-ack&quot;</span>
+<span class="c1"># 过滤 ipv6 的 syn-ack 包，tcp[tcpflags] 不支持 ipv6</span>
+<span class="c1"># 40 是默认 IPv6 头的长度，13 是 tcpflags 相对于 tcp 头开始的偏移量</span>
+tcpdump <span class="s2">&quot;tcp and ip6[40+13]&amp;(tcp-syn|tcp-ack) == tcp-syn|tcp-ack&quot;</span>
 </pre></div>
 </div>
 <ul class="simple">
@@ -230,6 +233,35 @@ iptables -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m <
 <p class="admonition-title">Note</p>
 <p>iptables 也可以直接按 IP 段过滤，通过 <code class="docutils literal notranslate"><span class="pre">-m</span> <span class="pre">iprange</span> <span class="pre">--src-range</span> <span class="pre">IP-IP</span></code> 来过滤，我们需要能够动态修改 IP 的能力，所以使用了 ipset。</p>
 </div>
+</section>
+<section id="pmtud-bu-tong-xi-tong-bu-yi-yang-de-mo-ren-xing-wei">
+<h2>pmtud 不同系统不一样的默认行为<a class="headerlink" href="#pmtud-bu-tong-xi-tong-bu-yi-yang-de-mo-ren-xing-wei" title="Permalink to this headline">¶</a></h2>
+<p>Mac OSX 的 TCP 协议栈默认开启了 pmtud，可以自适应调节 mss。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>sysctl -a<span class="p">|</span>grep pmtu
+<span class="go">net.inet.tcp.pmtud_blackhole_detection: 1</span>
+<span class="go">net.inet.tcp.pmtud_blackhole_mss: 1200</span>
+</pre></div>
+</div>
+<p>如下是一个 OSX 的 POST 请求，可以看到协议栈在等待一段时间没有 ack 回来后，降低了 mss 并重传了 POST 的数据包。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">17:20:14.267665 IP 172.19.124.27.65277 &gt; 113.240.91.50.80: Flags [P.], seq 5003:5573, ack 24460, win 4096, length 570: HTTP: POST /tc700/jpyadmin/files/uploads.html HTTP/1.1</span>
+
+<span class="go">17:20:14.267763 IP 172.19.124.27.65277 &gt; 113.240.91.50.80: Flags [.], seq 5573:7025, ack 24460, win 4096, length 1452: HTTP</span>
+<span class="go">17:20:14.267765 IP 172.19.124.27.65277 &gt; 113.240.91.50.80: Flags [.], seq 7025:8477, ack 24460, win 4096, length 1452: HTTP</span>
+<span class="go">17:20:14.267766 IP 172.19.124.27.65277 &gt; 113.240.91.50.80: Flags [.], seq 8477:9929, ack 24460, win 4096, length 1452: HTTP</span>
+<span class="go">17:20:14.267767 IP 172.19.124.27.65277 &gt; 113.240.91.50.80: Flags [.], seq 9929:11381, ack 24460, win 4096, length 1452: HTTP</span>
+<span class="go">17:20:14.267768 IP 172.19.124.27.65277 &gt; 113.240.91.50.80: Flags [.], seq 11381:12833, ack 24460, win 4096, length 1452: HTTP</span>
+<span class="go">17:20:14.267769 IP 172.19.124.27.65277 &gt; 113.240.91.50.80: Flags [.], seq 12833:14285, ack 24460, win 4096, length 1452: HTTP</span>
+<span class="go">17:20:14.301647 IP 113.240.91.50.80 &gt; 172.19.124.27.65277: Flags [.], ack 5573, win 210, length 0</span>
+<span class="go">17:20:14.349390 IP 172.19.124.27.65277 &gt; 113.240.91.50.80: Flags [.], seq 14285:15737, ack 24460, win 4096, length 1452: HTTP</span>
+<span class="go">17:20:14.600227 IP 172.19.124.27.65277 &gt; 113.240.91.50.80: Flags [.], seq 5573:7025, ack 24460, win 4096, length 1452: HTTP</span>
+
+<span class="go">17:20:14.901363 IP 172.19.124.27.65277 &gt; 113.240.91.50.80: Flags [.], seq 5573:6773, ack 24460, win 4096, length 1200: HTTP</span>
+<span class="go">17:20:14.936257 IP 113.240.91.50.80 &gt; 172.19.124.27.65277: Flags [.], ack 6773, win 206, length 0</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+<p>Linux 默认没有开启，如果是实现的服务端，客户端不在我们的控制下，应该假定客户端没有开启 pmtud。</p>
+<p>不同的默认行为可能会导致一些请求在有些系统上失败，但在另外的系统上的却可以成功。</p>
 </section>
 </section>
 
@@ -247,9 +279,10 @@ iptables -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m <
 <li><a class="reference internal" href="#mtu-he-mss">MTU 和 MSS</a></li>
 <li><a class="reference internal" href="#tcpdump-chu-de-bao-de-da-xiao-wei-shen-me-da-yu-mtu">tcpdump 出的包的大小为什么大于 MTU？</a></li>
 <li><a class="reference internal" href="#li-yong-lu-you-gui-ze-fen-bie-pei-zhi-shu-ju-zhong-xin-nei-wai-liu-liang-de-mtu">利用路由规则分别配置数据中心内外流量的 MTU</a></li>
-<li><a class="reference internal" href="#dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si">东西向/南北向流量是什么意思？</a></li>
+<li><a class="reference internal" href="#dong-xi-xiang-nan-bei-xiang-liu-liang-shi-shen-me-yi-si">东西向 / 南北向流量是什么意思？</a></li>
 <li><a class="reference internal" href="#tcpdump-da-yin-chu-de-ji-ge-bu-tong-length-zhi-jian-de-huan-suan">tcpdump 打印出的几个不同 length 之间的换算</a></li>
 <li><a class="reference internal" href="#tong-guo-ipset-iptables-xiu-gai-bu-fen-ip-de-tcp-mss">通过 ipset + iptables 修改部分 IP 的 TCP MSS</a></li>
+<li><a class="reference internal" href="#pmtud-bu-tong-xi-tong-bu-yi-yang-de-mo-ren-xing-wei">pmtud 不同系统不一样的默认行为</a></li>
 </ul>
 </li>
 </ul>
