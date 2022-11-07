@@ -160,6 +160,87 @@
 <li><p><a class="reference external" href="https://vincent.bernat.ch/en/blog/2017-ipv6-route-lookup-linux">https://vincent.bernat.ch/en/blog/2017-ipv6-route-lookup-linux</a></p></li>
 </ul>
 </section>
+<section id="lu-you-huan-cun">
+<h2>路由缓存<a class="headerlink" href="#lu-you-huan-cun" title="Permalink to this headline">¶</a></h2>
+<p>直接查询上面这个路由表（fib_lookup）的性能不太好，所以内核在查询路由上有缓存机制。</p>
+<p><code class="docutils literal notranslate"><span class="pre">ip_route_input_noref</span></code>、 <code class="docutils literal notranslate"><span class="pre">ip_route_output_ports</span></code> 等接口并不会直接返回 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">fib_info</span></code> 的数据，而是返回 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">rtable</span></code> 这个路由表缓存结构体（IPv6 的为 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">rt6_info</span></code>）。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">rtable</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="k">struct</span> <span class="nc">dst_entry</span><span class="w"> </span><span class="n">dst</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="kt">int</span><span class="w">          </span><span class="n">rt_genid</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">rt_flags</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="n">__u16</span><span class="w">        </span><span class="n">rt_type</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="n">__u8</span><span class="w">         </span><span class="n">rt_is_input</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="n">__u8</span><span class="w">         </span><span class="n">rt_uses_gateway</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="kt">int</span><span class="w">          </span><span class="n">rt_iif</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="n">u8</span><span class="w">           </span><span class="n">rt_gw_family</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">struct</span> <span class="nc">rt6_info</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="k">struct</span> <span class="nc">dst_entry</span><span class="w"> </span><span class="n">dst</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dst</span></code> 中包含了路由中和协议无关的部分，比如指向下一跳邻居信息的指针。很多跟路由相关的接口会使用 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dst_entry*</span></code> 作为参数，是把这个作为了 <code class="docutils literal notranslate"><span class="pre">rtable</span></code>、 <code class="docutils literal notranslate"><span class="pre">rt6_info</span></code> 的基类指针使用了，要访问 <code class="docutils literal notranslate"><span class="pre">rtable</span></code> 的数据时候直接强制转换下就行了。例如：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">INDIRECT_CALLABLE_SCOPE</span><span class="w"> </span><span class="k">struct</span> <span class="nc">dst_entry</span><span class="w"> </span><span class="o">*</span><span class="n">ipv4_dst_check</span><span class="p">(</span><span class="k">struct</span> <span class="nc">dst_entry</span><span class="w"> </span><span class="o">*</span><span class="n">dst</span><span class="p">,</span><span class="w"></span>
+<span class="w">                     </span><span class="n">u32</span><span class="w"> </span><span class="n">cookie</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="k">struct</span> <span class="nc">rtable</span><span class="w"> </span><span class="o">*</span><span class="n">rt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">struct</span> <span class="nc">rtable</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">dst</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>这个路由缓存信息一般会保存到 sk 结构体中，一个连接/会话只需要查询一次路由缓存信息即可。这个在收包路径上就是前文提到的  <a class="reference internal" href="220827-network-rx-skb-deliver.html#sysctl-ip-early-demux"><span class="std std-ref">sysctl_ip_early_demux</span></a> 优化。</p>
+<p>使用缓存路由信息之前需要调用 <code class="docutils literal notranslate"><span class="pre">dst_check</span></code> 函数验证下这条路由缓存是否已经失效，如果失效，需要调用 <code class="docutils literal notranslate"><span class="pre">dst_release</span></code> 释放该路由，并重新查询路由表。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">udp_v4_early_demux</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+
+<span class="w">   </span><span class="n">dst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rcu_dereference</span><span class="p">(</span><span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_rx_dst</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">dst</span><span class="p">)</span><span class="w"></span>
+<span class="w">         </span><span class="n">dst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dst_check</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="k">struct</span> <span class="nc">dst_entry</span><span class="w"> </span><span class="o">*</span><span class="n">dst_check</span><span class="p">(</span><span class="k">struct</span> <span class="nc">dst_entry</span><span class="w"> </span><span class="o">*</span><span class="n">dst</span><span class="p">,</span><span class="w"> </span><span class="n">u32</span><span class="w"> </span><span class="n">cookie</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">dst</span><span class="o">-&gt;</span><span class="n">obsolete</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="n">dst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">INDIRECT_CALL_INET</span><span class="p">(</span><span class="n">dst</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">check</span><span class="p">,</span><span class="w"> </span><span class="n">ip6_dst_check</span><span class="p">,</span><span class="w"></span>
+<span class="w">               </span><span class="n">ipv4_dst_check</span><span class="p">,</span><span class="w"> </span><span class="n">dst</span><span class="p">,</span><span class="w"> </span><span class="n">cookie</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="n">dst</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>查询结果再更新到路由缓存中。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">__udp4_lib_rcv</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">udp_table</span><span class="w"> </span><span class="o">*</span><span class="n">udptable</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="kt">int</span><span class="w"> </span><span class="n">proto</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">unlikely</span><span class="p">(</span><span class="n">rcu_dereference</span><span class="p">(</span><span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_rx_dst</span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">dst</span><span class="p">))</span><span class="w"></span>
+<span class="w">         </span><span class="n">udp_sk_rx_dst_set</span><span class="p">(</span><span class="n">sk</span><span class="p">,</span><span class="w"> </span><span class="n">dst</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="kt">bool</span><span class="w"> </span><span class="nf">udp_sk_rx_dst_set</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sock</span><span class="w"> </span><span class="o">*</span><span class="n">sk</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">dst_entry</span><span class="w"> </span><span class="o">*</span><span class="n">dst</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="k">struct</span> <span class="nc">dst_entry</span><span class="w"> </span><span class="o">*</span><span class="n">old</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">dst_hold_safe</span><span class="p">(</span><span class="n">dst</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">old</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">xchg</span><span class="p">((</span><span class="n">__force</span><span class="w"> </span><span class="k">struct</span> <span class="nc">dst_entry</span><span class="w"> </span><span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">sk</span><span class="o">-&gt;</span><span class="n">sk_rx_dst</span><span class="p">,</span><span class="w"> </span><span class="n">dst</span><span class="p">);</span><span class="w"></span>
+<span class="w">      </span><span class="n">dst_release</span><span class="p">(</span><span class="n">old</span><span class="p">);</span><span class="w"></span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">old</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">dst</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="p">}</span><span class="w"></span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
 </section>
 
 
@@ -176,6 +257,7 @@
 <li><a class="reference internal" href="#dao-di-liang-ge-hai-shi-yi-ge-lu-you-biao">到底两个还是一个路由表</a></li>
 <li><a class="reference internal" href="#lu-you-tracing">路由 tracing</a></li>
 <li><a class="reference internal" href="#lu-you-biao-de-cun-chu-shu-ju-jie-gou-lpc-trie">路由表的存储数据结构 LPC-trie</a></li>
+<li><a class="reference internal" href="#lu-you-huan-cun">路由缓存</a></li>
 </ul>
 </li>
 </ul>

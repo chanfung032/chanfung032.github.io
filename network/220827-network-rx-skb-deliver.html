@@ -307,7 +307,7 @@
                         <span class="o">|-</span> <span class="n">ipprot</span><span class="o">-&gt;</span><span class="n">handler</span><span class="o">/</span><span class="n">tcp_v4_rcv</span><span class="o">/</span><span class="n">udp_rcv</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">sysctl_ip_early_demux</span></code> 是一个查询路由的优化，默认一般都是打开的。这个优化会直接调用上面传输层的函数提前获取这个网络包归属的 socket，从里面获取缓存的路由，不用没次都查路由表了（比较慢）。</p>
+<p id="sysctl-ip-early-demux"><code class="docutils literal notranslate"><span class="pre">sysctl_ip_early_demux</span></code> 是一个查询路由的优化，默认一般都是打开的。这个优化会直接调用上面传输层的函数提前获取这个网络包归属的 socket，从里面获取缓存的路由，不用没次都查路由表了（比较慢）。</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>sysctl -ar <span class="s1">&#39;ip_early_demux&#39;</span>
 <span class="go">net.ipv4.ip_early_demux = 1</span>
 </pre></div>

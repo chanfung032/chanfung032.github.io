@@ -163,3 +163,94 @@ LPC-trie 可以通过下面的命令打印出来：
 - https://vincent.bernat.ch/en/blog/2017-ipv4-route-lookup-linux
   本文中 LPC-trie 这部分主要翻译自这篇文章。
 - https://vincent.bernat.ch/en/blog/2017-ipv6-route-lookup-linux
+
+路由缓存
+-------------------------
+
+直接查询上面这个路由表（fib_lookup）的性能不太好，所以内核在查询路由上有缓存机制。
+
+``ip_route_input_noref``、 ``ip_route_output_ports`` 等接口并不会直接返回 ``struct fib_info`` 的数据，而是返回 ``struct rtable`` 这个路由表缓存结构体（IPv6 的为 ``struct rt6_info``）。
+
+.. code-block:: c
+
+   struct rtable {
+      struct dst_entry dst;
+
+      int          rt_genid;
+      unsigned int rt_flags;
+      __u16        rt_type;
+      __u8         rt_is_input;
+      __u8         rt_uses_gateway;
+
+      int          rt_iif;
+
+      u8           rt_gw_family;
+      ...
+   };
+
+   struct rt6_info {
+      struct dst_entry dst;
+      ...
+   };
+
+``struct dst`` 中包含了路由中和协议无关的部分，比如指向下一跳邻居信息的指针。很多跟路由相关的接口会使用 ``struct dst_entry*`` 作为参数，是把这个作为了 ``rtable``、 ``rt6_info`` 的基类指针使用了，要访问 ``rtable`` 的数据时候直接强制转换下就行了。例如：
+
+.. code-block:: c
+
+   INDIRECT_CALLABLE_SCOPE struct dst_entry *ipv4_dst_check(struct dst_entry *dst,
+                        u32 cookie)
+   {
+      struct rtable *rt = (struct rtable *) dst;
+      ...
+   }
+
+这个路由缓存信息一般会保存到 sk 结构体中，一个连接/会话只需要查询一次路由缓存信息即可。这个在收包路径上就是前文提到的  :ref:`sysctl_ip_early_demux <sysctl_ip_early_demux>` 优化。
+
+使用缓存路由信息之前需要调用 ``dst_check`` 函数验证下这条路由缓存是否已经失效，如果失效，需要调用 ``dst_release`` 释放该路由，并重新查询路由表。
+
+.. code-block:: c
+
+   int udp_v4_early_demux(struct sk_buff *skb)
+   {
+      ...
+
+      dst = rcu_dereference(sk->sk_rx_dst);
+
+      if (dst)
+            dst = dst_check(dst, 0);
+
+      ...
+   }
+
+   static inline struct dst_entry *dst_check(struct dst_entry *dst, u32 cookie)
+   {
+      if (dst->obsolete)
+         dst = INDIRECT_CALL_INET(dst->ops->check, ip6_dst_check,
+                  ipv4_dst_check, dst, cookie);
+      return dst;
+   }
+
+查询结果再更新到路由缓存中。
+
+.. code-block:: c
+
+   int __udp4_lib_rcv(struct sk_buff *skb, struct udp_table *udptable,
+		   int proto)
+   {
+      ...
+      if (unlikely(rcu_dereference(sk->sk_rx_dst) != dst))
+            udp_sk_rx_dst_set(sk, dst);
+      ...
+   }
+
+   bool udp_sk_rx_dst_set(struct sock *sk, struct dst_entry *dst)
+   {
+      struct dst_entry *old;
+
+      if (dst_hold_safe(dst)) {
+         old = xchg((__force struct dst_entry **)&sk->sk_rx_dst, dst);
+         dst_release(old);
+         return old != dst;
+      }
+      return false;
+   }

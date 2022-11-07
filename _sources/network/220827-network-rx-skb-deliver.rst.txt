@@ -305,6 +305,8 @@ L3 网络层
                             |- ipprot = inet_protos[protocol]
                             |- ipprot->handler/tcp_v4_rcv/udp_rcv(skb)
 
+.. _sysctl_ip_early_demux:
+
 ``sysctl_ip_early_demux`` 是一个查询路由的优化，默认一般都是打开的。这个优化会直接调用上面传输层的函数提前获取这个网络包归属的 socket，从里面获取缓存的路由，不用没次都查路由表了（比较慢）。
 
 .. code-block:: console
