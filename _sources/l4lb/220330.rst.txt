@@ -171,3 +171,28 @@ i40e 驱动，网卡是 X722 型号的，在加载 xdp 的时候会报这个错�
 	override i40e * weak-updates/i40e
 
 https://linux.die.net/man/8/depmod
+
+第二跳直接摘除 VIP + 服务器开启了 ip_forward 造成的包循环
+---------------------------------------------------------------
+
+如果第二跳机器上没有绑定 VIP，机器上又开启了 ip_forward，这个时候解包出一个 VIP 的包过来，发现不是本机 IP，会走路由将包转发出去，包又会从负载均衡进来，重新转发，这个过程中包只有 ttl 会减小，会导致包一直在 director -> 第一跳后端 -> 第二跳后端 -> director 这样循环，直到 ttl 为 0 为止。
+
+.. code-block:: console
+
+    # tcpdump -i bond0 'dst <VIP>'  -nnn -v -e
+    19:26:28.377695 24:6e:96:c6:aa:60 > e4:43:4b:0a:fb:60, ethertype IPv4 (0x0800), length 54: (tos 0x0, ttl 49, id 21256, offset 0, flags [DF], proto TCP (6), length 40)
+      112.8.88.102.14979 > 140.249.147.253.80: Flags [F.], cksum 0x6105 (correct), seq 0, ack 1, win 333, length 0
+    ...
+    19:26:28.380421 24:6e:96:c6:aa:60 > e4:43:4b:0a:fb:60, ethertype IPv4 (0x0800), length 54: (tos 0x0, ttl 4, id 21256, offset 0, flags [DF], proto TCP (6), length 40)
+      112.8.88.102.14979 > 140.249.147.253.80: Flags [F.], cksum 0x6105 (correct), seq 0, ack 1, win 333, length 0
+    19:26:28.380493 24:6e:96:c6:aa:60 > e4:43:4b:0a:fb:60, ethertype IPv4 (0x0800), length 54: (tos 0x0, ttl 3, id 21256, offset 0, flags [DF], proto TCP (6), length 40)
+      112.8.88.102.14979 > 140.249.147.253.80: Flags [F.], cksum 0x6105 (correct), seq 0, ack 1, win 333, length 0
+    19:26:28.380540 24:6e:96:c6:aa:60 > e4:43:4b:0a:fb:60, ethertype IPv4 (0x0800), length 54: (tos 0x0, ttl 2, id 21256, offset 0, flags [DF], proto TCP (6), length 40)
+      112.8.88.102.14979 > 140.249.147.253.80: Flags [F.], cksum 0x6105 (correct), seq 0, ack 1, win 333, length 0
+    19:26:28.380595 24:6e:96:c6:aa:60 > e4:43:4b:0a:fb:60, ethertype IPv4 (0x0800), length 54: (tos 0x0, ttl 1, id 21256, offset 0, flags [DF], proto TCP (6), length 40)
+      112.8.88.102.14979 > 140.249.147.253.80: Flags [F.], cksum 0x6105 (correct), seq 0, ack 1, win 333, length 0
+
+教训就是：
+
+- 在对称部署架构下，OSPF VIP 和后端绑定 VIP 需要在逻辑在分开（物理上可能绑定的是一个），有些场景下 OSPF VIP 和后端 VIP 的绑定解绑逻辑不一致，一个需要解，一个不能解，这个需要特殊处理，避免类似上面这样的问题。
+- 没事别开 ip_forward。

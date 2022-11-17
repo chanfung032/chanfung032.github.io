@@ -196,6 +196,29 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 </div>
 <p><a class="reference external" href="https://linux.die.net/man/8/depmod">https://linux.die.net/man/8/depmod</a></p>
 </section>
+<section id="di-er-tiao-zhi-jie-zhai-chu-vip-fu-wu-qi-kai-qi-le-ip-forward-zao-cheng-de-bao-xun-huan">
+<h2>第二跳直接摘除 VIP + 服务器开启了 ip_forward 造成的包循环<a class="headerlink" href="#di-er-tiao-zhi-jie-zhai-chu-vip-fu-wu-qi-kai-qi-le-ip-forward-zao-cheng-de-bao-xun-huan" title="Permalink to this headline">¶</a></h2>
+<p>如果第二跳机器上没有绑定 VIP，机器上又开启了 ip_forward，这个时候解包出一个 VIP 的包过来，发现不是本机 IP，会走路由将包转发出去，包又会从负载均衡进来，重新转发，这个过程中包只有 ttl 会减小，会导致包一直在 director -&gt; 第一跳后端 -&gt; 第二跳后端 -&gt; director 这样循环，直到 ttl 为 0 为止。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tcpdump -i bond0 <span class="s1">&#39;dst &lt;VIP&gt;&#39;</span>  -nnn -v -e
+<span class="go">19:26:28.377695 24:6e:96:c6:aa:60 &gt; e4:43:4b:0a:fb:60, ethertype IPv4 (0x0800), length 54: (tos 0x0, ttl 49, id 21256, offset 0, flags [DF], proto TCP (6), length 40)</span>
+<span class="go">  112.8.88.102.14979 &gt; 140.249.147.253.80: Flags [F.], cksum 0x6105 (correct), seq 0, ack 1, win 333, length 0</span>
+<span class="go">...</span>
+<span class="go">19:26:28.380421 24:6e:96:c6:aa:60 &gt; e4:43:4b:0a:fb:60, ethertype IPv4 (0x0800), length 54: (tos 0x0, ttl 4, id 21256, offset 0, flags [DF], proto TCP (6), length 40)</span>
+<span class="go">  112.8.88.102.14979 &gt; 140.249.147.253.80: Flags [F.], cksum 0x6105 (correct), seq 0, ack 1, win 333, length 0</span>
+<span class="go">19:26:28.380493 24:6e:96:c6:aa:60 &gt; e4:43:4b:0a:fb:60, ethertype IPv4 (0x0800), length 54: (tos 0x0, ttl 3, id 21256, offset 0, flags [DF], proto TCP (6), length 40)</span>
+<span class="go">  112.8.88.102.14979 &gt; 140.249.147.253.80: Flags [F.], cksum 0x6105 (correct), seq 0, ack 1, win 333, length 0</span>
+<span class="go">19:26:28.380540 24:6e:96:c6:aa:60 &gt; e4:43:4b:0a:fb:60, ethertype IPv4 (0x0800), length 54: (tos 0x0, ttl 2, id 21256, offset 0, flags [DF], proto TCP (6), length 40)</span>
+<span class="go">  112.8.88.102.14979 &gt; 140.249.147.253.80: Flags [F.], cksum 0x6105 (correct), seq 0, ack 1, win 333, length 0</span>
+<span class="go">19:26:28.380595 24:6e:96:c6:aa:60 &gt; e4:43:4b:0a:fb:60, ethertype IPv4 (0x0800), length 54: (tos 0x0, ttl 1, id 21256, offset 0, flags [DF], proto TCP (6), length 40)</span>
+<span class="go">  112.8.88.102.14979 &gt; 140.249.147.253.80: Flags [F.], cksum 0x6105 (correct), seq 0, ack 1, win 333, length 0</span>
+</pre></div>
+</div>
+<p>教训就是：</p>
+<ul class="simple">
+<li><p>在对称部署架构下，OSPF VIP 和后端绑定 VIP 需要在逻辑在分开（物理上可能绑定的是一个），有些场景下 OSPF VIP 和后端 VIP 的绑定解绑逻辑不一致，一个需要解，一个不能解，这个需要特殊处理，避免类似上面这样的问题。</p></li>
+<li><p>没事别开 ip_forward。</p></li>
+</ul>
+</section>
 </section>
 
 
@@ -210,6 +233,7 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><a class="reference internal" href="#">#220330 问题</a><ul>
 <li><a class="reference internal" href="#ixgbe-detected-tx-unit-hang">ixgbe Detected Tx Unit Hang</a></li>
 <li><a class="reference internal" href="#i40e-x722-unable-to-handle-kernel-null-pointer-dereference">i40e/X722 unable to handle kernel NULL pointer dereference</a></li>
+<li><a class="reference internal" href="#di-er-tiao-zhi-jie-zhai-chu-vip-fu-wu-qi-kai-qi-le-ip-forward-zao-cheng-de-bao-xun-huan">第二跳直接摘除 VIP + 服务器开启了 ip_forward 造成的包循环</a></li>
 </ul>
 </li>
 </ul>
