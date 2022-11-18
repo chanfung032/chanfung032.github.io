@@ -130,6 +130,7 @@ html_theme = 'alabaster'
 # documentation.
 html_theme_options = {
     'font_size': '14px',
+    'page_width': '1020px',
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
