@@ -219,6 +219,10 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><p>没事别开 ip_forward。</p></li>
 </ul>
 </section>
+<section id="ipv4-vip-fang-wen-zheng-chang-ipv6-fang-wen-yi-chang-ke-neng-de-wen-ti">
+<h2>IPv4 VIP 访问正常、IPv6 访问异常可能的问题<a class="headerlink" href="#ipv4-vip-fang-wen-zheng-chang-ipv6-fang-wen-yi-chang-ke-neng-de-wen-ti" title="Permalink to this headline">¶</a></h2>
+<p>集群中有一台机器 IPv6 访问异常，IPv4 访问确正常，异常的机器上 IPv6 的 VIP 绑定正常，sit0 网卡也正常，一切看上去都挺正常，这种情况可能是没有初始化 IPv6 导致缺少默认 IPv6 路由，下行的包不知道怎么出去导致的。</p>
+</section>
 </section>
 
 
@@ -234,6 +238,7 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><a class="reference internal" href="#ixgbe-detected-tx-unit-hang">ixgbe Detected Tx Unit Hang</a></li>
 <li><a class="reference internal" href="#i40e-x722-unable-to-handle-kernel-null-pointer-dereference">i40e/X722 unable to handle kernel NULL pointer dereference</a></li>
 <li><a class="reference internal" href="#di-er-tiao-zhi-jie-zhai-chu-vip-fu-wu-qi-kai-qi-le-ip-forward-zao-cheng-de-bao-xun-huan">第二跳直接摘除 VIP + 服务器开启了 ip_forward 造成的包循环</a></li>
+<li><a class="reference internal" href="#ipv4-vip-fang-wen-zheng-chang-ipv6-fang-wen-yi-chang-ke-neng-de-wen-ti">IPv4 VIP 访问正常、IPv6 访问异常可能的问题</a></li>
 </ul>
 </li>
 </ul>
