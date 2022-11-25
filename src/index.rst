@@ -55,3 +55,7 @@ Feng's blog
    graphite.rst
    build-all-in-one-package-for-python-application.rst
    dive-into-python/index.rst
+
+.. raw:: html
+
+    <hr>
