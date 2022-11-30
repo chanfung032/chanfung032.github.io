@@ -1,0 +1,281 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>实数域上的椭圆曲线与群 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="有限域与离散对数问题" href="2.html" />
+    <link rel="prev" title="Elliptic Curve Cryptography" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="shi-shu-yu-shang-de-tuo-yuan-qu-xian-yu-qun">
+<h1>实数域上的椭圆曲线与群<a class="headerlink" href="#shi-shu-yu-shang-de-tuo-yuan-qu-xian-yu-qun" title="Permalink to this headline">¶</a></h1>
+<p>原文： <a class="reference external" href="http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/">Elliptic curves over real numbers and the group law</a></p>
+<section id="tuo-yuan-qu-xian-elliptic-curves">
+<h2>椭圆曲线（Elliptic Curves）<a class="headerlink" href="#tuo-yuan-qu-xian-elliptic-curves" title="Permalink to this headline">¶</a></h2>
+<p>首先，什么是椭圆曲线，简单来说，椭圆曲线就是满足以下公式的点的集合：</p>
+<div class="math notranslate nohighlight">
+\[y^2 = x^3 + ax + b\]</div>
+<p>其中 <span class="math notranslate nohighlight">\(4a^3 + 27b^2 \ne 0\)</span> （排除掉奇异曲线 singular curves）。</p>
+<figure class="align-default" id="id1">
+<img alt="../_images/curves.png" src="../_images/curves.png" />
+<figcaption>
+<p><span class="caption-text">不同形状的椭圆曲线，<span class="math notranslate nohighlight">\(b = 1\)</span>, <span class="math notranslate nohighlight">\(a\)</span> 从 2 到 -3。</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p><em>a</em> 和 <em>b</em> 的值不一样，曲线在平面上的形状也不一样。显而易见并且容易证明的是：椭圆曲线都是相对于 x 轴对称的。</p>
+<p>另外，我们定义无穷远点（point at infinity）为椭圆曲线上的一点，这个点我们用符号 <span class="math notranslate nohighlight">\(0\)</span> 来表示。</p>
+<p>加上无穷远点，完善后的椭圆曲线公式如下：</p>
+<div class="math notranslate nohighlight">
+\[\left\{ (x, y) \in \mathbb{R}^2\ |\ y^2 = x^3 + ax + b,\ 4 a^3 + 27 b^2 \ne 0 \right\}\ \cup\ \left\{ 0 \right\}\]</div>
+</section>
+<section id="qun-groups">
+<h2>群（Groups）<a class="headerlink" href="#qun-groups" title="Permalink to this headline">¶</a></h2>
+<p>在数学中，群是一个集合 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> ，连同其上定义的二元运算 <em>加</em> （使用符号 + 表示）。要具备成为群的资格，这个集合和运算 <span class="math notranslate nohighlight">\((\mathbb{G}, +)\)</span> 还必须满足叫做群公理的四个要求：</p>
+<ol class="arabic simple">
+<li><p>封闭性（closure）：对于所有 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中 a, b，运算 a + b 的结果也在 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中。</p></li>
+<li><p>结合性（associativity）：对于所有 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中的 a, b 和 c，等式 (a + b) + c = a + (b + c) 成立。</p></li>
+<li><p>单位元（identity element）：存在 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中的一个元素 <span class="math notranslate nohighlight">\(0\)</span>，使得对于所有 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中的元素 a，等式 <span class="math notranslate nohighlight">\(a + 0 = 0 + a = a\)</span> 成立。</p></li>
+<li><p>逆元（inverse）：对于每个 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中的 a，存在 <span class="math notranslate nohighlight">\(\mathbb{G}\)</span> 中的一个元素 b 使得 <span class="math notranslate nohighlight">\(a + b = 0\)</span>。</p></li>
+</ol>
+<p>如果再加上第 5 个条件：</p>
+<ol class="arabic simple" start="5">
+<li><p>交换性（commutativity）: a + b = b + a 。</p></li>
+</ol>
+<p>那么这个群又叫做阿贝尔群（abelian group）。</p>
+<p>整数集合 <span class="math notranslate nohighlight">\(\mathbb{Z}\)</span> 连同我们日常使用的整数加法构成一个群（还是一个阿贝尔群）。自然数集合 <span class="math notranslate nohighlight">\(\mathbb{N}\)</span> 不是群，因为不满足第 4 个要求。</p>
+<p>在以上特性成立的基础上，我们可以继续推导出群的一些其它特性，比如：单位元是唯一的，并且逆元也是唯一的，也就是说：对于任意 a，只存在唯一的 b 使得 a + b = 0（我们可以将 b 写做 -a）。这些特性在后文中会直接或间接的派上重要用场。</p>
+</section>
+<section id="zai-tuo-yuan-qu-xian-shang-ding-yi-yi-ge-qun-the-group-law-for-elliptic-curves">
+<h2>在椭圆曲线上定义一个群（The group law for elliptic curves）<a class="headerlink" href="#zai-tuo-yuan-qu-xian-shang-ding-yi-yi-ge-qun-the-group-law-for-elliptic-curves" title="Permalink to this headline">¶</a></h2>
+<p>我们可以如下定义一个椭圆曲线上的群：</p>
+<ul class="simple">
+<li><p>群里的元素为曲线上的点。</p></li>
+<li><p><em>单位元</em> 为无穷远点 <span class="math notranslate nohighlight">\(0\)</span>。</p></li>
+<li><p>曲线上任意一点 <span class="math notranslate nohighlight">\(P\)</span> 的 <em>逆元</em> 是其相对于 x 轴的对称点。</p></li>
+<li><p><em>加</em> 法规定如下：曲线上任意的 3 点 <span class="math notranslate nohighlight">\(P\)</span>，<span class="math notranslate nohighlight">\(Q\)</span>，<span class="math notranslate nohighlight">\(R\)</span>，如果 3 点在一条直线上（aligned）并且都不是无穷远点（nonzero），那么它们的和 <span class="math notranslate nohighlight">\(P + Q + R = 0\)</span> 。</p></li>
+</ul>
+<img alt="../_images/three-aligned-points.png" src="../_images/three-aligned-points.png" />
+<p>注意最后一条规则，我们只要求 3 个点在一条直线上，并不要求其顺序，也就是说 <span class="math notranslate nohighlight">\(P + (Q + R) = Q + (P + R) = R + (P + Q) = \cdots = 0\)</span>，因此定义的加法满足结合性和交换性，也就是说这是一个阿贝尔群。</p>
+<p>那么，我们如何计算任意两点相加的和呢？</p>
+</section>
+<section id="ji-he-jia-fa-geometric-addition">
+<h2>几何加法（Geometric addition）<a class="headerlink" href="#ji-he-jia-fa-geometric-addition" title="Permalink to this headline">¶</a></h2>
+<p>上面定义的群是一个阿贝尔群，所以我们可以将 <span class="math notranslate nohighlight">\(P + Q + R = 0\)</span> 改写成 <span class="math notranslate nohighlight">\(P + Q = -R\)</span> 。从后面这个公式我们可以得出计算任意两点 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q\)</span> 相加和的几何方法：过 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q\)</span> 两点画一条直线，这条直线交曲线上第三点 <span class="math notranslate nohighlight">\(R\)</span>，取其逆元 <span class="math notranslate nohighlight">\(-R\)</span> 即是 <span class="math notranslate nohighlight">\(P + Q\)</span> 的结果。</p>
+<img alt="../_images/point-addition.png" src="../_images/point-addition.png" />
+<p>上面的几何计算方法可以工作但还需要几点补充，尤其是下面几个问题需要解决：</p>
+<ul>
+<li><p><strong>如果</strong> <span class="math notranslate nohighlight">\(P = 0\)</span> <strong>或者</strong> <span class="math notranslate nohighlight">\(Q = 0\)</span> <strong>怎么办？</strong>  此时无法画一条过两点的直线，但是前面我们已经定义了 <span class="math notranslate nohighlight">\(0\)</span> 为单位元，所以 <span class="math notranslate nohighlight">\(P + 0 = P\)</span> ，<span class="math notranslate nohighlight">\(0 + Q = Q\)</span> 。</p></li>
+<li><p><strong>如果</strong> <span class="math notranslate nohighlight">\(P = -Q\)</span> <strong>呢？</strong> 此时过两点的直线是垂直的，和曲线没有第三个交点。但是因为 <span class="math notranslate nohighlight">\(P\)</span> 是 <span class="math notranslate nohighlight">\(Q\)</span> 的逆元，根据逆元的定义： <span class="math notranslate nohighlight">\(P + Q = P + (-P) = 0\)</span> 。</p></li>
+<li><p><strong>如果</strong> <span class="math notranslate nohighlight">\(P = Q\)</span> <strong>呢？</strong> 过一点有无数条直线，这里问题变得有点复杂了。考虑曲线上的一点 <span class="math notranslate nohighlight">\(Q' \ne P\)</span> ，如果我们让 <span class="math notranslate nohighlight">\(Q'\)</span> 不断逼近 <span class="math notranslate nohighlight">\(P\)</span>，此时过 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q'\)</span> 的直线就变成了曲线的切线。基于此，我们可以定义 <span class="math notranslate nohighlight">\(P + P = -R\)</span> ，这里 <span class="math notranslate nohighlight">\(R\)</span> 是曲线在 <span class="math notranslate nohighlight">\(P\)</span> 点的切线与曲线的另外一个交点。</p>
+<img alt="../_images/animation-point-doubling.gif" src="../_images/animation-point-doubling.gif" />
+</li>
+<li><p><strong>如果</strong> <span class="math notranslate nohighlight">\(P \ne Q\)</span>，<strong>但是没有第三个交点</strong> <span class="math notranslate nohighlight">\(R\)</span> <strong>呢？</strong> 这个和前面一个问题的情况类似，此时过 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q\)</span> 的直线是曲线的切线。</p>
+<img alt="../_images/animation-tangent-line.gif" src="../_images/animation-tangent-line.gif" />
+<p>假设 <span class="math notranslate nohighlight">\(P\)</span> 是切点，那么 <span class="math notranslate nohighlight">\(P + P = -Q\)</span>，所以 <span class="math notranslate nohighlight">\(P + Q = -P\)</span>，同理，如果 <span class="math notranslate nohighlight">\(Q\)</span> 是切点，<span class="math notranslate nohighlight">\(P + Q = -Q\)</span> 。</p>
+</li>
+</ul>
+<p>以上就是几何加法的完整步骤，使用笔和尺子我们就可以完成椭圆曲线上任意两点的加法（或者可以使用这个 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=-1&amp;py=4&amp;qx=1&amp;qy=2">可视化工具</a> ）。</p>
+</section>
+<section id="dai-shu-jia-fa-algebraic-addition">
+<h2>代数加法（Algebraic addition）<a class="headerlink" href="#dai-shu-jia-fa-algebraic-addition" title="Permalink to this headline">¶</a></h2>
+<p>为了使用计算机来计算椭圆曲线上点的加法，我们需要将上面的几何方法转换为代数方法。将上面的规则转化为公式涉及到解三次方程，比较繁琐，所以这里我们省略过程直接给出结果。</p>
+<p>首先，我们先去掉一些极限情况，我们知道 <span class="math notranslate nohighlight">\(P + (-P) = 0\)</span>，也知道 <span class="math notranslate nohighlight">\(P + 0 = 0 + P = P\)</span>，所以下面的公式中我们排除这两种情况，只考虑 <span class="math notranslate nohighlight">\(P = (x_P, y_p)\)</span> 和 <span class="math notranslate nohighlight">\(Q = (x_Q, y_Q)\)</span> 为非对称点、非无穷远点的情况。</p>
+<p>因为 <span class="math notranslate nohighlight">\(P\)</span> 和 <span class="math notranslate nohighlight">\(Q\)</span> 非对称（<span class="math notranslate nohighlight">\(x_P \ne x_Q\)</span>），所以过两点的直线有斜率（slope），斜率为：</p>
+<div class="math notranslate nohighlight">
+\[m = \frac{y_P - y_Q}{x_P - x_Q}\]</div>
+<p>设直线与椭圆曲线的第三个交点为 <span class="math notranslate nohighlight">\(R = (x_R, y_R)\)</span>，则：</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{rcl}
+    x_R &amp; = &amp; m^2 - x_P - x_Q \\
+    y_R &amp; = &amp; y_P + m(x_R - x_P)
+\end{array}\end{split}\]</div>
+<p>或者：</p>
+<div class="math notranslate nohighlight">
+\[y_R = y_Q + m(x_R - x_Q)\]</div>
+<p>我们使用一个例子来验证以下以上公式的正确性：根据我们的 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=-1&amp;py=4&amp;qx=1&amp;qy=2">可视化工具</a> ，给定曲线 <span class="math notranslate nohighlight">\(y^2 = x^3 - 7x + 10\)</span> ，<span class="math notranslate nohighlight">\(P = (1, 2)\)</span> 和 <span class="math notranslate nohighlight">\(Q = (3, 4)\)</span> ，两点的和 <span class="math notranslate nohighlight">\(P + Q = -R = (-3, 2)\)</span> 。我们来看下和我们上面的公式计算的结果是否吻合：</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{rcl}
+    m &amp; = &amp; \frac{y_P - y_Q}{x_P - x_Q} = \frac{2 - 4}{1 - 3} = 1 \\
+    x_R &amp; = &amp; m^2 - x_P - x_Q = 1^2 - 1 - 3 = -3 \\
+    y_R &amp; = &amp; y_P + m(x_R - x_P) = 2 + 1 \cdot (-3 - 1) = -2 \\
+    &amp; = &amp; y_Q + m(x_R - x_Q) = 4 + 1 \cdot (-3 - 3) = -2
+\end{array}\end{split}\]</div>
+<p>结果一致！</p>
+<p>即使 <span class="math notranslate nohighlight">\(P\)</span> <strong>或者</strong> <span class="math notranslate nohighlight">\(Q\)</span> <strong>中的一点是切点</strong>，上面的公式依然可以得出正确的结果。例如： <span class="math notranslate nohighlight">\(P = (-1, 4)\)</span> 和 <span class="math notranslate nohighlight">\(Q = (1, 2)\)</span> 。</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{rcl}
+    m &amp; = &amp; \frac{y_P - y_Q}{x_P - x_Q} = \frac{4 - 2}{-1 - 1} = -1 \\
+    x_R &amp; = &amp; m^2 - x_P - x_Q = (-1)^2 - (-1) - 1 = 1 \\
+    y_R &amp; = &amp; y_P + m(x_R - x_P) = 4 + -1 \cdot (1 - (-1)) = 2
+\end{array}\end{split}\]</div>
+<p>结果 <span class="math notranslate nohighlight">\(P + Q = (1, -2)\)</span> ，和 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=-1&amp;py=4&amp;qx=1&amp;qy=2">可视化工具</a> 给出的一样。</p>
+<p><span class="math notranslate nohighlight">\(P = Q\)</span> <strong>的情况需要特殊处理：</strong> 计算 <span class="math notranslate nohighlight">\(x_R\)</span> 和 <span class="math notranslate nohighlight">\(y_R\)</span> 的公式不变，但是斜率的公式需要修改使用以下公式（因为 <span class="math notranslate nohighlight">\(x_P = x_Q\)</span>）：</p>
+<div class="math notranslate nohighlight">
+\[m = \frac{3x_P^2 + a}{2y_P}\]</div>
+<p>此时，斜率 m 是下面这个公式的一阶导数：</p>
+<div class="math notranslate nohighlight">
+\[y_P = \pm \sqrt{x_P^3 + ax_P + b}\]</div>
+<p>使用 <span class="math notranslate nohighlight">\(P = Q = (1, 2)\)</span> 验证一下：</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{rcl}
+    m &amp; = &amp; \frac{3x_P^2 + a}{2 y_P} = \frac{3 \cdot 1^2 - 7}{2 \cdot 2} = -1 \\
+    x_R &amp; = &amp; m^2 - x_P - x_Q = (-1)^2 - 1 - 1 = -1 \\
+    y_R &amp; = &amp; y_P + m(x_R - x_P) = 2 + (-1) \cdot (-1 - 1) = 4
+\end{array}\end{split}\]</div>
+<p>结果： <span class="math notranslate nohighlight">\(P + P = -R = (-1,-4)\)</span> ，<a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-add.html?px=1&amp;py=2&amp;qx=1&amp;qy=2">正确</a> ！</p>
+</section>
+<section id="cheng-fa-scalar-multiplication">
+<h2>乘法（Scalar multiplication）<a class="headerlink" href="#cheng-fa-scalar-multiplication" title="Permalink to this headline">¶</a></h2>
+<p>除了加法之外，我们可以再定义一个运算：乘法。</p>
+<div class="math notranslate nohighlight">
+\[nP = \underbrace{P + P + \cdots + P}_{n\ \text{times}}\]</div>
+<p>这里，<span class="math notranslate nohighlight">\(n\)</span> 是一个自然数。 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-mul.html">乘法可视化计算工具</a> 。</p>
+<p>从乘法定义来看，计算 <span class="math notranslate nohighlight">\(nP\)</span> 需要进行 <span class="math notranslate nohighlight">\(n\)</span> 次加法运算。假如 <span class="math notranslate nohighlight">\(n\)</span> 为 <span class="math notranslate nohighlight">\(k\)</span> bit，则计算复杂度为： <span class="math notranslate nohighlight">\(O(2^k)\)</span> ，性能不好，还好乘法存在不少快速算法。</p>
+<p><strong>double and add</strong> 就是其中算法之一。这个算法的原理可以用一个例子来解释清楚。令 <span class="math notranslate nohighlight">\(n = 151\)</span> ，它的二进制表达形式为： <span class="math notranslate nohighlight">\(10010111_2\)</span> ，这个二进制形式可以进一步用一系列 <em>2的幂(powers of two)</em> 的和来表示：</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{rcl}
+    151 &amp; = &amp; 1 \cdot 2^7 + 0 \cdot 2^6 + 0 \cdot 2^5 + 1 \cdot 2^4 + 0 \cdot 2^3 + 1 \cdot 2^2 + 1 \cdot 2^1 + 1 \cdot 2^0 \\
+    &amp; = &amp; 2^7 + 2^4 + 2^2 + 2^1 + 2^0
+\end{array}\end{split}\]</div>
+<p>因此 <span class="math notranslate nohighlight">\(151 \cdot P\)</span> 可以写成：</p>
+<div class="math notranslate nohighlight">
+\[151 \cdot P = 2^7 P + 2^4 P + 2^2 P + 2^1 P + 2^0 P\]</div>
+<p>最后，double and add 算法的计算步骤如下：</p>
+<ul class="simple">
+<li><p>取 <span class="math notranslate nohighlight">\(P\)</span> 。</p></li>
+<li><p>计算（Double） <span class="math notranslate nohighlight">\(2P = P + P\)</span> 。</p></li>
+<li><p>将 <span class="math notranslate nohighlight">\(2P\)</span> 和 <span class="math notranslate nohighlight">\(P\)</span> 相加得到 <span class="math notranslate nohighlight">\(2^1P + 2^0P\)</span> 的结果。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(2^2P = 2P + 2P\)</span> 。</p></li>
+<li><p>将 <span class="math notranslate nohighlight">\(2^2P\)</span> 和前面的结果相加得到 <span class="math notranslate nohighlight">\(2^2P + 2^1P + 2^0P\)</span> 的结果。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(2^3P = 2^2P + 2^2P\)</span> 。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(2^4P = 2^3P + 2^3P\)</span> 。</p></li>
+<li><p>将 <span class="math notranslate nohighlight">\(2^4P\)</span> 和前面的结果相加得到 <span class="math notranslate nohighlight">\(2^4P + 2^2P + 21^P + 2^0P\)</span> 的结果。</p></li>
+<li><p>……</p></li>
+</ul>
+<p>最终我们通过 7 次 Double 和 4 次加运算就得到了 <span class="math notranslate nohighlight">\(151 \cdot P\)</span> 的结果。</p>
+<p>如果上面的描述不够清晰，下面是该算法的 Python 代码实现：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">bits</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates the binary digits of n, starting</span>
+<span class="sd">    from the least significant bit.</span>
+
+<span class="sd">    bits(151) -&gt; 1, 1, 1, 0, 1, 0, 0, 1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">while</span> <span class="n">n</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">n</span> <span class="o">&amp;</span> <span class="mi">1</span>
+        <span class="n">n</span> <span class="o">&gt;&gt;=</span> <span class="mi">1</span>
+
+<span class="k">def</span> <span class="nf">double_and_add</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the result of n * x, computed using</span>
+<span class="sd">    the double and add algorithm.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">addend</span> <span class="o">=</span> <span class="n">x</span>
+
+    <span class="k">for</span> <span class="n">bit</span> <span class="ow">in</span> <span class="n">bits</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">bit</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="n">addend</span>
+        <span class="n">addend</span> <span class="o">*=</span> <span class="mi">2</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+</div>
+<p>如果 Double 和加法的复杂度是 <span class="math notranslate nohighlight">\(O(1)\)</span> ，那么本算法的复杂度就是 <span class="math notranslate nohighlight">\(O(\log n)\)</span> （或者用 n 的 bit 长度表示的话： <span class="math notranslate nohighlight">\(O(k)\)</span> ），性能很不错，比一开始 <span class="math notranslate nohighlight">\(O(n)\)</span> 的复杂度好多了。</p>
+</section>
+<section id="dui-shu-logarithm">
+<h2>对数（Logarithm）<a class="headerlink" href="#dui-shu-logarithm" title="Permalink to this headline">¶</a></h2>
+<p>给定 <span class="math notranslate nohighlight">\(n\)</span> 和 <span class="math notranslate nohighlight">\(P\)</span> ，我们有了一个算法可以在多项式时间内计算得到 <span class="math notranslate nohighlight">\(Q = nP\)</span> 。那么反过来，如果我们知道 <span class="math notranslate nohighlight">\(Q\)</span> 和 <span class="math notranslate nohighlight">\(P\)</span> 需要计算出 <span class="math notranslate nohighlight">\(n\)</span> 呢？这个问题被称作 <strong>对数问题</strong> ，称其为“对数”而不是“除”主要是为了和其它加密系统一致（这些系统里乘法对应的是幂 exponentiation）。</p>
+<p>对数问题目前没有比较高效（easy）的解决算法，当然通过 <a class="reference external" href="https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/reals-mul.html?a=-3&amp;b=1&amp;px=0&amp;py=1">摸索</a> 我们也能看到一些模式（pattern）。比如，曲线 <span class="math notranslate nohighlight">\(y^2 = x^3 - 3x +1\)</span> 和点 <span class="math notranslate nohighlight">\(P = (0, 1)\)</span> ，可以看到，当 <span class="math notranslate nohighlight">\(n\)</span> 是奇数时，<span class="math notranslate nohighlight">\(nP\)</span> 总是落在左边的曲线上，当 <span class="math notranslate nohighlight">\(n\)</span> 是偶数时，<span class="math notranslate nohighlight">\(nP\)</span> 落在右边的曲线上。通过不断的实验，我们也许可以发现更多的模式，这些模式可能最终可以帮我们找到一个解决对数问题的高效算法。</p>
+<p>但是，对数问题中有一类 <em>离散</em> 对数问题，我们将在下文中看到，当我们缩小曲线的值域， <strong>曲线上的乘法还是可以高效运算，但是其逆运算，也就是离散对数运算变得非常的困难（hard）</strong>。这种不对称（duality）即椭圆曲线加密的核心。</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">实数域上的椭圆曲线与群</a><ul>
+<li><a class="reference internal" href="#tuo-yuan-qu-xian-elliptic-curves">椭圆曲线（Elliptic Curves）</a></li>
+<li><a class="reference internal" href="#qun-groups">群（Groups）</a></li>
+<li><a class="reference internal" href="#zai-tuo-yuan-qu-xian-shang-ding-yi-yi-ge-qun-the-group-law-for-elliptic-curves">在椭圆曲线上定义一个群（The group law for elliptic curves）</a></li>
+<li><a class="reference internal" href="#ji-he-jia-fa-geometric-addition">几何加法（Geometric addition）</a></li>
+<li><a class="reference internal" href="#dai-shu-jia-fa-algebraic-addition">代数加法（Algebraic addition）</a></li>
+<li><a class="reference internal" href="#cheng-fa-scalar-multiplication">乘法（Scalar multiplication）</a></li>
+<li><a class="reference internal" href="#dui-shu-logarithm">对数（Logarithm）</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/ecc/1.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/ecc/1.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

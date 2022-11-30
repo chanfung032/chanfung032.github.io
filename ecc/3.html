@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>椭圆曲线加密：ECDH 和 ECDSA &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="比特币的工作原理" href="../bitcoin-explained.html" />
+    <link rel="prev" title="有限域与离散对数问题" href="2.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="tuo-yuan-qu-xian-jia-mi-ecdh-he-ecdsa">
+<h1>椭圆曲线加密：ECDH 和 ECDSA<a class="headerlink" href="#tuo-yuan-qu-xian-jia-mi-ecdh-he-ecdsa" title="Permalink to this headline">¶</a></h1>
+<p>原文： <a class="reference external" href="http://andrea.corbellini.name/2015/05/30/elliptic-curve-cryptography-ecdh-and-ecdsa/">Key pair generation and two ECC algorithms: ECDH and ECDSA</a></p>
+<section id="tuo-yuan-qu-xian-can-shu-domain-parameters">
+<h2>椭圆曲线参数（Domain parameters）<a class="headerlink" href="#tuo-yuan-qu-xian-can-shu-domain-parameters" title="Permalink to this headline">¶</a></h2>
+<p>椭圆曲线加密算法工作在 <em>有限域上的椭圆曲线</em> 的循环子群上，曲线的参数可以用一个六元组 <span class="math notranslate nohighlight">\((p, a, b, G, n, h)\)</span> 表示：</p>
+<ul class="simple">
+<li><p><strong>素数</strong> <span class="math notranslate nohighlight">\(p\)</span> 指定有限域的大小。</p></li>
+<li><p><strong>椭圆曲线的系数</strong> <span class="math notranslate nohighlight">\(a\)</span> 和 <span class="math notranslate nohighlight">\(b\)</span> 。</p></li>
+<li><p>子群的 <strong>基点</strong> <span class="math notranslate nohighlight">\(G\)</span> 。</p></li>
+<li><p>子群的 <strong>序</strong> <span class="math notranslate nohighlight">\(n\)</span> 。</p></li>
+<li><p>子群的 <strong>cofactor</strong> <span class="math notranslate nohighlight">\(h\)</span> 。</p></li>
+</ul>
+</section>
+<section id="tuo-yuan-qu-xian-jia-mi-elliptic-curve-cryptography">
+<h2>椭圆曲线加密（Elliptic Curve Cryptography）<a class="headerlink" href="#tuo-yuan-qu-xian-jia-mi-elliptic-curve-cryptography" title="Permalink to this headline">¶</a></h2>
+<p>椭圆曲线的核心原理如下：</p>
+<ol class="arabic simple">
+<li><p><strong>私钥（private key）</strong> 是从 <span class="math notranslate nohighlight">\({1, \cdots, n - 1}\)</span> 中随机选择的一个数 <span class="math notranslate nohighlight">\(d\)</span> （<span class="math notranslate nohighlight">\(n\)</span> 是子群的序）。</p></li>
+<li><p><strong>公钥</strong> 是点 <span class="math notranslate nohighlight">\(H = dG\)</span> （<span class="math notranslate nohighlight">\(G\)</span> 是子群的基点）。</p></li>
+</ol>
+<p>根据循环子群的特性，知道 <span class="math notranslate nohighlight">\(d\)</span> 和 <span class="math notranslate nohighlight">\(G\)</span> 可以很容易的计算得到 <span class="math notranslate nohighlight">\(H\)</span>，相反，知道 <span class="math notranslate nohighlight">\(H\)</span> 和 <span class="math notranslate nohighlight">\(G\)</span> 想要得到私钥 <span class="math notranslate nohighlight">\(d\)</span> 非常的困难，因为这是一个离散对数问题。</p>
+<p>椭圆曲线常用的有以下两个算法：用于加密的 ECDH (Elliptic curve Diffie-Hellman) 算法，用于计算数字签名的 ECDSA (Elliptic Curve Digital Signature Algorithm) 算法。</p>
+<section id="ecdh-jia-mi-suan-fa">
+<span id="ecdh"></span><h3>ECDH 加密算法<a class="headerlink" href="#ecdh-jia-mi-suan-fa" title="Permalink to this headline">¶</a></h3>
+<p>ECDH 是 <a class="reference external" href="https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange">Diffie-Hellman 算法</a> 的一个变种，它本质上是 <a class="reference external" href="https://en.wikipedia.org/wiki/Key-agreement_protocol">密钥协商算法</a> ，只负责通信双方密钥的生成和交换，如何使用这个密钥加密数据取决于用户，和 ECDH 算法无关。</p>
+<p>假设 Alice 和 Bob 想要交换信息，下面是使用 ECDH 交换密钥的过程：</p>
+<ol class="arabic simple">
+<li><p>首先，<strong>Alice 和 Bob 各自生成自己的公钥和私钥</strong>。设 Alice 的私钥为 <span class="math notranslate nohighlight">\(d_A\)</span> ，公钥 <span class="math notranslate nohighlight">\(H_A = d_AG\)</span>，Bob 的私钥 <span class="math notranslate nohighlight">\(d_B\)</span>，公钥 <span class="math notranslate nohighlight">\(H_B = d_BG\)</span> 。两人使用同样的曲线参数。</p></li>
+<li><p><strong>Alice 和 Bob 在不可靠的信道上交换它们的公钥</strong>。中间人即使监听获得了两人的公钥 <span class="math notranslate nohighlight">\(H_A\)</span> 和 <span class="math notranslate nohighlight">\(H_B\)</span> ，也没办法解出两人的私钥 <span class="math notranslate nohighlight">\(d_A\)</span> 或 <span class="math notranslate nohighlight">\(d_B\)</span> ，因为需要解离散对数问题。</p></li>
+<li><p>Alice 计算 <span class="math notranslate nohighlight">\(S = d_AH_B\)</span> （使用自己的私钥和 Bob 的公钥），Bob 计算 <span class="math notranslate nohighlight">\(S = d_BH_A\)</span> （使用自己的私钥和 Alice 的公钥）。这个 <span class="math notranslate nohighlight">\(S\)</span> 是两人之间“共同的秘密（shared secret）”。</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[S = d_AH_B = d_A(d_BG) = d_B(D_AG) = d_BH_A\]</div>
+<p>通过公钥 <span class="math notranslate nohighlight">\(H_A\)</span> 和 <span class="math notranslate nohighlight">\(H_B\)</span> 很难解出 <span class="math notranslate nohighlight">\(S\)</span> 来，这个叫做 Diffie-Hellman 难题。即：</p>
+<blockquote>
+<div><p>给定三个点 <span class="math notranslate nohighlight">\(P\)</span>， <span class="math notranslate nohighlight">\(aP\)</span> 和 <span class="math notranslate nohighlight">\(bP\)</span>，求 <span class="math notranslate nohighlight">\(abP\)</span> 。</p>
+</div></blockquote>
+<p>或者等价的（原始 Diffie-Hellman 算法里用的）：</p>
+<blockquote>
+<div><p>给定三个整数 <span class="math notranslate nohighlight">\(k\)</span>， <span class="math notranslate nohighlight">\(k^x\)</span> 和 <span class="math notranslate nohighlight">\(k^y\)</span>，求 <span class="math notranslate nohighlight">\(k^{xy}\)</span> 。</p>
+</div></blockquote>
+<img alt="../_images/ecdh.png" src="../_images/ecdh.png" />
+<p>Diffie-Hellman 难题更详细的可以参见可汗学院的这个视频： <a class="reference external" href="https://www.youtube.com/watch?v=YEBfamv-_do#t=02m37s">Public key cryptography - Diffie-Hellman Key Exchange (full version)</a></p>
+<p>解决椭圆曲线的 Diffie-Hellman 难题需要解决离散对数难题，所以很难求解。</p>
+<p><strong>Alice 和 Bob 获得共同的秘密</strong> <span class="math notranslate nohighlight">\(S\)</span> <strong>后，就可以使用对称加密来交换数据了。</strong></p>
+<p>比如，可以使用 <span class="math notranslate nohighlight">\(S\)</span> 的 <span class="math notranslate nohighlight">\(x\)</span> 坐标作为密钥，使用 AES 或者 3DES 之类的算法来加密信息。TLS 的方式比这个稍微复杂一点，它用的是 <span class="math notranslate nohighlight">\(x\)</span> 坐标再加上一些和连接相关的数值后计算的一个 hash。</p>
+</section>
+<section id="ecdhe-jia-mi-suan-fa">
+<h3>ECDHE 加密算法<a class="headerlink" href="#ecdhe-jia-mi-suan-fa" title="Permalink to this headline">¶</a></h3>
+<p>ECDHE 指的是 Ephemeral（临时的） ECDH 算法，也就是说 ECDH 加密算法交换的密钥只是临时的，不是 <strong>静态</strong> 的。</p>
+<p>比如 TLS 就使用了 ECDHE 算法，客户端和服务端每次建立连接的时候都会生成并交换新的公私钥。</p>
+</section>
+<section id="ecdsa-qian-ming-suan-fa-signing-with-ecdsa">
+<h3>ECDSA 签名算法（Signing with ECDSA）<a class="headerlink" href="#ecdsa-qian-ming-suan-fa-signing-with-ecdsa" title="Permalink to this headline">¶</a></h3>
+<p>ECDSA 签名算法的使用场景是这样的：Alice 要发送一个消息给 Bob，为了让 Bob 相信这个信息确实是她发出的， Alice 使用自己的私钥 <span class="math notranslate nohighlight">\(d_A\)</span> 给消息生成一个数字签名并和消息一起发给 Bob，Bob 收到后可以使用 Alice 的公钥 <span class="math notranslate nohighlight">\(H_A\)</span> 验证这个消息是否确实是 Alice 所发。</p>
+<p>这里两人依然使用同样的椭圆曲线参数。ECDSA 是 Digital Signature Algorithm 在椭圆曲线上的应用。</p>
+<p>ECDSA 是用消息的 hash 来生成签名的，这个 hash 函数我们可以自己定（但最好使用一个 <a class="reference external" href="http://en.wikipedia.org/wiki/Cryptographic_hash_function">安全 hash 算法</a> ）。hash 值会被截断到和子群的序 <span class="math notranslate nohighlight">\(n\)</span> 同样的 bit 长度。记这个截断后的整数值为 <span class="math notranslate nohighlight">\(z\)</span> 。</p>
+<p>ECDSA 算法签名的过程如下：</p>
+<ol class="arabic simple">
+<li><p>从 <span class="math notranslate nohighlight">\({1, \cdots, n - 1}\)</span> 随机取一个数 <span class="math notranslate nohighlight">\(k\)</span> （<span class="math notranslate nohighlight">\(n\)</span> 是子群的序）。</p></li>
+<li><p>计算点 <span class="math notranslate nohighlight">\(P = kG\)</span> （<span class="math notranslate nohighlight">\(G\)</span> 是子群的基点）。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(r = x_P \bmod n\)</span> （<span class="math notranslate nohighlight">\(x_P\)</span> 是 <span class="math notranslate nohighlight">\(P\)</span> 点的 <span class="math notranslate nohighlight">\(x\)</span> 坐标）。</p></li>
+<li><p>如果 <span class="math notranslate nohighlight">\(r = 0\)</span> 换一个 <span class="math notranslate nohighlight">\(k\)</span> 后重试。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(s = k^{-1}(z + rd_A) \bmod n\)</span> （其中 <span class="math notranslate nohighlight">\(d_A\)</span> 是 Alice 的私钥， <span class="math notranslate nohighlight">\(k^{-1}\)</span> 是 <span class="math notranslate nohighlight">\(k\)</span> 的乘法逆元。</p></li>
+<li><p>如果 <span class="math notranslate nohighlight">\(s = 0\)</span>，换一个 <span class="math notranslate nohighlight">\(k\)</span> 后重试。</p></li>
+</ol>
+<p><span class="math notranslate nohighlight">\((r, s)\)</span> 对就是生成的数字签名。</p>
+<img alt="../_images/ecdsa.png" src="../_images/ecdsa.png" />
+<p>简言之，这个算法生成一个密钥 <span class="math notranslate nohighlight">\(k\)</span> ，然后使用点的乘法将其藏入 <span class="math notranslate nohighlight">\(r\)</span> 中（乘法容易，反过来就是对数问题，求解很困难），最后使用公式 <span class="math notranslate nohighlight">\(s = k^{-1}(z + rd_A) \bmod n\)</span> 将 <span class="math notranslate nohighlight">\(r\)</span> 和消息的 hash <span class="math notranslate nohighlight">\(z\)</span> 绑定。</p>
+</section>
+<section id="yan-zheng-qian-ming-verifying-signatures">
+<h3>验证签名（Verifying signatures）<a class="headerlink" href="#yan-zheng-qian-ming-verifying-signatures" title="Permalink to this headline">¶</a></h3>
+<p>Bob 收到消息后，同 Alice 计算签名时算消息的 hash 的方法一样计算收到的消息的 hash 值 <span class="math notranslate nohighlight">\(z\)</span> 。然后：</p>
+<ol class="arabic simple">
+<li><p>计算 <span class="math notranslate nohighlight">\(u_1 = s^{-1}z \bmod n\)</span> 。</p></li>
+<li><p>计算 <span class="math notranslate nohighlight">\(u_2 = s^{-1}r \bmod n\)</span> 。</p></li>
+<li><p>计算点 <span class="math notranslate nohighlight">\(P = u_1G + u_2H_A\)</span> 。</p></li>
+</ol>
+<p>如果 <span class="math notranslate nohighlight">\(r = x_P \bmod n\)</span> ，那么说明这条消息确实是 Alice 所发。</p>
+</section>
+<section id="suan-fa-zheng-ming-correctness-of-the-algorithm">
+<h3>算法证明（Correctness of the algorithm）<a class="headerlink" href="#suan-fa-zheng-ming-correctness-of-the-algorithm" title="Permalink to this headline">¶</a></h3>
+<p>根据公钥定义 <span class="math notranslate nohighlight">\(H_A = d_AG\)</span> （<span class="math notranslate nohighlight">\(d_A\)</span> 是私钥），我们可以得到：</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{rl}
+P &amp; = u_1 G + u_2 H_A \\
+&amp; = u_1 G + u_2 d_A G \\
+&amp; = (u_1 + u_2 d_A) G
+\end{array}\end{split}\]</div>
+<p>根据上面 <span class="math notranslate nohighlight">\(u_1\)</span> 和 <span class="math notranslate nohighlight">\(u_2\)</span> 点定义：</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{rl}
+P &amp; = (u_1 + u_2 d_A) G \\
+&amp; = (s^{-1} z + s^{-1} r d_A) G \\
+&amp; = s^{-1} (z + r d_A) G
+\end{array}\end{split}\]</div>
+<p>为了简洁，上面的公式都省略了“ <span class="math notranslate nohighlight">\(\bmod n\)</span>”。</p>
+<p>又： <span class="math notranslate nohighlight">\(s = k^{-1}(z + rd_A) \bmod n\)</span> ，两边乘上 <span class="math notranslate nohighlight">\(k\)</span> 再除 <span class="math notranslate nohighlight">\(s\)</span> 得到： <span class="math notranslate nohighlight">\(k = s^{-1}(z + rd_A) \bmod n\)</span> 。将上面 <span class="math notranslate nohighlight">\(P\)</span> 公式里的 <span class="math notranslate nohighlight">\(s^{-1}(z + rd_A)\)</span> 替换为 <span class="math notranslate nohighlight">\(k\)</span> 得到：</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{rl}
+P &amp; = s^{-1} (z + r d_A) G \\
+&amp; = k G
+\end{array}\end{split}\]</div>
+<p>这个公式和生成签名第 2 步里的公式一模一样，也就是生成和验证的时候我们可以计算得到相同的点 <span class="math notranslate nohighlight">\(P\)</span>。证明完毕。</p>
+<p>ECDSA 使用的密钥 <span class="math notranslate nohighlight">\(k\)</span> 应该不可预测，如果我们所有的签名使用同样的 <span class="math notranslate nohighlight">\(k\)</span> 或者使用的随机数生成器可预测，攻击者可以有办法破解得到私钥。</p>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">椭圆曲线加密：ECDH 和 ECDSA</a><ul>
+<li><a class="reference internal" href="#tuo-yuan-qu-xian-can-shu-domain-parameters">椭圆曲线参数（Domain parameters）</a></li>
+<li><a class="reference internal" href="#tuo-yuan-qu-xian-jia-mi-elliptic-curve-cryptography">椭圆曲线加密（Elliptic Curve Cryptography）</a><ul>
+<li><a class="reference internal" href="#ecdh-jia-mi-suan-fa">ECDH 加密算法</a></li>
+<li><a class="reference internal" href="#ecdhe-jia-mi-suan-fa">ECDHE 加密算法</a></li>
+<li><a class="reference internal" href="#ecdsa-qian-ming-suan-fa-signing-with-ecdsa">ECDSA 签名算法（Signing with ECDSA）</a></li>
+<li><a class="reference internal" href="#yan-zheng-qian-ming-verifying-signatures">验证签名（Verifying signatures）</a></li>
+<li><a class="reference internal" href="#suan-fa-zheng-ming-correctness-of-the-algorithm">算法证明（Correctness of the algorithm）</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/ecc/3.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/ecc/3.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,265 @@
+有限域与离散对数问题
+^^^^^^^^^^^^^^^^^^^^^
+
+原文： `Elliptic Curve Cryptography: finite fields and discrete logarithms <http://andrea.corbellini.name/2015/05/23/elliptic-curve-cryptography-finite-fields-and-discrete-logarithms/>`_
+
+“整数对 p 取模“有限域（The field of integers modulo p）
+-------------------------------------------------------
+
+有限域是什么？首先，它是一个包含有限个元素的集合。有限域最常见的例子是当 p 为素数时，整数对 p 取模，一般使用 :math:`\mathbb{Z}/p`, :math:`GF(p)` 或者 :math:`\mathbb{F}_p` 表示，下文中我们使用最后一种表示这个有限域。
+
+有限域上定义了加法（+）和乘法（·）两种运算，运算满足封闭性、结合性和交换性。存在唯一的单位元（identity element），域中的每个元素存在唯一的逆元（inverse element）。最后，乘法对加法满足分配律（distributive）： :math:`x \cdot (y + z) = x \cdot y + x \cdot z` 。
+
+整数对 p 取模有限域中包含了从 :math:`0` 到 :math:`p - 1` 的所有整数，加法和乘法同 `模运算（modular arithmetic） <http://en.wikipedia.org/wiki/Modular_arithmetic>`_ ，下面是 :math:`\mathbb{F}_{23}` 的运算示例：
+
+- 加： :math:`(18 + 9) \bmod 23 = 4`
+- 减： :math:`(7 - 14) \bmod 23 = 16`
+- 乘： :math:`(4 \cdot 7) \bmod 23 = 5`
+- 加法逆元（Additive inverse）： :math:`-5 \bmod 23 = 18`
+
+  :math:`(5 + (-5)) \bmod 23 = (5 + 18) \bmod 23 = 0` ，正确。
+
+- 乘法逆元（Multiplicative inverse）： :math:`9^{-1} \bmod 23 = 18`
+
+  :math:`9 \cdot 9^{-1} \bmod 23 = 9 \cdot 18 \bmod 23 = 1` ，正确。
+
+如果上面的公式看不太明白，可以看下可汗学院的这个教程： `What is Modular Arithmetic <https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/what-is-modular-arithmetic>`_ 。
+
+注意： :math:`p` 必须是一个素数。比如整数对 4 取模构成的集合就不是一个域：因为集合里的元素 2 没有乘法逆元，也就是说 :math:`2 \cdot x \bmod 4 = 1` 无解。
+
+模除(Division modulo p)
+--------------------------------
+
+在 :math:`\mathbb{F}_p` 中 :math:`x/y = x \cdot y^{-1}` ，也就是说，:math:`x` 除 :math:`y` 等价于 :math:`x` 乘上 :math:`y` 的乘法逆元。
+
+乘法逆元可以使用 `扩展欧几里得算法（extended Euclidean algorithm） <http://en.wikipedia.org/wiki/Extended_Euclidean_algorithm>`_ 很容易的计算得出，复杂度最差为 :math:`O(\log p)`，用 p 的 bit 长度表示的话为 :math:`O(k)` 。
+
+这个算法的细节跟本文主题无关，这里就不展开叙述了，下面是这个算法的 Python 语言实现，有兴趣的可以看看：
+
+.. code-block:: python
+
+    def extended_euclidean_algorithm(a, b):
+        """
+        Returns a three-tuple (gcd, x, y) such that
+        a * x + b * y == gcd, where gcd is the greatest
+        common divisor of a and b.
+
+        This function implements the extended Euclidean
+        algorithm and runs in O(log b) in the worst case.
+        """
+        s, old_s = 0, 1
+        t, old_t = 1, 0
+        r, old_r = b, a
+
+        while r != 0:
+            quotient = old_r // r
+            old_r, r = r, old_r - quotient * r
+            old_s, s = s, old_s - quotient * s
+            old_t, t = t, old_t - quotient * t
+
+        return old_r, old_s, old_t
+
+
+    def inverse_of(n, p):
+        """
+        Returns the multiplicative inverse of
+        n modulo p.
+
+        This function returns an integer m such that
+        (n * m) % p == 1.
+        """
+        gcd, x, y = extended_euclidean_algorithm(n, p)
+        assert (n * x + p * y) % p == gcd
+
+        if gcd != 1:
+            # Either n is 0, or p is not a prime number.
+            raise ValueError(
+                '{} has no multiplicative inverse '
+                'modulo {}'.format(n, p))
+        else:
+            return x % p
+
+:math:`\mathbb{F}_p` 上的椭圆曲线（Elliptic curves in :math:`\mathbb{F}_p`）
+-------------------------------------------------------------------------------
+
+下面我们将椭圆曲线限定在 :math:`\mathbb{F}_p` 上，前文提到实数域上的椭圆曲线公式如下：
+
+.. math::
+
+    \begin{array}{rcl}
+    \left\{(x, y) \in \mathbb{R}^2 \right. & \left. | \right. & \left. y^2 = x^3 + ax + b, \right. \\
+    & & \left. 4a^3 + 27b^2 \ne 0\right\}\ \cup\ \left\{0\right\}
+    \end{array}
+
+限定之后，公式变为：
+
+.. math::
+
+    \begin{array}{rcl}
+    \left\{(x, y) \in (\mathbb{F}_p)^2 \right. & \left. | \right. & \left. y^2 \equiv x^3 + ax + b \bmod p, \right. \\
+    & & \left. 4a^3 + 27b^2 \not\equiv 0 \bmod p \right\}\ \cup\ \left\{0\right\}
+    \end{array}
+
+其中 :math:`0` 依然是无穷远点，:math:`a` 和 :math:`b` 是 :math:`\mathbb{F}_p` 上的整数。
+
+.. figure:: images/elliptic-curves-mod-p.png
+
+   曲线 :math:`y^2 \equiv x^3 - 7x + 10 (\bmod p)` ，:math:`p = 19, 97, 127, 487` 。每一个 x 对应两个点，并相对于 :math:`y = p/2` 对称。
+
+之前连续的曲线现在变成了 :math:`xy` 平面上的离散点。我们可以证明，限定之后， :math:`\mathbb{F}_p` **上的椭圆曲线依然构成一个阿贝尔群**。
+
+曲线上点的加法（Point addition）
+----------------------------------
+
+我们需要稍微修改一下加法的定义，让其在 :math:`\mathbb{F}_p` 上可以正常工作。在实数域上，我们说三个在一条直线上的点的和为零（:math:`P + Q + R = 0`）。在 :math:`\mathbb{F}_p` 上同理，只是这里的直线和实数域上的直线不太一样。:math:`\mathbb{F}_p` 上的直线指的是满足 :math:`ax + by + c \equiv 0 (\bmod p)` 的所有点 :math:`(x, y)` 的集合。
+
+.. image:: images/point-addition-mod-p.png
+
+曲线构成群，所以曲线上点的加法依然满足前面说的各种群特性。
+
+- :math:`Q + 0 = 0 + Q = Q` (根据单位元的定义）。
+- 非无穷元点 :math:`Q` 的逆元 :math:`-Q = (x_Q, -y_Q \bmod p)` 。比如， :math:`\mathbb{F}_{29}` 上的曲线上有一个点 :math:`Q = (2,5)` ，那么其逆元 :math:`-Q = (2, -5 \bmod 29) = (2,24)` 。
+- :math:`P + (-P) = 0` （根据逆元的定义）。
+
+代数加法（Algebraic sum）
+----------------------------
+
+公式和前面实数域上的代数加法一样，只是每个公式的最后需要追加一个“:math:`\bmod p`”。给定 :math:`P = (x_P, y_P)`, :math:`Q = (x_Q, y_Q)` 和 :math:`R = (x_R, y_R)` ，我们如下计算 :math:`P + Q = -R` ：
+
+.. math::
+
+    \begin{array}{rcl}
+    x_R & = & (m^2 - x_P - x_Q) \bmod{p} \\
+    y_R & = & [y_P + m(x_R - x_P)] \bmod{p} \\
+    & = & [y_Q + m(x_R - x_Q)] \bmod{p}
+    \end{array}
+
+如果 :math:`P \ne Q`，斜率 :math:`m` 为：
+
+.. math:: m = (y_P - y_Q)(x_P - x_Q)^{-1} \bmod p
+
+否则：
+
+.. math:: m = (3 x_P^2 + a)(2 y_P)^{-1} \bmod{p}
+
+`离散点加法可视化工具 <https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/modk-add.html>`_
+
+椭圆曲线群的序（The order of an elliptic curve group）
+--------------------------------------------------------
+
+有限域上的椭圆曲线群的集合中包含有限个数的点，这些点的个数称为该群的序（order）。
+
+我们可以从 :math:`0` 到 :math:`p - 1` 遍历 :math:`x` 的所有可能值来计算得到点的个数，计算复杂度为 :math:`O(p)` ，如果 :math:`p` 非常大的话，性能会很低下。
+
+还好，存在高效算法 `Schoof's algorithm <https://en.wikipedia.org/wiki/Schoof%27s_algorithm>`_ 可以快速计算一个群的序。具体细节我们可以不用关注，只需要知道其可以多项式时间内计算完成就行。
+
+乘法和循环子群（Scalar multiplication and cyclic subgroups）
+--------------------------------------------------------------
+
+有限域上的乘法和实数域上一样，还是：
+
+.. math::
+
+    nP = \underbrace{P + P + \cdots + P}_{n\ \text{times}}
+
+我们依然可以使用 double and add 算法来高效完成乘法运算。
+
+`乘法可视化演示工具 <https://cdn.rawgit.com/andreacorbellini/ecc/920b29a/interactive/modk-mul.html>`_
+
+:math:`\mathbb{F}_p` 上的椭圆曲线上的点的乘法有一个非常有意思的特性。以曲线 :math:`y^2 \equiv x^3 + 2x + 3 (\bmod 97)` 和点 :math:`P = (3, 6)` 为例：
+
+.. image:: images/cyclic-subgroup.png
+
+- :math:`0P = 0`
+- :math:`1P = (3, 6)`
+- :math:`2P = (80, 10)`
+- :math:`3P = (80, 87)`
+- :math:`4P = (3, 91)`
+- :math:`5P = 0`
+- :math:`6P = (3, 6)`
+- :math:`7P = (80, 10)`
+- :math:`8P = (80, 87)`
+- :math:`9P = (3, 91)`
+- ……
+
+首先，:math:`nP` 所有可能的值只有 5 个。第二，这些值循环出现。所以，对于所有的整数 :math:`k` ：
+
+- :math:`5kP = 0`
+- :math:`(5k + 1)P = P`
+- :math:`(5k + 2)P = 2P`
+- :math:`(5k + 3)P = 3P`
+- :math:`(5k + 4)P = 4P`
+
+使用取模运算我们可以将上面 5 个公式进一步简化为： :math:`kP = (k \bmod 5)P` 。
+
+不仅如此，我们还可以证明这 5 个点的加法是封闭的。也就是说 :math:`0` 、:math:`P`、:math:`2P`、:math:`3P`、:math:`4P` 任意相加，最终的结果还是这 5 个点之一。
+
+以上规律并不限于 :math:`P = (3, 6)` 这个点，而是对曲线上所有的点都成立。假设 :math:`P` 是曲线上任意一点：
+
+.. math::
+
+    nP + mP = \underbrace{P + \cdots + P}_{n\ \text{times}} + \underbrace{P + \cdots + P}_{m\ \text{times}} = (n + m)P
+
+也就是说：两个 :math:`P` 的倍乘数相加，它们的和还是 :math:`P` 的倍乘数。也就证明了 :math:`nP` 的可能值构成的集合是一个椭圆曲线的循环子群。
+
+通过点 :math:`P` 我们可以获得这个循环子群里的所有元素，所以 :math:`P` 又被称为这个循环子群的 **生成元（generator）**  或者 **基点（base point）** 。
+
+循环子群是椭圆曲线加密以及其它一些加密系统的基石。
+
+子群的序（Subgroup order）
+------------------------------
+
+Schoof's algorithm 只能计算椭圆曲线群的序，不能用于计算点 :math:`P` 生成的子群的序，那么这个子群的序怎么来计算呢？
+
+在解决这个问题之前，我们先做一点铺垫：
+
+- 前面，我们定义一个群的序为这个群里元素的个数。不过对于循环子群，我们可以给出另外一个等价的定义：:math:`P` 的序为满足 :math:`nP = 0` 的最小正整数 :math:`n` 。例如前面包含 5 个点的子群，我们可以看到 :math:`5P = 0` 。
+- 根据 `拉格朗日定理（Lagrange's theorem） <https://en.wikipedia.org/wiki/Lagrange%27s_theorem_(group_theory)>`_ ，子群的序是其父群的一个约数（divisor）。也就是说，如果椭圆曲线群的序为 :math:`N`，子群的序为 :math:`n`，那么 :math:`n` 是 :math:`N` 的一个约数。
+
+综上，我们可以得到如下计算子群的序的算法：
+
+1. 使用 Schoof's algorithm 计算得到椭圆曲线群的序 :math:`N`。
+2. 找出 :math:`N` 的所有约数。
+3. 对于 :math:`N` 的每一个约数 :math:`n`，计算 :math:`nP` 。
+4. 满足 :math:`nP = 0` 的最小 :math:`n` ，就是基点为 :math:`P` 的子群的序。
+
+例如，:math:`\mathbb{F}_{37}` 上的椭圆曲线群 :math:`y^2 = x^3 - x + 3` 的序为 :math:`N = 42`。那么它的子群的序可能是 :math:`n =` 1, 2, 3, 6, 7, 14, 21 或者 42。对于点 :math:`P = (2, 3)`，我们可以计算得到 :math:`P \ne 0`，:math:`2P \ne 0`，……，:math:`7P = 0`，所以，:math:`P` 的序为 :math:`n = 7` 。
+
+另外一个例子：:math:`\mathbb{F}_{29}` 上的椭圆曲线群 :math:`y^2 = x^3 - x + 3` 的序为 :math:`N = 37`，是一个素数，所以它的子群的序 :math:`n` 只能为 1 或者 37。当 :math:`n = 1` 时，子群里只有无穷远点，当 :math:`n = N` 时，子群包含了椭圆曲线群里的所有点。
+
+寻找基点（Finding a base point）
+------------------------------------
+
+对于椭圆曲线加密算法，我们需要一个序比较高的子群。具体来说，我们需要选择一个椭圆曲线，计算它的序 :math:`N`，选择 :math:`N` 的一个比较大的约数作为子群的序 :math:`n`，最后找到这个序对应的基点。这里我们不是先选基点再计算它的序，而是反过来：先选定序再寻找其对应的基点。那么在知道序的情况下如何找到其对应的基点呢？
+
+我们需要再引入一个概念。根据拉格朗日定理可知 :math:`h = N/n` **必然是一个整数** （:math:`n` 是 :math:`N` 的约数）。这个 :math:`h` 叫做 **子群的 cofactor** 。
+
+对于椭圆曲线上的任意点，都有 :math:`NP = 0`，因为 :math:`N` 是所以 :math:`n` 的公倍数，根据 cofactor 的定义，我们可以得到：
+
+.. math:: n(hP) = 0
+
+假设 :math:`n` 是一个素数（具体理由后面会解释）。从上面的公式我们可以知道：点 :math:`G = hP` 生成一个序为 :math:`n` 的子群（除非 :math:`G = hP = 0`，它生成的群的序为 1）。
+
+据此，我们得到以下算法：
+
+1. 计算椭圆曲线的序 :math:`N` 。
+2. 选择子群的序 :math:`n`， :math:`n` 是素数并且是 :math:`N` 的约数。
+3. 计算 cofactor :math:`h = N/n`。
+4. 取曲线上随机一点 :math:`P` 。
+5. 计算 :math:`G = hP` 。
+6. 如果 :math:`G` 是 :math:`0`，回第 4 步，否则 :math:`G` 就是我们要找的基点（序为 :math:`n`，cofactor 为 :math:`h` ）。
+
+注意，算法可以工作的前提是 :math:`n` 是一个素数，如果不是，:math:`G` 的序可能是 :math:`n` 的一个约数。
+
+离散对数（Discrete logarithm）
+--------------------------------
+
+如果知道 :math:`P` 和 :math:`Q`，如何找到 :math:`k` 使得 :math:`Q = kP` 呢？
+
+这个问题前面已经说了，叫做 **离散对数问题** 。到目前为止，还没有一个算法可以在多项式时间内解决。
+
+这个问题同 DSA 算法、 Diffie-Hellman (D-H) 密钥交换以及 ElGamal 算法中使用的离散对数问题类似，区别只在于这些算法使用的是幂次而不是乘法运算，这些算法中的离散对数问题是这样的：如果知道 :math:`a` 和 :math:`b`，如何找到 :math:`k` 使得 :math:`b = a^k \bmod p` 。
+
+因为这些问题都是限定在有限域上的，所以它们是“离散”的，因为它们和普通的对数运算类似，所以叫做对数问题。
+
+椭圆曲线有意思的地方在于：比起其它的加密算法，它的离散对数问题似乎更难解决。这意味着我们可以使用较少 bit 的 :math:`k` 就获得和其它加密系统同样的安全等级。

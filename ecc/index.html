@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Elliptic Curve Cryptography &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="实数域上的椭圆曲线与群" href="1.html" />
+    <link rel="prev" title="Percolator 的事务模型" href="../percolator.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="elliptic-curve-cryptography">
+<h1>Elliptic Curve Cryptography<a class="headerlink" href="#elliptic-curve-cryptography" title="Permalink to this headline">¶</a></h1>
+<p>翻译自：</p>
+<ul class="simple">
+<li><p><a class="reference external" href="http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/">Elliptic curves over real numbers and the group law</a></p></li>
+<li><p><a class="reference external" href="http://andrea.corbellini.name/2015/05/23/elliptic-curve-cryptography-finite-fields-and-discrete-logarithms/">Elliptic Curve Cryptography: finite fields and discrete logarithms</a></p></li>
+<li><p><a class="reference external" href="http://andrea.corbellini.name/2015/05/30/elliptic-curve-cryptography-ecdh-and-ecdsa/">Key pair generation and two ECC algorithms: ECDH and ECDSA</a></p></li>
+<li><p><a class="reference external" href="http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/">Algorithms for breaking ECC security, and a comparison with RSA</a> 未翻</p></li>
+</ul>
+<hr><div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="1.html">实数域上的椭圆曲线与群</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="1.html#tuo-yuan-qu-xian-elliptic-curves">椭圆曲线（Elliptic Curves）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1.html#qun-groups">群（Groups）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1.html#zai-tuo-yuan-qu-xian-shang-ding-yi-yi-ge-qun-the-group-law-for-elliptic-curves">在椭圆曲线上定义一个群（The group law for elliptic curves）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1.html#ji-he-jia-fa-geometric-addition">几何加法（Geometric addition）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1.html#dai-shu-jia-fa-algebraic-addition">代数加法（Algebraic addition）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1.html#cheng-fa-scalar-multiplication">乘法（Scalar multiplication）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="1.html#dui-shu-logarithm">对数（Logarithm）</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="2.html">有限域与离散对数问题</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="2.html#zheng-shu-dui-p-qu-mo-you-xian-yu-the-field-of-integers-modulo-p">“整数对 p 取模“有限域（The field of integers modulo p）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2.html#mo-chu-division-modulo-p">模除(Division modulo p)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2.html#mathbb-f-p-shang-de-tuo-yuan-qu-xian-elliptic-curves-in-mathbb-f-p"><span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span> 上的椭圆曲线（Elliptic curves in <span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span>）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2.html#qu-xian-shang-dian-de-jia-fa-point-addition">曲线上点的加法（Point addition）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2.html#dai-shu-jia-fa-algebraic-sum">代数加法（Algebraic sum）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2.html#tuo-yuan-qu-xian-qun-de-xu-the-order-of-an-elliptic-curve-group">椭圆曲线群的序（The order of an elliptic curve group）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2.html#cheng-fa-he-xun-huan-zi-qun-scalar-multiplication-and-cyclic-subgroups">乘法和循环子群（Scalar multiplication and cyclic subgroups）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2.html#zi-qun-de-xu-subgroup-order">子群的序（Subgroup order）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2.html#xun-zhao-ji-dian-finding-a-base-point">寻找基点（Finding a base point）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="2.html#li-san-dui-shu-discrete-logarithm">离散对数（Discrete logarithm）</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="3.html">椭圆曲线加密：ECDH 和 ECDSA</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="3.html#tuo-yuan-qu-xian-can-shu-domain-parameters">椭圆曲线参数（Domain parameters）</a></li>
+<li class="toctree-l2"><a class="reference internal" href="3.html#tuo-yuan-qu-xian-jia-mi-elliptic-curve-cryptography">椭圆曲线加密（Elliptic Curve Cryptography）</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference external" href="http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/">Algorithms for breaking ECC security, and a comparison with RSA</a></li>
+</ul>
+</div>
+<div style="display:none"><p><span class="math notranslate nohighlight">\(\mathbb{F}_p\)</span></p>
+</div></section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/ecc/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/ecc/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

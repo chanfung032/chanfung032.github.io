@@ -24,7 +24,7 @@ Feng's blog
    the-hungry-beast-and-ugly-baby.rst
    spanner.rst
    percolator.rst
-   elliptic-curve-cryptography.rst
+   ecc/index.rst
    bitcoin-explained.rst
    nginx-lua-internals.rst
    user-experience-design-for-apis.rst
