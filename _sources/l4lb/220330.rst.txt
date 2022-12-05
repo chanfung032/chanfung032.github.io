@@ -202,4 +202,109 @@ IPv4 VIP 访问正常、IPv6 访问异常可能的问题
 
 集群中有一台机器 IPv6 访问异常，IPv4 访问确正常，异常的机器上 IPv6 的 VIP 绑定正常，sit0 网卡也正常，一切看上去都挺正常，这种情况可能是没有初始化 IPv6 导致缺少默认 IPv6 路由，下行的包不知道怎么出去导致的。
 
+交换机和服务器上 MTU 不一致导致的 bird ospf 失败
+------------------------------------------------
 
+有些交换机 MTU 设置为 9000 且无法修改，但是挂载了 XDP 的网卡的 MTU 无法改到和交换机的一致（ :ref:`mtu9000` ），此时 `bird <https://bird.network.cz/>`_ 会报下面的错误。
+
+.. code-block:: console
+
+	# tail /tmp/bird.log
+	2022-12-03 20:30:51.893 <RMT> ospfv2: MTU mismatch with nbr 61.184.215.126 on bond0 (remote 9000, local 1500)
+	...
+
+这个是 bird v2.0.7 版本开始加上的一个验证，之前只是一个 warning。
+
+https://github.com/CZ-NIC/bird/commit/267da8138d7f429941f2d829b44cf9bdd94a14d6
+
+可以加个选项支持将这个验证关闭。
+
+.. code-block:: diff
+
+	diff -ru a/proto/ospf/config.Y b/proto/ospf/config.Y
+	--- a/proto/ospf/config.Y	2019-10-16 18:45:08.000000000 +0800
+	+++ b/proto/ospf/config.Y	2022-12-05 16:36:46.334051267 +0800
+	@@ -191,7 +191,7 @@
+	 CF_DECLS
+	 
+	 CF_KEYWORDS(OSPF, V2, V3, OSPF_METRIC1, OSPF_METRIC2, OSPF_TAG, OSPF_ROUTER_ID)
+	-CF_KEYWORDS(AREA, NEIGHBORS, RFC1583COMPAT, STUB, TICK, COST, COST2, RETRANSMIT)
+	+CF_KEYWORDS(AREA, NEIGHBORS, RFC1583COMPAT, STUB, TICK, COST, COST2, RETRANSMIT, IGNOREMTU)
+	 CF_KEYWORDS(HELLO, TRANSMIT, PRIORITY, DEAD, TYPE, BROADCAST, BCAST, DEFAULT)
+	 CF_KEYWORDS(NONBROADCAST, NBMA, POINTOPOINT, PTP, POINTOMULTIPOINT, PTMP)
+	 CF_KEYWORDS(NONE, SIMPLE, AUTHENTICATION, STRICT, CRYPTOGRAPHIC, TTL, SECURITY)
+	@@ -258,6 +258,7 @@
+		proto_item
+	  | ospf_channel { this_proto->net_type = $1->net_type; }
+	  | RFC1583COMPAT bool { OSPF_CFG->rfc1583 = $2; }
+	+ | IGNOREMTU bool { OSPF_CFG->ignoremtu = $2; }
+	  | RFC5838 bool { OSPF_CFG->af_ext = $2; if (!ospf_cfg_is_v3()) cf_error("RFC5838 option requires OSPFv3"); }
+	  | VPN PE bool { OSPF_CFG->vpn_pe = $3; }
+	  | STUB ROUTER bool { OSPF_CFG->stub_router = $3; }
+	diff -ru a/proto/ospf/dbdes.c b/proto/ospf/dbdes.c
+	--- a/proto/ospf/dbdes.c	2019-10-16 18:45:08.000000000 +0800
+	+++ b/proto/ospf/dbdes.c	2022-12-05 16:54:41.919077802 +0800
+	@@ -360,9 +360,11 @@
+		   (rcv_iface_mtu != ifa->iface->mtu) &&
+		   (rcv_iface_mtu != 0) && (ifa->iface->mtu != 0))
+	   {
+	-    LOG_PKT("MTU mismatch with nbr %R on %s (remote %d, local %d)",
+	-	    n->rid, ifa->ifname, rcv_iface_mtu, ifa->iface->mtu);
+	-    return;
+	+    LOG_PKT("MTU mismatch with nbr %R on %s (remote %d, local %d) %d",
+	+	    n->rid, ifa->ifname, rcv_iface_mtu, ifa->iface->mtu, p->ignoremtu);
+	+    if (!p->ignoremtu) {
+	+       return;
+	+    }
+	   }
+	 
+	   switch (n->state)
+	diff -ru a/proto/ospf/ospf.c b/proto/ospf/ospf.c
+	--- a/proto/ospf/ospf.c	2019-10-16 18:45:08.000000000 +0800
+	+++ b/proto/ospf/ospf.c	2022-12-05 16:57:16.415081613 +0800
+	@@ -287,6 +287,7 @@
+	   p->af_ext = c->af_ext;
+	   p->af_mc = c->af_mc;
+	   p->rfc1583 = c->rfc1583;
+	+  p->ignoremtu = c->ignoremtu;
+	   p->stub_router = c->stub_router;
+	   p->merge_external = c->merge_external;
+	   p->instance_id = c->instance_id;
+	@@ -708,6 +709,9 @@
+	   if (p->rfc1583 != new->rfc1583)
+		 return 0;
+	 
+	+  if (p->ignoremtu != new->ignoremtu)
+	+    return 0;
+	+
+	   if (p->instance_id != new->instance_id)
+		 return 0;
+	 
+	@@ -832,6 +836,7 @@
+	 
+	   cli_msg(-1014, "%s:", p->p.name);
+	   cli_msg(-1014, "RFC1583 compatibility: %s", (p->rfc1583 ? "enabled" : "disabled"));
+	+  cli_msg(-1014, "Ignore MTU: %s", (p->ignoremtu? "enabled" : "disabled"));
+	   cli_msg(-1014, "Stub router: %s", (p->stub_router ? "Yes" : "No"));
+	   cli_msg(-1014, "RT scheduler tick: %d", p->tick);
+	   cli_msg(-1014, "Number of areas: %u", p->areano);
+	diff -ru a/proto/ospf/ospf.h b/proto/ospf/ospf.h
+	--- a/proto/ospf/ospf.h	2019-10-16 18:45:08.000000000 +0800
+	+++ b/proto/ospf/ospf.h	2022-12-05 15:19:47.161937314 +0800
+	@@ -94,6 +94,7 @@
+	   u8 af_ext;
+	   u8 af_mc;
+	   u8 rfc1583;
+	+  u8 ignoremtu;
+	   u8 stub_router;
+	   u8 merge_external;
+	   u8 instance_id;
+	@@ -232,6 +233,7 @@
+	   u8 af_ext;			/* OSPFv3-AF extension */
+	   u8 af_mc;			/* OSPFv3-AF multicast */
+	   u8 rfc1583;			/* RFC1583 compatibility */
+	+  u8 ignoremtu;
+	   u8 stub_router;		/* Do not forward transit traffic */
+	   u8 merge_external;		/* Should i merge external routes? */
+	   u8 instance_id;		/* Differentiate between more OSPF instances */
+	

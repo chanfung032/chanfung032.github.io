@@ -263,6 +263,16 @@ tcpdump <span class="s2">&quot;tcp and ip6[40+13]&amp;(tcp-syn|tcp-ack) == tcp-s
 <p>Linux 默认没有开启，如果是实现的服务端，客户端不在我们的控制下，应该假定客户端没有开启 pmtud。</p>
 <p>不同的默认行为可能会导致一些请求在有些系统上失败，但在另外的系统上的却可以成功。</p>
 </section>
+<section id="mlx5-core-mtu-9000-3498-is-not-allowed-while-xdp-enabled">
+<span id="mtu9000"></span><h2>mlx5_core MTU(9000) &gt; 3498 is not allowed while XDP enabled<a class="headerlink" href="#mlx5-core-mtu-9000-3498-is-not-allowed-while-xdp-enabled" title="Permalink to this headline">¶</a></h2>
+<p>启用 XDP 的情况下，大包模式的 mtu 设置不到最大的 9000。部分驱动支持设置 mtu 到一个稍微小于 4k（内存页面大小）的值。</p>
+<p><a class="reference external" href="https://github.com/xdp-project/xdp-tutorial/issues/225">https://github.com/xdp-project/xdp-tutorial/issues/225</a></p>
+<p>再往上就需要 XDP Multi-buffers 的支持，这个需要比较新的内核，且目前只有少部分网卡支持，详细见：</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://lore.kernel.org/bpf/cover.1617885385.git.lorenzo&#64;kernel.org/">https://lore.kernel.org/bpf/cover.1617885385.git.lorenzo&#64;kernel.org/</a></p></li>
+<li><p>Bringing TSO/GRO and Jumbo frames to XDP <a class="reference external" href="https://lpc.events/event/11/contributions/939/attachments/771/1551/xdp-multi-buff.pdf">PPT</a> <a class="reference external" href="https://www.youtube.com/watch?v=FlJ9bsnjywM">视频</a> 。</p></li>
+</ul>
+</section>
 </section>
 
 
@@ -283,6 +293,7 @@ tcpdump <span class="s2">&quot;tcp and ip6[40+13]&amp;(tcp-syn|tcp-ack) == tcp-s
 <li><a class="reference internal" href="#tcpdump-da-yin-chu-de-ji-ge-bu-tong-length-zhi-jian-de-huan-suan">tcpdump 打印出的几个不同 length 之间的换算</a></li>
 <li><a class="reference internal" href="#tong-guo-ipset-iptables-xiu-gai-bu-fen-ip-de-tcp-mss">通过 ipset + iptables 修改部分 IP 的 TCP MSS</a></li>
 <li><a class="reference internal" href="#pmtud-bu-tong-xi-tong-bu-yi-yang-de-mo-ren-xing-wei">pmtud 不同系统不一样的默认行为</a></li>
+<li><a class="reference internal" href="#mlx5-core-mtu-9000-3498-is-not-allowed-while-xdp-enabled">mlx5_core MTU(9000) &gt; 3498 is not allowed while XDP enabled</a></li>
 </ul>
 </li>
 </ul>

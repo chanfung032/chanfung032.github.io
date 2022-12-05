@@ -223,6 +223,106 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <h2>IPv4 VIP 访问正常、IPv6 访问异常可能的问题<a class="headerlink" href="#ipv4-vip-fang-wen-zheng-chang-ipv6-fang-wen-yi-chang-ke-neng-de-wen-ti" title="Permalink to this headline">¶</a></h2>
 <p>集群中有一台机器 IPv6 访问异常，IPv4 访问确正常，异常的机器上 IPv6 的 VIP 绑定正常，sit0 网卡也正常，一切看上去都挺正常，这种情况可能是没有初始化 IPv6 导致缺少默认 IPv6 路由，下行的包不知道怎么出去导致的。</p>
 </section>
+<section id="jiao-huan-ji-he-fu-wu-qi-shang-mtu-bu-yi-zhi-dao-zhi-de-bird-ospf-shi-bai">
+<h2>交换机和服务器上 MTU 不一致导致的 bird ospf 失败<a class="headerlink" href="#jiao-huan-ji-he-fu-wu-qi-shang-mtu-bu-yi-zhi-dao-zhi-de-bird-ospf-shi-bai" title="Permalink to this headline">¶</a></h2>
+<p>有些交换机 MTU 设置为 9000 且无法修改，但是挂载了 XDP 的网卡的 MTU 无法改到和交换机的一致（ <a class="reference internal" href="210305.html#mtu9000"><span class="std std-ref">mlx5_core MTU(9000) &gt; 3498 is not allowed while XDP enabled</span></a> ），此时 <a class="reference external" href="https://bird.network.cz/">bird</a> 会报下面的错误。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tail /tmp/bird.log
+<span class="go">2022-12-03 20:30:51.893 &lt;RMT&gt; ospfv2: MTU mismatch with nbr 61.184.215.126 on bond0 (remote 9000, local 1500)</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+<p>这个是 bird v2.0.7 版本开始加上的一个验证，之前只是一个 warning。</p>
+<p><a class="reference external" href="https://github.com/CZ-NIC/bird/commit/267da8138d7f429941f2d829b44cf9bdd94a14d6">https://github.com/CZ-NIC/bird/commit/267da8138d7f429941f2d829b44cf9bdd94a14d6</a></p>
+<p>可以加个选项支持将这个验证关闭。</p>
+<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span><span class="gh">diff -ru a/proto/ospf/config.Y b/proto/ospf/config.Y</span>
+<span class="gd">--- a/proto/ospf/config.Y       2019-10-16 18:45:08.000000000 +0800</span>
+<span class="gi">+++ b/proto/ospf/config.Y       2022-12-05 16:36:46.334051267 +0800</span>
+<span class="gu">@@ -191,7 +191,7 @@</span>
+ CF_DECLS
+
+ CF_KEYWORDS(OSPF, V2, V3, OSPF_METRIC1, OSPF_METRIC2, OSPF_TAG, OSPF_ROUTER_ID)
+<span class="gd">-CF_KEYWORDS(AREA, NEIGHBORS, RFC1583COMPAT, STUB, TICK, COST, COST2, RETRANSMIT)</span>
+<span class="gi">+CF_KEYWORDS(AREA, NEIGHBORS, RFC1583COMPAT, STUB, TICK, COST, COST2, RETRANSMIT, IGNOREMTU)</span>
+ CF_KEYWORDS(HELLO, TRANSMIT, PRIORITY, DEAD, TYPE, BROADCAST, BCAST, DEFAULT)
+ CF_KEYWORDS(NONBROADCAST, NBMA, POINTOPOINT, PTP, POINTOMULTIPOINT, PTMP)
+ CF_KEYWORDS(NONE, SIMPLE, AUTHENTICATION, STRICT, CRYPTOGRAPHIC, TTL, SECURITY)
+<span class="gu">@@ -258,6 +258,7 @@</span>
+        proto_item
+  | ospf_channel { this_proto-&gt;net_type = $1-&gt;net_type; }
+  | RFC1583COMPAT bool { OSPF_CFG-&gt;rfc1583 = $2; }
+<span class="gi">+ | IGNOREMTU bool { OSPF_CFG-&gt;ignoremtu = $2; }</span>
+  | RFC5838 bool { OSPF_CFG-&gt;af_ext = $2; if (!ospf_cfg_is_v3()) cf_error(&quot;RFC5838 option requires OSPFv3&quot;); }
+  | VPN PE bool { OSPF_CFG-&gt;vpn_pe = $3; }
+  | STUB ROUTER bool { OSPF_CFG-&gt;stub_router = $3; }
+<span class="gh">diff -ru a/proto/ospf/dbdes.c b/proto/ospf/dbdes.c</span>
+<span class="gd">--- a/proto/ospf/dbdes.c        2019-10-16 18:45:08.000000000 +0800</span>
+<span class="gi">+++ b/proto/ospf/dbdes.c        2022-12-05 16:54:41.919077802 +0800</span>
+<span class="gu">@@ -360,9 +360,11 @@</span>
+           (rcv_iface_mtu != ifa-&gt;iface-&gt;mtu) &amp;&amp;
+           (rcv_iface_mtu != 0) &amp;&amp; (ifa-&gt;iface-&gt;mtu != 0))
+   {
+<span class="gd">-    LOG_PKT(&quot;MTU mismatch with nbr %R on %s (remote %d, local %d)&quot;,</span>
+<span class="gd">-           n-&gt;rid, ifa-&gt;ifname, rcv_iface_mtu, ifa-&gt;iface-&gt;mtu);</span>
+<span class="gd">-    return;</span>
+<span class="gi">+    LOG_PKT(&quot;MTU mismatch with nbr %R on %s (remote %d, local %d) %d&quot;,</span>
+<span class="gi">+           n-&gt;rid, ifa-&gt;ifname, rcv_iface_mtu, ifa-&gt;iface-&gt;mtu, p-&gt;ignoremtu);</span>
+<span class="gi">+    if (!p-&gt;ignoremtu) {</span>
+<span class="gi">+       return;</span>
+<span class="gi">+    }</span>
+   }
+
+   switch (n-&gt;state)
+<span class="gh">diff -ru a/proto/ospf/ospf.c b/proto/ospf/ospf.c</span>
+<span class="gd">--- a/proto/ospf/ospf.c 2019-10-16 18:45:08.000000000 +0800</span>
+<span class="gi">+++ b/proto/ospf/ospf.c 2022-12-05 16:57:16.415081613 +0800</span>
+<span class="gu">@@ -287,6 +287,7 @@</span>
+   p-&gt;af_ext = c-&gt;af_ext;
+   p-&gt;af_mc = c-&gt;af_mc;
+   p-&gt;rfc1583 = c-&gt;rfc1583;
+<span class="gi">+  p-&gt;ignoremtu = c-&gt;ignoremtu;</span>
+   p-&gt;stub_router = c-&gt;stub_router;
+   p-&gt;merge_external = c-&gt;merge_external;
+   p-&gt;instance_id = c-&gt;instance_id;
+<span class="gu">@@ -708,6 +709,9 @@</span>
+   if (p-&gt;rfc1583 != new-&gt;rfc1583)
+         return 0;
+
+<span class="gi">+  if (p-&gt;ignoremtu != new-&gt;ignoremtu)</span>
+<span class="gi">+    return 0;</span>
+<span class="gi">+</span>
+   if (p-&gt;instance_id != new-&gt;instance_id)
+         return 0;
+
+<span class="gu">@@ -832,6 +836,7 @@</span>
+
+   cli_msg(-1014, &quot;%s:&quot;, p-&gt;p.name);
+   cli_msg(-1014, &quot;RFC1583 compatibility: %s&quot;, (p-&gt;rfc1583 ? &quot;enabled&quot; : &quot;disabled&quot;));
+<span class="gi">+  cli_msg(-1014, &quot;Ignore MTU: %s&quot;, (p-&gt;ignoremtu? &quot;enabled&quot; : &quot;disabled&quot;));</span>
+   cli_msg(-1014, &quot;Stub router: %s&quot;, (p-&gt;stub_router ? &quot;Yes&quot; : &quot;No&quot;));
+   cli_msg(-1014, &quot;RT scheduler tick: %d&quot;, p-&gt;tick);
+   cli_msg(-1014, &quot;Number of areas: %u&quot;, p-&gt;areano);
+<span class="gh">diff -ru a/proto/ospf/ospf.h b/proto/ospf/ospf.h</span>
+<span class="gd">--- a/proto/ospf/ospf.h 2019-10-16 18:45:08.000000000 +0800</span>
+<span class="gi">+++ b/proto/ospf/ospf.h 2022-12-05 15:19:47.161937314 +0800</span>
+<span class="gu">@@ -94,6 +94,7 @@</span>
+   u8 af_ext;
+   u8 af_mc;
+   u8 rfc1583;
+<span class="gi">+  u8 ignoremtu;</span>
+   u8 stub_router;
+   u8 merge_external;
+   u8 instance_id;
+<span class="gu">@@ -232,6 +233,7 @@</span>
+   u8 af_ext;                   /* OSPFv3-AF extension */
+   u8 af_mc;                    /* OSPFv3-AF multicast */
+   u8 rfc1583;                  /* RFC1583 compatibility */
+<span class="gi">+  u8 ignoremtu;</span>
+   u8 stub_router;              /* Do not forward transit traffic */
+   u8 merge_external;           /* Should i merge external routes? */
+   u8 instance_id;              /* Differentiate between more OSPF instances */
+</pre></div>
+</div>
+</section>
 </section>
 
 
@@ -239,6 +339,7 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><a class="reference internal" href="#i40e-x722-unable-to-handle-kernel-null-pointer-dereference">i40e/X722 unable to handle kernel NULL pointer dereference</a></li>
 <li><a class="reference internal" href="#di-er-tiao-zhi-jie-zhai-chu-vip-fu-wu-qi-kai-qi-le-ip-forward-zao-cheng-de-bao-xun-huan">第二跳直接摘除 VIP + 服务器开启了 ip_forward 造成的包循环</a></li>
 <li><a class="reference internal" href="#ipv4-vip-fang-wen-zheng-chang-ipv6-fang-wen-yi-chang-ke-neng-de-wen-ti">IPv4 VIP 访问正常、IPv6 访问异常可能的问题</a></li>
+<li><a class="reference internal" href="#jiao-huan-ji-he-fu-wu-qi-shang-mtu-bu-yi-zhi-dao-zhi-de-bird-ospf-shi-bai">交换机和服务器上 MTU 不一致导致的 bird ospf 失败</a></li>
 </ul>
 </li>
 </ul>

@@ -254,3 +254,17 @@ Mac OSX 的 TCP 协议栈默认开启了 pmtud，可以自适应调节 mss。
 Linux 默认没有开启，如果是实现的服务端，客户端不在我们的控制下，应该假定客户端没有开启 pmtud。
 
 不同的默认行为可能会导致一些请求在有些系统上失败，但在另外的系统上的却可以成功。
+
+.. _mtu9000:
+
+mlx5_core MTU(9000) > 3498 is not allowed while XDP enabled
+----------------------------------------------------------------------
+
+启用 XDP 的情况下，大包模式的 mtu 设置不到最大的 9000。部分驱动支持设置 mtu 到一个稍微小于 4k（内存页面大小）的值。
+
+https://github.com/xdp-project/xdp-tutorial/issues/225
+
+再往上就需要 XDP Multi-buffers 的支持，这个需要比较新的内核，且目前只有少部分网卡支持，详细见：
+
+- https://lore.kernel.org/bpf/cover.1617885385.git.lorenzo@kernel.org/
+- Bringing TSO/GRO and Jumbo frames to XDP `PPT <https://lpc.events/event/11/contributions/939/attachments/771/1551/xdp-multi-buff.pdf>`_ `视频 <https://www.youtube.com/watch?v=FlJ9bsnjywM>`_ 。
