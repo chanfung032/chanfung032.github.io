@@ -208,6 +208,24 @@ https://discuss.hashicorp.com/t/failed-to-join-no-installed-keys-could-decrypt-t
 
 ``consul keyring`` 的使用方法参见：https://learn.hashicorp.com/tutorials/consul/gossip-encryption-rotate
 
+Raft has a leader but other tracking of the node would indicate that the node is unhealthy or does not exist
+----------------------------------------------------------------------------------------------------------------------
+
+错误信息如下：
+
+.. code-block:: console
+
+    agent.server: Raft has a leader but other tracking of the node would indicate that the node is unhealthy or does not exist.  \
+    The network may be misconfigured.: leader=183.3.203.134:28300
+
+这个错误一般出现在从一个 consul 集群中取出一部分节点构建一个新的 consul 集群（历史遗留特色场景），新集群配置了不同的 `serf encrypt key <https://developer.hashicorp.com/consul/docs/security/encryption>`_ 。这样新集群的节点无法通过 serf 节点发现 join 进老的集群， ``consul members`` 看老集群中这些节点处于 fail 状态。看新集群只有新的节点。这种时候就会报出上面的错误。
+
+**因为虽然 serf 节点发现加密了，但是 raft 是没有加密的**，新集群认老的 raft leader，但是 leader 在新集群的成员列表里找不到，就会报这个错误。
+
+https://github.com/hashicorp/consul/blob/v1.14.2/agent/consul/rpc.go#L774
+
+处理方法就是使用 ``consul force-leave -prune <hostname>`` 从老的集群中删除这些 fail 的节点，然后再恢复新集群。
+
 Go API Examples
 ----------------------------------
 
