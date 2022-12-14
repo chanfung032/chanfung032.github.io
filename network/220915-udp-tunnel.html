@@ -36,6 +36,8 @@
             
   <section id="udp-sui-dao">
 <h1>#220915 UDP 隧道<a class="headerlink" href="#udp-sui-dao" title="Permalink to this headline">¶</a></h1>
+<section id="shou-bao-chu-li-lu-jing">
+<h2>收包处理路径<a class="headerlink" href="#shou-bao-chu-li-lu-jing" title="Permalink to this headline">¶</a></h2>
 <p>以 fou 隧道为例，隧道创建的时候，会创建一个 udp socket，并设置其对应的 <code class="docutils literal notranslate"><span class="pre">udp_sock.encap_rcv</span></code> 为 <code class="docutils literal notranslate"><span class="pre">fou_udp_recv</span></code> 函数。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fou_create</span><span class="p">(</span><span class="n">struct</span> <span class="n">net</span> <span class="o">*</span><span class="n">net</span><span class="p">,</span> <span class="n">struct</span> <span class="n">fou_cfg</span> <span class="o">*</span><span class="n">cfg</span><span class="p">,</span> <span class="n">struct</span> <span class="n">socket</span> <span class="o">**</span><span class="n">sockp</span><span class="p">)</span>
 <span class="o">|-</span> <span class="n">struct</span> <span class="n">socket</span> <span class="o">*</span><span class="n">sock</span> <span class="o">=</span> <span class="n">NULL</span>
@@ -94,6 +96,110 @@
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">inet_protos</span></code> 里除了普通传输层协议的各种处理函数，还有各种隧道协议注册的处理函数。</p>
 </section>
+<section id="jie-bao">
+<h2>解包<a class="headerlink" href="#jie-bao" title="Permalink to this headline">¶</a></h2>
+<p>首先在 fou 模块的设置的 <code class="docutils literal notranslate"><span class="pre">encap_rcv</span></code> 回调函数 <code class="docutils literal notranslate"><span class="pre">fou_udp_recv</span></code> 中。剥除外层的 UDP 头，将传输层指向内层 IP/IPv6 包的开头。然后回调函数返回 <code class="docutils literal notranslate"><span class="pre">-IPPROTO_IPIP</span></code> 或者 <code class="docutils literal notranslate"><span class="pre">-IPPROTO_IPV6</span></code> 来调用通用的解包函数来接包。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">fou_recv_pull</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">fou</span><span class="w"> </span><span class="o">*</span><span class="n">fou</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">len</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="c1">// 从外层 IP 包中减去 UDP 头的大小</span>
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">fou</span><span class="o">-&gt;</span><span class="n">family</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">AF_INET</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="n">ip_hdr</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">tot_len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">htons</span><span class="p">(</span><span class="n">ntohs</span><span class="p">(</span><span class="n">ip_hdr</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">tot_len</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="k">else</span><span class="w"></span>
+<span class="w">      </span><span class="n">ipv6_hdr</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">payload_len</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">          </span><span class="n">htons</span><span class="p">(</span><span class="n">ntohs</span><span class="p">(</span><span class="n">ipv6_hdr</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">payload_len</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">   </span><span class="c1">// 剥除 UDP 协议头</span>
+<span class="w">   </span><span class="n">__skb_pull</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="c1">// 更新外层 IP 包的 checksum</span>
+<span class="w">   </span><span class="n">skb_postpull_rcsum</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">udp_hdr</span><span class="p">(</span><span class="n">skb</span><span class="p">),</span><span class="w"> </span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="c1">// 更新传输层指向内层 IP 包的开头</span>
+<span class="w">   </span><span class="n">skb_reset_transport_header</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="n">iptunnel_pull_offloads</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">fou_udp_recv</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sock</span><span class="w"> </span><span class="o">*</span><span class="n">sk</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="k">struct</span> <span class="nc">fou</span><span class="w"> </span><span class="o">*</span><span class="n">fou</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fou_from_sock</span><span class="p">(</span><span class="n">sk</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">fou</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">fou_recv_pull</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">fou</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">udphdr</span><span class="p">)))</span><span class="w"></span>
+<span class="w">      </span><span class="k">goto</span><span class="w"> </span><span class="n">drop</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="c1">// 返回 fou 隧道的协议，可能是 IPPROTO_IPIP、IPPROTO_IPV6</span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="o">-</span><span class="n">fou</span><span class="o">-&gt;</span><span class="n">protocol</span><span class="p">;</span><span class="w"></span>
+
+<span class="nl">drop</span><span class="p">:</span><span class="w"></span>
+<span class="w">   </span><span class="n">kfree_skb</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>如果是一个 IPv6 in IPv4 的包。那就是返回 <code class="docutils literal notranslate"><span class="pre">-IPPROTO_IPV6</span></code>，回到 IP 层 resubmit 后就到了 <code class="docutils literal notranslate"><span class="pre">tunnel64_rcv</span></code> 这个回调函数中。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">tunnel64_rcv</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="k">struct</span> <span class="nc">xfrm_tunnel</span><span class="w"> </span><span class="o">*</span><span class="n">handler</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">pskb_may_pull</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">ipv6hdr</span><span class="p">)))</span><span class="w"></span>
+<span class="w">      </span><span class="k">goto</span><span class="w"> </span><span class="n">drop</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="n">for_each_tunnel_rcu</span><span class="p">(</span><span class="n">tunnel64_handlers</span><span class="p">,</span><span class="w"> </span><span class="n">handler</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">handler</span><span class="o">-&gt;</span><span class="n">handler</span><span class="p">(</span><span class="n">skb</span><span class="p">))</span><span class="w"></span>
+<span class="w">         </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="n">icmp_send</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">ICMP_DEST_UNREACH</span><span class="p">,</span><span class="w"> </span><span class="n">ICMP_PORT_UNREACH</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
+
+<span class="nl">drop</span><span class="p">:</span><span class="w"></span>
+<span class="w">   </span><span class="n">kfree_skb</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>sit 模块在初始化的时候会调用 <code class="docutils literal notranslate"><span class="pre">xfrm4_tunnel_register</span></code> 注册 <code class="docutils literal notranslate"><span class="pre">IPPROTO_IPV6</span></code> 的处理函数 <code class="docutils literal notranslate"><span class="pre">ipip6_rcv</span></code> 。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="k">struct</span> <span class="nc">xfrm_tunnel</span><span class="w"> </span><span class="n">sit_handler</span><span class="w"> </span><span class="n">__read_mostly</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">handler</span><span class="w"> </span><span class="o">=</span><span class="w">        </span><span class="n">ipip6_rcv</span><span class="p">,</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">err_handler</span><span class="w"> </span><span class="o">=</span><span class="w">    </span><span class="n">ipip6_err</span><span class="p">,</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">priority</span><span class="w"> </span><span class="o">=</span><span class="w">       </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">__init</span><span class="w"> </span><span class="n">sit_init</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="w">   </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">xfrm4_tunnel_register</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sit_handler</span><span class="p">,</span><span class="w"> </span><span class="n">AF_INET6</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>tunnel64_rcv 中会遍历所有注册的处理 IPv6 in IPv4 的包的处理函数并调用。就会调用到 <code class="docutils literal notranslate"><span class="pre">ipip6_rcv</span></code> 。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">ipip6_rcv</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="c1">// 这个是外层 IP 头</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">iphdr</span><span class="w"> </span><span class="o">*</span><span class="n">iph</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ip_hdr</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="w">   </span><span class="n">tunnel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ipip6_tunnel_lookup</span><span class="p">(</span><span class="n">dev_net</span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">dev</span><span class="p">),</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">dev</span><span class="p">,</span><span class="w"></span>
+<span class="w">               </span><span class="n">iph</span><span class="o">-&gt;</span><span class="n">saddr</span><span class="p">,</span><span class="w"> </span><span class="n">iph</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="p">,</span><span class="w"> </span><span class="n">sifindex</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">tunnel</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="p">...</span><span class="w"></span>
+
+<span class="w">      </span><span class="c1">// 让 iphdr 指针指向内层 IPv6 头</span>
+<span class="w">      </span><span class="n">skb_reset_network_header</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">      </span><span class="p">...</span><span class="w"></span>
+
+<span class="w">      </span><span class="c1">// 重新提交包到协议栈网络层</span>
+<span class="w">      </span><span class="n">netif_rx</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">   </span><span class="cm">/* no tunnel matched,  let upstream know, ipsec may handle it */</span><span class="w"></span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+</section>
 
 
           </div>
@@ -102,6 +208,15 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#220915 UDP 隧道</a><ul>
+<li><a class="reference internal" href="#shou-bao-chu-li-lu-jing">收包处理路径</a></li>
+<li><a class="reference internal" href="#jie-bao">解包</a></li>
+</ul>
+</li>
+</ul>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
