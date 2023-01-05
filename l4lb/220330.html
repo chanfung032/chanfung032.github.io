@@ -195,6 +195,10 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 </pre></div>
 </div>
 <p><a class="reference external" href="https://linux.die.net/man/8/depmod">https://linux.die.net/man/8/depmod</a></p>
+<hr class="docutils" />
+<p>升级驱动版本注意中间有些版本升级后会出现网卡统计的 RX 一直为 0 的问题，这个在下面这个提交中已经修复：</p>
+<p><a class="reference external" href="https://github.com/torvalds/linux/commit/cdec2141c24ef177d929765c5a6f95549c266fb3">https://github.com/torvalds/linux/commit/cdec2141c24ef177d929765c5a6f95549c266fb3</a></p>
+<p>虽然这个是 2018 年的提交，但 intel 官方在 2021 年之后提供的驱动版本似乎还是不包含这个补丁内容。需要代码确认下。</p>
 </section>
 <section id="di-er-tiao-zhi-jie-zhai-chu-vip-fu-wu-qi-kai-qi-le-ip-forward-zao-cheng-de-bao-xun-huan">
 <h2>第二跳直接摘除 VIP + 服务器开启了 ip_forward 造成的包循环<a class="headerlink" href="#di-er-tiao-zhi-jie-zhai-chu-vip-fu-wu-qi-kai-qi-le-ip-forward-zao-cheng-de-bao-xun-huan" title="Permalink to this headline">¶</a></h2>
