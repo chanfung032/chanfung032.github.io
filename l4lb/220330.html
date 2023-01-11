@@ -327,6 +327,24 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 </pre></div>
 </div>
 </section>
+<section id="tcpdump-neng-kan-dao-vlan-header-dan-shi-xdp-kan-bu-dao">
+<h2>tcpdump 能看到 vlan header，但是 xdp 看不到<a class="headerlink" href="#tcpdump-neng-kan-dao-vlan-header-dan-shi-xdp-kan-bu-dao" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>Since XDP needs to see the VLAN headers as part of the packet headers, it is important to turn off VLAN hardware offload (which most hardware NICs support), since that will remove the VLAN tag from the packet header and instead communicate it out of band to the kernel via the packet hardware descriptor.</p>
+<p><a class="reference external" href="https://github.com/xdp-project/xdp-tutorial/tree/master/packet01-parsing">https://github.com/xdp-project/xdp-tutorial/tree/master/packet01-parsing</a></p>
+</div></blockquote>
+<p>一般网卡都有 vlan 解析/插入的硬件加速：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ethtool -k eth0<span class="p">|</span>grep vlan-offload
+<span class="go">rx-vlan-offload: on</span>
+<span class="go">tx-vlan-offload: on [fixed]</span>
+</pre></div>
+</div>
+<p>网卡会直接硬件解析 vlan header，然后将 vlan id 等信息直接给驱动，DMA 给驱动的网络包会删除掉 vlan header 变成一个普通的网络包。这样 XDP 就看不到 vlan header 了。解决的方法是关闭这个硬件加速：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ethtool -K eth0 rxvlan off
+</pre></div>
+</div>
+<p>或者通过配置将 vlan 信息给到 XDP 程序。</p>
+</section>
 </section>
 
 
@@ -344,6 +362,7 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><a class="reference internal" href="#di-er-tiao-zhi-jie-zhai-chu-vip-fu-wu-qi-kai-qi-le-ip-forward-zao-cheng-de-bao-xun-huan">第二跳直接摘除 VIP + 服务器开启了 ip_forward 造成的包循环</a></li>
 <li><a class="reference internal" href="#ipv4-vip-fang-wen-zheng-chang-ipv6-fang-wen-yi-chang-ke-neng-de-wen-ti">IPv4 VIP 访问正常、IPv6 访问异常可能的问题</a></li>
 <li><a class="reference internal" href="#jiao-huan-ji-he-fu-wu-qi-shang-mtu-bu-yi-zhi-dao-zhi-de-bird-ospf-shi-bai">交换机和服务器上 MTU 不一致导致的 bird ospf 失败</a></li>
+<li><a class="reference internal" href="#tcpdump-neng-kan-dao-vlan-header-dan-shi-xdp-kan-bu-dao">tcpdump 能看到 vlan header，但是 xdp 看不到</a></li>
 </ul>
 </li>
 </ul>

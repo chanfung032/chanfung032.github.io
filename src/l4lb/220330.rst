@@ -315,4 +315,26 @@ https://github.com/CZ-NIC/bird/commit/267da8138d7f429941f2d829b44cf9bdd94a14d6
 	   u8 stub_router;		/* Do not forward transit traffic */
 	   u8 merge_external;		/* Should i merge external routes? */
 	   u8 instance_id;		/* Differentiate between more OSPF instances */
-	
+
+tcpdump 能看到 vlan header，但是 xdp 看不到
+------------------------------------------------
+
+	Since XDP needs to see the VLAN headers as part of the packet headers, it is important to turn off VLAN hardware offload (which most hardware NICs support), since that will remove the VLAN tag from the packet header and instead communicate it out of band to the kernel via the packet hardware descriptor.
+
+	https://github.com/xdp-project/xdp-tutorial/tree/master/packet01-parsing
+
+一般网卡都有 vlan 解析/插入的硬件加速：
+
+.. code-block:: console
+
+	# ethtool -k eth0|grep vlan-offload
+	rx-vlan-offload: on
+	tx-vlan-offload: on [fixed]
+
+网卡会直接硬件解析 vlan header，然后将 vlan id 等信息直接给驱动，DMA 给驱动的网络包会删除掉 vlan header 变成一个普通的网络包。这样 XDP 就看不到 vlan header 了。解决的方法是关闭这个硬件加速：
+
+.. code-block:: console
+
+    # ethtool -K eth0 rxvlan off
+
+或者通过配置将 vlan 信息给到 XDP 程序。
