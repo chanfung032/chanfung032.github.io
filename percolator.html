@@ -18,7 +18,7 @@
     <script src="_static/custom.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Elliptic Curve Cryptography" href="elliptic-curve-cryptography.html" />
+    <link rel="next" title="Elliptic Curve Cryptography" href="ecc/index.html" />
     <link rel="prev" title="Spanner 概要（K-V 部分）" href="spanner.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -141,13 +141,24 @@
 <div id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
-    <form class="search" action="search.html" method="get">
+    <form class="search" action="https://cn.bing.com/search" method="get">
       <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <input type="submit" value="Go" />
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>
+$('#searchbox').show(0);
+document.getElementsByClassName('search')[0].addEventListener('submit', function(event) {
+  event.preventDefault();
+  var form = event.target;
+  var input = form.querySelector('input[name="q"]');
+  var value = input.value;
+  var q = 'ensearch=1&q=site%3Achanfung032.github.io++' + value;
+  var url = form.action + '?' + q;
+  window.location.href = url;
+});
+</script>
         </div>
       </div>
       <div class="clearer"></div>
