@@ -338,3 +338,10 @@ tcpdump 能看到 vlan header，但是 xdp 看不到
     # ethtool -K eth0 rxvlan off
 
 或者通过配置将 vlan 信息给到 XDP 程序。
+
+XDP_PASS & sysctl net.ipv4.conf.interface.accept_local
+--------------------------------------------------------------
+
+https://sysctl-explorer.net/net/ipv4/accept_local/
+
+sysctl ``net.ipv4.conf.interface.accept_local`` 参数默认为 FALSE，此时 XDP_PASS 给本机的 GUE 包的源地址需要改成其他非本机 IP，否则包会被丢掉。或者设置 sysctl ``net.ipv4.conf.interface.accept_local`` 参数为 TRUE。

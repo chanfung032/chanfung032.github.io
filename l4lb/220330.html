@@ -345,6 +345,11 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 </div>
 <p>或者通过配置将 vlan 信息给到 XDP 程序。</p>
 </section>
+<section id="xdp-pass-sysctl-net-ipv4-conf-interface-accept-local">
+<h2>XDP_PASS &amp; sysctl net.ipv4.conf.interface.accept_local<a class="headerlink" href="#xdp-pass-sysctl-net-ipv4-conf-interface-accept-local" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://sysctl-explorer.net/net/ipv4/accept_local/">https://sysctl-explorer.net/net/ipv4/accept_local/</a></p>
+<p>sysctl <code class="docutils literal notranslate"><span class="pre">net.ipv4.conf.interface.accept_local</span></code> 参数默认为 FALSE，此时 XDP_PASS 给本机的 GUE 包的源地址需要改成其他非本机 IP，否则包会被丢掉。或者设置 sysctl <code class="docutils literal notranslate"><span class="pre">net.ipv4.conf.interface.accept_local</span></code> 参数为 TRUE。</p>
+</section>
 </section>
 
 
@@ -363,6 +368,7 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><a class="reference internal" href="#ipv4-vip-fang-wen-zheng-chang-ipv6-fang-wen-yi-chang-ke-neng-de-wen-ti">IPv4 VIP 访问正常、IPv6 访问异常可能的问题</a></li>
 <li><a class="reference internal" href="#jiao-huan-ji-he-fu-wu-qi-shang-mtu-bu-yi-zhi-dao-zhi-de-bird-ospf-shi-bai">交换机和服务器上 MTU 不一致导致的 bird ospf 失败</a></li>
 <li><a class="reference internal" href="#tcpdump-neng-kan-dao-vlan-header-dan-shi-xdp-kan-bu-dao">tcpdump 能看到 vlan header，但是 xdp 看不到</a></li>
+<li><a class="reference internal" href="#xdp-pass-sysctl-net-ipv4-conf-interface-accept-local">XDP_PASS &amp; sysctl net.ipv4.conf.interface.accept_local</a></li>
 </ul>
 </li>
 </ul>
