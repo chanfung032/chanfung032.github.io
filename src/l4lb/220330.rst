@@ -345,3 +345,55 @@ XDP_PASS & sysctl net.ipv4.conf.interface.accept_local
 https://sysctl-explorer.net/net/ipv4/accept_local/
 
 sysctl ``net.ipv4.conf.interface.accept_local`` 参数默认为 FALSE，此时 XDP_PASS 给本机的 GUE 包的源地址需要改成其他非本机 IP，否则包会被丢掉。或者设置 sysctl ``net.ipv4.conf.interface.accept_local`` 参数为 TRUE。
+
+clang loop unroll(full) 失败导致的 BPF 加载失败
+------------------------------------------------------------
+
+下面的代码在编译的时候，循环会展开失败。
+
+.. code-block:: c
+
+	#pragma clang loop unroll(full)
+	for (int i = 1; i < L4LB_GUE_IPS_ARRAY_SIZE; i++) {
+	    uint32_t *ip = (uint32_t *)bpf_map_lookup_elem(&l4lb_gue_ips, &i);
+	    ...
+	}
+
+报 *警告*：
+
+	warning: loop not unrolled: the optimizer was unable to perform the requested transformation; the transformation might be part of an unsupported transformation ordering [-Wpass-failed=transform-warning]
+
+这样编译出的 bpf 会加载失败，报 *错误*。
+
+	invalid argument: back-edge from insn 1456 to 1458
+
+搜索 Linux 内核代码可以看到这个错误是说 bpf 代码中有往回的 jump 了，在我们的场景下就是上面的这个循环，bpf 不允许循环。
+
+一个让编译器的优化器可以成功展开这个循环的方法是：
+
+.. code-block:: c
+
+	#pragma clang loop unroll(full)
+	for (int i = 1; i < L4LB_GUE_IPS_ARRAY_SIZE; i++) {
+	    int j = i;   // 👈
+	    uint32_t *ip = (uint32_t *)bpf_map_lookup_elem(&l4lb_gue_ips, &j);
+	    ...
+	}
+
+邮件列表里也有人遇到过同样问题（https://lists.linuxfoundation.org/pipermail/iovisor-dev/2017-April/000733.html），给出的解释是将 ``&i`` 这个循环计数变量的指针传给 ``bpf_map_lookup_elem`` 函数，函数中可能会改变指针指向的内容，但是从这个函数的原型 ``static void *(*bpf_map_lookup_elem)(void *map, const void *key) = (void *) 1`` 来看，这个参数前面带了 const 关键字，编译器应该可以知道这个变量是一个只读变量的。
+
+----
+
+.. code-block:: c
+
+	int a = 24;
+	const int *p = &a;
+
+	// 报 error: assignment of read-only location ‘*p’
+	*p = 10;
+	// 但是做一个强制转换后，像下面这样是可以编译通过的
+	*(int*)p = 10;
+
+https://stackoverflow.com/questions/34842224/when-to-use-const-void
+
+const 指针指向的内容也是可以改变的，但这种情况编译器应该考虑吗？
