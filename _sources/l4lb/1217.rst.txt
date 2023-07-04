@@ -47,6 +47,16 @@ IPv6 地址一共 128 位，一般分成 8 组，每组 16 位，每组使用 16
 
 特殊形式 ::ffff:192.0.2.128 表示的是 IPv4 地址 192.0.2.128 。
 
+IPv6 地址在 URL 中或者和端口一起出现的时候，需要使用 ``[]`` 将 IP 地址部分括起来（ ``[]`` 是对内部的 ``:`` 进行转义）。例如： ``http://[::1]/ipng``。
+
+使用 curl 访问带 IPv6 地址的 URL 时，还需要加上 ``-g`` 选项，curl 默认会对 ``[]`` 做 globbing 展开。
+
+    -g, --globoff
+
+    This  option  switches off the "URL globbing parser". When you set this option, you can specify URLs that contain the letters {}[] without having them being interpreted by curl itself. Note that these letters are not normal legal URL contents but they should be encoded according to the URI standard.
+
+    https://everything.curl.dev/cmdline/globbing
+
 LVS RS 上如何配置 VIP
 ----------------------
 

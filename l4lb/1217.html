@@ -73,6 +73,13 @@
 <li><p>loopback 地址 0000:0000:0000:0000:0000:0000:0000:0001 可以缩略为 ::1 。</p></li>
 </ul>
 <p>特殊形式 ::ffff:192.0.2.128 表示的是 IPv4 地址 192.0.2.128 。</p>
+<p>IPv6 地址在 URL 中或者和端口一起出现的时候，需要使用 <code class="docutils literal notranslate"><span class="pre">[]</span></code> 将 IP 地址部分括起来（ <code class="docutils literal notranslate"><span class="pre">[]</span></code> 是对内部的 <code class="docutils literal notranslate"><span class="pre">:</span></code> 进行转义）。例如： <code class="docutils literal notranslate"><span class="pre">http://[::1]/ipng</span></code>。</p>
+<p>使用 curl 访问带 IPv6 地址的 URL 时，还需要加上 <code class="docutils literal notranslate"><span class="pre">-g</span></code> 选项，curl 默认会对 <code class="docutils literal notranslate"><span class="pre">[]</span></code> 做 globbing 展开。</p>
+<blockquote>
+<div><p>-g, –globoff</p>
+<p>This  option  switches off the “URL globbing parser”. When you set this option, you can specify URLs that contain the letters {}[] without having them being interpreted by curl itself. Note that these letters are not normal legal URL contents but they should be encoded according to the URI standard.</p>
+<p><a class="reference external" href="https://everything.curl.dev/cmdline/globbing">https://everything.curl.dev/cmdline/globbing</a></p>
+</div></blockquote>
 </section>
 <section id="lvs-rs-shang-ru-he-pei-zhi-vip">
 <h2>LVS RS 上如何配置 VIP<a class="headerlink" href="#lvs-rs-shang-ru-he-pei-zhi-vip" title="Permalink to this headline">¶</a></h2>
