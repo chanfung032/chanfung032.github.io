@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>有符号类型、负数与类型转换 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/custom.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="内核网络栈笔记" href="network/index.html" />
+    <link rel="prev" title="Feng’s blog" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="you-fu-hao-lei-xing-fu-shu-yu-lei-xing-zhuan-huan">
+<h1>有符号类型、负数与类型转换<a class="headerlink" href="#you-fu-hao-lei-xing-fu-shu-yu-lei-xing-zhuan-huan" title="Permalink to this headline">¶</a></h1>
+<section id="wen-ti">
+<h2>问题<a class="headerlink" href="#wen-ti" title="Permalink to this headline">¶</a></h2>
+<p>最近帮同事调试代码遇到的一个问题，这个问题可以简化为下面这段代码：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0xa9</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">c</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%x</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">u</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>这段代码会输出什么？在 x86_64 机器上使用 gcc 编译然后执行的结果是 <code class="docutils literal notranslate"><span class="pre">ffffffa9</span></code>。emm….，是不是和想的有点不一样，不是 <code class="docutils literal notranslate"><span class="pre">a9</span></code>，问题在哪？</p>
+<p>反编译可以看到上面赋值语句被翻译成了如下的汇编代码：</p>
+<div class="highlight-objdump notranslate"><div class="highlight"><pre><span></span><span class="x">400535: c6 45 ff a9          movb   $0xa9,-0x1(%rbp)</span>
+<span class="x">将一个字节的立即值 0xa9 压入栈中</span>
+
+<span class="x">400539: 0f be 45 ff          movsbl -0x1(%rbp),%eax</span>
+<span class="x">movsbl 指令负责拷贝一个字节为 4 个字节，并用这个字节的最高位填充其它 3 个字节，这种扩展方式叫“符号扩展”</span>
+</pre></div>
+</div>
+<p>如果将 <code class="docutils literal notranslate"><span class="pre">char</span> <span class="pre">c</span> <span class="pre">=</span> <span class="pre">0xa9</span></code> 改成 <code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">char</span></code> 再重新编译，这个赋值语句就会变成了下面这段汇编代码：</p>
+<div class="highlight-objdump notranslate"><div class="highlight"><pre><span></span><span class="x">400535: c6 45 ff a9          movb   $0xa9,-0x1(%rbp)</span>
+
+<span class="x">400539: 0f b6 45 ff          movzbl -0x1(%rbp),%eax</span>
+<span class="x">movzbl 指令负责拷贝一个字节为 4 个字节，并使用 0 填充其它字节，也叫“零扩展”</span>
+</pre></div>
+</div>
+<p>所以问题就出在了：</p>
+<ol class="arabic simple">
+<li><p>编译器将 <code class="docutils literal notranslate"><span class="pre">char</span></code> 等同于了 <code class="docutils literal notranslate"><span class="pre">signed</span> <span class="pre">char</span></code>，上面代码中的 <code class="docutils literal notranslate"><span class="pre">char</span> <span class="pre">c</span> <span class="pre">=</span> <span class="pre">0xa9</span></code> 写成 <code class="docutils literal notranslate"><span class="pre">char</span> <span class="pre">c</span> <span class="pre">=</span> <span class="pre">-87</span></code> 会更清晰点，也就是一个负数。</p></li>
+<li><p>将 <code class="docutils literal notranslate"><span class="pre">signed</span> <span class="pre">char</span></code> 做（隐式）类型转换到 <code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span></code> 时，转换的方法是什么。</p></li>
+</ol>
+</section>
+<section id="fu-shu-biao-shi-fa">
+<h2>负数表示法<a class="headerlink" href="#fu-shu-biao-shi-fa" title="Permalink to this headline">¶</a></h2>
+<p>以 <code class="docutils literal notranslate"><span class="pre">int8_t</span></code> 为例，87 的编码为：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">01010111</span>
+</pre></div>
+</div>
+<p>来看 -87 的几种表示方法：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>11010111 原码，第一位符号位，其余位和正 87 一样
+10101000 反码，就是将 87 的所有二进制位进行取反
+10101001 补码，补码为反码加 1
+</pre></div>
+</div>
+<p>目前普遍使用的是 <strong>补码</strong> 表示法。使用补码运算方便，负数和正数可以直接运算，以 <code class="docutils literal notranslate"><span class="pre">87</span> <span class="pre">+</span> <span class="pre">(-87)</span></code> 为例：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">反码</span>           <span class="n">补码</span>
+  <span class="mi">01010111</span>      <span class="mi">01010111</span>
+<span class="o">+</span> <span class="mi">10101000</span>    <span class="o">+</span> <span class="mi">10101000</span>
+              <span class="o">+</span>        <span class="mi">1</span>
+<span class="o">----------</span>    <span class="o">----------</span>
+  <span class="mi">11111111</span>      <span class="mi">00000000</span>
+</pre></div>
+</div>
+<p>补码直接运算的结果就是实际的结果。</p>
+<p>另外反码还有一个问题就是 <code class="docutils literal notranslate"><span class="pre">11111111</span></code>，表示 <code class="docutils literal notranslate"><span class="pre">-0</span></code>，和 <code class="docutils literal notranslate"><span class="pre">00000000</span></code> 表示的 <code class="docutils literal notranslate"><span class="pre">+0</span></code> 一起，出现了两个 <code class="docutils literal notranslate"><span class="pre">0</span></code>，浪费了，反码只能表示 <code class="docutils literal notranslate"><span class="pre">（-128,</span> <span class="pre">127]</span></code> 区间的数值，而补码可以表示 <code class="docutils literal notranslate"><span class="pre">[-128,</span> <span class="pre">127]</span></code> 区间的数值。</p>
+</section>
+<section id="lei-xing-zhuan-huan">
+<h2>类型转换<a class="headerlink" href="#lei-xing-zhuan-huan" title="Permalink to this headline">¶</a></h2>
+<p>C99: <a class="reference external" href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf">https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf</a></p>
+<blockquote>
+<div><p>whether a “plain” char is treated as signed is implementation-defined</p>
+</div></blockquote>
+<p>C99 中并没有定义 <code class="docutils literal notranslate"><span class="pre">char</span></code> 到底是有符号还是无符号的，留给编译器自己定，显然 gcc 中 <code class="docutils literal notranslate"><span class="pre">char</span></code> 是有符号的，也就是等价于 <code class="docutils literal notranslate"><span class="pre">signed</span> <span class="pre">char</span></code>。</p>
+<blockquote>
+<div><p>if the new type is unsigned, the value is converted by repeatedly adding or
+subtracting one more than the maximum value that can be represented in the new type
+until the value is in the range of the new type</p>
+</div></blockquote>
+<p>将 <code class="docutils literal notranslate"><span class="pre">signed</span> <span class="pre">char</span></code> 转换为 <code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span></code> 的规则为加上或减去 <code class="docutils literal notranslate"><span class="pre">UINT_MAX</span> <span class="pre">+</span> <span class="pre">1</span></code>。对于 32 bit int。</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">hex</span><span class="p">(</span><span class="o">-</span><span class="mi">87</span> <span class="o">+</span> <span class="mh">0xffffffff</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">&#39;0xffffffa9&#39;</span>
+</pre></div>
+</div>
+<p>这个规则转换为汇编代码就是上面的 <code class="docutils literal notranslate"><span class="pre">movsbl</span></code> 指令，也就是符号扩展。如果把上面的隐式类型转换用显式类型转换写出来就是：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="p">)((</span><span class="kt">signed</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="n">c</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+<p>这样理解上面的程序错误就更直观了。</p>
+</section>
+<section id="ru-he-rang-strace-da-yin-chu-bian-liang-de-yuan-shi-zhi">
+<h2>如何让 strace 打印出变量的原始值<a class="headerlink" href="#ru-he-rang-strace-da-yin-chu-bian-liang-de-yuan-shi-zhi" title="Permalink to this headline">¶</a></h2>
+<p>可以使用 strace 的 <code class="docutils literal notranslate"><span class="pre">-X</span> <span class="pre">verbose</span></code> 选项，就可以既打印出原始值，也打印出翻译后的结果。有时候原始值能更直观的看出问题所在。</p>
+<p>比如下面两个 sendto 发送的内容，第一个是正常的结果，第二个是异常的结果，看里面的 <code class="docutils literal notranslate"><span class="pre">type</span></code> 参数，直接看也就是奇怪为什么第二个 sendto 的 <code class="docutils literal notranslate"><span class="pre">type</span></code> 参数没有翻译成对应的类型名称。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">[host1]# </span>strace -esendto &lt;command&gt;
+<span class="go">sendto(3, {{len=20, type=genl_hiwan, flags=NLM_F_REQUEST, seq=996, pid=0}, &quot;\x06\x01\x00\x00&quot;}, 20, 0, {sa_family=AF_NETLINK, nl_pid=0, nl_groups=00000000}, 12) = 20</span>
+<span class="gp">[host2]# </span>strace -esendto &lt;command&gt;
+<span class="go">sendto(3, {{len=20, type=0xffa9, flags=NLM_F_REQUEST, seq=996, pid=0}, &quot;\x06\x01\x00\x00&quot;}, 20, 0, {sa_family=0x10, nl_pid=0, nl_groups=00000000}, 12) = 20</span>
+</pre></div>
+</div>
+<p>使用 <code class="docutils literal notranslate"><span class="pre">-X</span> <span class="pre">verbose</span></code> 参数就能一目了然的看出问题所在，因为这两个传的值不一样。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">[host1]# </span>strace -Xverbose -esendto &lt;command&gt;
+<span class="go">sendto(3, {{len=20, type=0x31 /* genl_hiwan */, flags=NLM_F_REQUEST, seq=996, pid=0}, &quot;\x06\x01\x00\x00&quot;}, 20, 0, {sa_family=0x10 /* AF_NETLINK */, nl_pid=0, nl_groups=00000000}, 12) = 20</span>
+</pre></div>
+</div>
+<p>这个传的 <code class="docutils literal notranslate"><span class="pre">type</span></code> 在两个机器上稍微有点不一样，host2 上本来应该传的是 <code class="docutils literal notranslate"><span class="pre">0xa9</span></code>，但是和本文前面描述的问题一样，因为类型转换的问题，传成了 <code class="docutils literal notranslate"><span class="pre">0xffa9</span></code>，导致了程序错误。</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">有符号类型、负数与类型转换</a><ul>
+<li><a class="reference internal" href="#wen-ti">问题</a></li>
+<li><a class="reference internal" href="#fu-shu-biao-shi-fa">负数表示法</a></li>
+<li><a class="reference internal" href="#lei-xing-zhuan-huan">类型转换</a></li>
+<li><a class="reference internal" href="#ru-he-rang-strace-da-yin-chu-bian-liang-de-yuan-shi-zhi">如何让 strace 打印出变量的原始值</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/signed-type-and-type-conversion.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="https://cn.bing.com/search" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>
+$('#searchbox').show(0);
+document.getElementsByClassName('search')[0].addEventListener('submit', function(event) {
+  event.preventDefault();
+  var form = event.target;
+  var input = form.querySelector('input[name="q"]');
+  var value = input.value;
+  var q = 'ensearch=1&q=site%3Achanfung032.github.io++' + value;
+  var url = form.action + '?' + q;
+  window.location.href = url;
+});
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/signed-type-and-type-conversion.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

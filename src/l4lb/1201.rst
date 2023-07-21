@@ -411,3 +411,15 @@ https://nakryiko.com/posts/bpf-tips-printk/
 - `BPF In Depth: The BPF Bytecode and the BPF Verifier <https://blogs.oracle.com/linux/notes-on-bpf-5>`_
 - https://www.kernel.org/doc/html/latest/networking/filter.html#bpf-kernel-internals
 - https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c
+
+如何查询某一个 BPF 挂载点支持的 bpf 函数
+------------------------------------------
+
+在每个挂载点的 verfier ops 结构中有一个 ``get_func_proto`` 字段，这个字段指向的函数里列出了这个挂载点可以调用的所有 bpf 函数。比如 xdp 这个挂载点可以调用的函数可以参见 `xdp_func_proto <https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L6486>`_ 函数。
+
+详细见： https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L8879
+
+BPF 特性与需要的内核版本
+----------------------------
+
+https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md

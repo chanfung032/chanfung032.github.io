@@ -390,6 +390,15 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <li><p><a class="reference external" href="https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c">https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c</a></p></li>
 </ul>
 </section>
+<section id="ru-he-cha-xun-mou-yi-ge-bpf-gua-zai-dian-zhi-chi-de-bpf-han-shu">
+<h2>如何查询某一个 BPF 挂载点支持的 bpf 函数<a class="headerlink" href="#ru-he-cha-xun-mou-yi-ge-bpf-gua-zai-dian-zhi-chi-de-bpf-han-shu" title="Permalink to this headline">¶</a></h2>
+<p>在每个挂载点的 verfier ops 结构中有一个 <code class="docutils literal notranslate"><span class="pre">get_func_proto</span></code> 字段，这个字段指向的函数里列出了这个挂载点可以调用的所有 bpf 函数。比如 xdp 这个挂载点可以调用的函数可以参见 <a class="reference external" href="https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L6486">xdp_func_proto</a> 函数。</p>
+<p>详细见： <a class="reference external" href="https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L8879">https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L8879</a></p>
+</section>
+<section id="bpf-te-xing-yu-xu-yao-de-nei-he-ban-ben">
+<h2>BPF 特性与需要的内核版本<a class="headerlink" href="#bpf-te-xing-yu-xu-yao-de-nei-he-ban-ben" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md">https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md</a></p>
+</section>
 </section>
 
 
@@ -416,6 +425,8 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <li><a class="reference internal" href="#python-bpf-cao-zuo-ku">Python BPF 操作库</a></li>
 <li><a class="reference internal" href="#tiao-shi-ri-zhi">调试日志</a></li>
 <li><a class="reference internal" href="#ru-he-jie-jue-bpf-verifier-bao-cuo">如何解决 BPF Verifier 报错</a></li>
+<li><a class="reference internal" href="#ru-he-cha-xun-mou-yi-ge-bpf-gua-zai-dian-zhi-chi-de-bpf-han-shu">如何查询某一个 BPF 挂载点支持的 bpf 函数</a></li>
+<li><a class="reference internal" href="#bpf-te-xing-yu-xu-yao-de-nei-he-ban-ben">BPF 特性与需要的内核版本</a></li>
 </ul>
 </li>
 </ul>
