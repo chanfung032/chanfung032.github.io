@@ -199,6 +199,30 @@
 </pre></div>
 </div>
 </section>
+<section id="gro-mei-qi-zuo-yong">
+<h2>GRO 没起作用？<a class="headerlink" href="#gro-mei-qi-zuo-yong" title="Permalink to this headline">¶</a></h2>
+<p>5.13 前内核的 UDP 隧道 有个 GRO 的 BUG，UDP 包的 checksum 为 0 的时候， <code class="docutils literal notranslate"><span class="pre">udp_gro_receive</span></code> 函数中会误认为不满足合并包的条件而提前终止，所以 GUE 这一类的 UDP 隧道协议虽然早就实现了协议对应的 <code class="docutils literal notranslate"><span class="pre">gro_receive</span></code>、 <code class="docutils literal notranslate"><span class="pre">gro_complete</span></code> 处理函数，但是因为 GRO 在 UDP 层提前终止了，实际还是没有起作用。</p>
+<p>详细见：<a class="reference external" href="https://github.com/torvalds/linux/commit/89e5c58fc1e2857ccdaae506fb8bc5fed57ee063">https://github.com/torvalds/linux/commit/89e5c58fc1e2857ccdaae506fb8bc5fed57ee063</a></p>
+<p>虽然物理网卡这一层的 GRO 没有生效，但是对于 <code class="docutils literal notranslate"><span class="pre">IPPROTO_IPIP</span></code> 类型的隧道协议包，在解包之后 redirect 到对应的逻辑网卡时还有一次 GRO 机会。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>ipip_rcv
+|- ipip_tunnel_rcv(skb, IPPROTO_IPIP)
+   |- ip_tunnel_rcv
+      |- gro_cells_receive
+         |- if (!gcells-&gt;cells || skb_cloned(skb) || !(dev-&gt;features &amp; NETIF_F_GRO))
+         |    netif_rx(skb)
+         |    return
+         |- __skb_queue_tail(&amp;cell-&gt;napi_skbs, skb)
+         |- napi_schedule(&amp;cell-&gt;napi)
+</pre></div>
+</div>
+<p>这个看到的现象就是 tcpdump 看物理网卡上收到的 UDP 隧道协议包都是大小 1500 以下的小包，但是在隧道对应的逻辑网卡上抓包看到的内层包能看到 1500 以上的大包。</p>
+<p>IPPROTO_IPV6 协议没有，详细可以看上面 <code class="docutils literal notranslate"><span class="pre">ipip6_rcv</span></code> 函数， <code class="docutils literal notranslate"><span class="pre">ipip6_rcv</span></code> 没有做第二次 GRO。</p>
+<p>内核 UDP 性能相关的一些优化和版本：<a class="reference external" href="https://developers.redhat.com/articles/2021/11/05/improve-udp-performance-rhel-85">https://developers.redhat.com/articles/2021/11/05/improve-udp-performance-rhel-85</a></p>
+</section>
+<section id="ge-zhong-sui-dao-lei-xing">
+<h2>各种隧道类型<a class="headerlink" href="#ge-zhong-sui-dao-lei-xing" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels">https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels</a></p>
+</section>
 </section>
 
 
@@ -213,6 +237,8 @@
 <li><a class="reference internal" href="#">#220915 UDP 隧道</a><ul>
 <li><a class="reference internal" href="#shou-bao-chu-li-lu-jing">收包处理路径</a></li>
 <li><a class="reference internal" href="#jie-bao">解包</a></li>
+<li><a class="reference internal" href="#gro-mei-qi-zuo-yong">GRO 没起作用？</a></li>
+<li><a class="reference internal" href="#ge-zhong-sui-dao-lei-xing">各种隧道类型</a></li>
 </ul>
 </li>
 </ul>

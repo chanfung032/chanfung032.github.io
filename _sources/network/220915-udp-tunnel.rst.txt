@@ -195,3 +195,33 @@ tunnel64_rcv 中会遍历所有注册的处理 IPv6 in IPv4 的包的处理函�
       /* no tunnel matched,  let upstream know, ipsec may handle it */
       return 1;
    }
+
+GRO 没起作用？
+-----------------
+
+5.13 前内核的 UDP 隧道 有个 GRO 的 BUG，UDP 包的 checksum 为 0 的时候， ``udp_gro_receive`` 函数中会误认为不满足合并包的条件而提前终止，所以 GUE 这一类的 UDP 隧道协议虽然早就实现了协议对应的 ``gro_receive``、 ``gro_complete`` 处理函数，但是因为 GRO 在 UDP 层提前终止了，实际还是没有起作用。
+
+详细见：https://github.com/torvalds/linux/commit/89e5c58fc1e2857ccdaae506fb8bc5fed57ee063
+
+虽然物理网卡这一层的 GRO 没有生效，但是对于 ``IPPROTO_IPIP`` 类型的隧道协议包，在解包之后 redirect 到对应的逻辑网卡时还有一次 GRO 机会。 ::
+
+   ipip_rcv
+   |- ipip_tunnel_rcv(skb, IPPROTO_IPIP)
+      |- ip_tunnel_rcv
+         |- gro_cells_receive
+            |- if (!gcells->cells || skb_cloned(skb) || !(dev->features & NETIF_F_GRO))
+            |    netif_rx(skb)
+            |    return
+            |- __skb_queue_tail(&cell->napi_skbs, skb)
+            |- napi_schedule(&cell->napi)
+
+这个看到的现象就是 tcpdump 看物理网卡上收到的 UDP 隧道协议包都是大小 1500 以下的小包，但是在隧道对应的逻辑网卡上抓包看到的内层包能看到 1500 以上的大包。
+
+IPPROTO_IPV6 协议没有，详细可以看上面 ``ipip6_rcv`` 函数， ``ipip6_rcv`` 没有做第二次 GRO。
+
+内核 UDP 性能相关的一些优化和版本：https://developers.redhat.com/articles/2021/11/05/improve-udp-performance-rhel-85
+
+各种隧道类型
+--------------
+
+https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels
