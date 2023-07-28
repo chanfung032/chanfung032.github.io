@@ -399,6 +399,17 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <h2>BPF 特性与需要的内核版本<a class="headerlink" href="#bpf-te-xing-yu-xu-yao-de-nei-he-ban-ben" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md">https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md</a></p>
 </section>
+<section id="ge-zhong-ban-ben-de-nei-he">
+<h2>各种版本的内核<a class="headerlink" href="#ge-zhong-ban-ben-de-nei-he" title="Permalink to this headline">¶</a></h2>
+<p>可以在 elrepo archive 找到各种版本的内核：<a class="reference external" href="https://mirrors.tuna.tsinghua.edu.cn/elrepo/archive/kernel/">https://mirrors.tuna.tsinghua.edu.cn/elrepo/archive/kernel/</a></p>
+<p>安装后使用 <code class="docutils literal notranslate"><span class="pre">grub2-set-default</span></code> 命令切换要使用的内核版本（menuentry 序号从 0 开始）：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>grep -w menuentry /etc/grub2.cfg
+<span class="go">menuentry &#39;CentOS Linux (6.4.4-1.el7.elrepo.x86_64) 7 (Core)&#39; --class centos --class gnu-linux --class gnu --class os --unrestricted $menuentry_id_option &#39;gnulinux-3.10.0-1160.el7.x86_64-advanced-9cff3d69-3769-4ad9-8460-9c54050583f9&#39; {</span>
+<span class="go">menuentry &#39;CentOS Linux (4.19.113-88.8bs.el7.x86_64) 7 (Core)&#39; --class centos --class gnu-linux --class gnu --class os --unrestricted $menuentry_id_option &#39;gnulinux-3.10.0-1160.el7.x86_64-advanced-9cff3d69-3769-4ad9-8460-9c54050583f9&#39; {</span>
+<span class="gp"># </span>grub2-set-default <span class="m">0</span>
+</pre></div>
+</div>
+</section>
 </section>
 
 
@@ -427,6 +438,7 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <li><a class="reference internal" href="#ru-he-jie-jue-bpf-verifier-bao-cuo">如何解决 BPF Verifier 报错</a></li>
 <li><a class="reference internal" href="#ru-he-cha-xun-mou-yi-ge-bpf-gua-zai-dian-zhi-chi-de-bpf-han-shu">如何查询某一个 BPF 挂载点支持的 bpf 函数</a></li>
 <li><a class="reference internal" href="#bpf-te-xing-yu-xu-yao-de-nei-he-ban-ben">BPF 特性与需要的内核版本</a></li>
+<li><a class="reference internal" href="#ge-zhong-ban-ben-de-nei-he">各种版本的内核</a></li>
 </ul>
 </li>
 </ul>

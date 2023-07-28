@@ -61,23 +61,23 @@
 </pre></div>
 </div>
 <p>加载运行/查看/删除：</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tc qdisc add dev eth1 clsact
-<span class="gp"># </span>tc qdisc show dev eth1
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tc qdisc add dev eth0 clsact
+<span class="gp"># </span>tc qdisc show dev eth0
 <span class="go">qdisc fq_codel 0: root refcnt 2 limit 10240p flows 1024 quantum 1514 target 5.0ms interval 100.0ms memory_limit 32Mb ecn</span>
 <span class="go">qdisc clsact ffff: parent ffff:fff1</span>
 
-<span class="gp"># </span>tc filter add dev eth1 ingress bpf da obj foo.o sec mycls
-<span class="gp"># </span>tc filter add dev eth1 egress  bpf da obj foo.o sec mycls
+<span class="gp"># </span>tc filter add dev eth0 ingress bpf da obj foo.o sec mycls
+<span class="gp"># </span>tc filter add dev eth0 egress  bpf da obj foo.o sec mycls
 
-<span class="gp"># </span>tc filter show dev eth1 ingress
+<span class="gp"># </span>tc filter show dev eth0 ingress
 <span class="go">filter protocol all pref 49152 bpf chain 0</span>
 <span class="go">filter protocol all pref 49152 bpf chain 0 handle 0x1 foo.o:[mycls] direct-action not_in_hw id 17 tag 3b185187f1855c4c jited</span>
-<span class="gp"># </span>tc filter show dev eth1 egress
+<span class="gp"># </span>tc filter show dev eth0 egress
 <span class="go">filter protocol all pref 49152 bpf chain 0</span>
 <span class="go">filter protocol all pref 49152 bpf chain 0 handle 0x1 foo.o:[mycls] direct-action not_in_hw id 18 tag 3b185187f1855c4c jited</span>
 
-<span class="gp"># </span>tc filter del dev eth1 ingress pref <span class="m">49152</span>
-<span class="gp"># </span>tc filter del dev eth1 egress  pref <span class="m">49152</span>
+<span class="gp"># </span>tc filter del dev eth0 ingress pref <span class="m">49152</span>
+<span class="gp"># </span>tc filter del dev eth0 egress  pref <span class="m">49152</span>
 </pre></div>
 </div>
 <p>上面的程序运行后会 drop 所有的包。</p>

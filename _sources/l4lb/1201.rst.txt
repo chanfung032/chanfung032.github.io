@@ -423,3 +423,17 @@ BPF 特性与需要的内核版本
 ----------------------------
 
 https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md
+
+各种版本的内核
+----------------
+
+可以在 elrepo archive 找到各种版本的内核：https://mirrors.tuna.tsinghua.edu.cn/elrepo/archive/kernel/
+
+安装后使用 ``grub2-set-default`` 命令切换要使用的内核版本（menuentry 序号从 0 开始）：
+
+.. code-block:: console
+
+    # grep -w menuentry /etc/grub2.cfg
+    menuentry 'CentOS Linux (6.4.4-1.el7.elrepo.x86_64) 7 (Core)' --class centos --class gnu-linux --class gnu --class os --unrestricted $menuentry_id_option 'gnulinux-3.10.0-1160.el7.x86_64-advanced-9cff3d69-3769-4ad9-8460-9c54050583f9' {
+    menuentry 'CentOS Linux (4.19.113-88.8bs.el7.x86_64) 7 (Core)' --class centos --class gnu-linux --class gnu --class os --unrestricted $menuentry_id_option 'gnulinux-3.10.0-1160.el7.x86_64-advanced-9cff3d69-3769-4ad9-8460-9c54050583f9' {
+    # grub2-set-default 0

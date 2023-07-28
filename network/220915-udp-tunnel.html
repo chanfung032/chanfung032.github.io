@@ -219,6 +219,10 @@
 <p>IPPROTO_IPV6 协议没有，详细可以看上面 <code class="docutils literal notranslate"><span class="pre">ipip6_rcv</span></code> 函数， <code class="docutils literal notranslate"><span class="pre">ipip6_rcv</span></code> 没有做第二次 GRO。</p>
 <p>内核 UDP 性能相关的一些优化和版本：<a class="reference external" href="https://developers.redhat.com/articles/2021/11/05/improve-udp-performance-rhel-85">https://developers.redhat.com/articles/2021/11/05/improve-udp-performance-rhel-85</a></p>
 </section>
+<section id="tso-gso">
+<h2>TSO/GSO<a class="headerlink" href="#tso-gso" title="Permalink to this headline">¶</a></h2>
+<p>veth 测隧道 TSO 没有问题，但虚拟机 virtio 驱动下 TSO 似乎都有问题？（待进一步测试），在 veth 上测，GRO/GSO 关闭开启对性能影响不是特别大，但是 TSO 对性能影响巨大。</p>
+</section>
 <section id="ge-zhong-sui-dao-lei-xing">
 <h2>各种隧道类型<a class="headerlink" href="#ge-zhong-sui-dao-lei-xing" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels">https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels</a></p>
@@ -238,6 +242,7 @@
 <li><a class="reference internal" href="#shou-bao-chu-li-lu-jing">收包处理路径</a></li>
 <li><a class="reference internal" href="#jie-bao">解包</a></li>
 <li><a class="reference internal" href="#gro-mei-qi-zuo-yong">GRO 没起作用？</a></li>
+<li><a class="reference internal" href="#tso-gso">TSO/GSO</a></li>
 <li><a class="reference internal" href="#ge-zhong-sui-dao-lei-xing">各种隧道类型</a></li>
 </ul>
 </li>

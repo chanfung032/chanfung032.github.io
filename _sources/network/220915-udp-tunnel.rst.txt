@@ -221,6 +221,11 @@ IPPROTO_IPV6 协议没有，详细可以看上面 ``ipip6_rcv`` 函数， ``ipip
 
 内核 UDP 性能相关的一些优化和版本：https://developers.redhat.com/articles/2021/11/05/improve-udp-performance-rhel-85
 
+TSO/GSO
+------------------
+
+veth 测隧道 TSO 没有问题，但虚拟机 virtio 驱动下 TSO 似乎都有问题？（待进一步测试），在 veth 上测，GRO/GSO 关闭开启对性能影响不是特别大，但是 TSO 对性能影响巨大。
+
 各种隧道类型
 --------------
 
