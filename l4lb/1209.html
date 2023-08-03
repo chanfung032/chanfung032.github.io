@@ -96,6 +96,68 @@
 <p>tc 程序的执行点位于系统网络栈的最底层，在 NIC Driver 之后，最关键的是在 tcpdump 之后，所以 tcpdump 又可以使用了 ✌️。</p>
 <p>完整的图参见：<a class="reference external" href="https://commons.wikimedia.org/wiki/File:Netfilter-packet-flow.svg">https://commons.wikimedia.org/wiki/File:Netfilter-packet-flow.svg</a></p>
 </section>
+<section id="shi-yong-tc-bpf-lai-shi-xian-dai-kuan-kong-zhi">
+<h2>使用 tc-bpf 来实现带宽控制<a class="headerlink" href="#shi-yong-tc-bpf-lai-shi-xian-dai-kuan-kong-zhi" title="Permalink to this headline">¶</a></h2>
+<p>tc-bpf 只能用来控制哪些流需要进行带宽控制，哪些不需要，实际的带宽控制需要结合 tc 的其他功能模块来完成。一般有以下 2 中方式。</p>
+<section id="fang-fa-yi-jie-he-htb-dui-lie">
+<h3>方法一：结合 HTB 队列<a class="headerlink" href="#fang-fa-yi-jie-he-htb-dui-lie" title="Permalink to this headline">¶</a></h3>
+<img alt="../_images/tc-bpf-htb.png" src="../_images/tc-bpf-htb.png" />
+<p><strong>Hierarchical Token Bucket (HTB) 多层令牌桶</strong> 是 tc 中常用的一种用于控制带宽的队列算法。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>tc qdisc add dev eth0 root handle <span class="m">1</span>: htb
+tc class add dev eth0 parent <span class="m">1</span>: classid <span class="m">1</span>:1 htb rate 10kbit
+tc class add dev eth0 parent <span class="m">1</span>: classid <span class="m">1</span>:2 htb rate 10mbit
+</pre></div>
+</div>
+<p>在 bpf 中，通过返回限速的 classid 可以将流量分配给不同的带宽控制类别去。tc 命令行中一般使用 <code class="docutils literal notranslate"><span class="pre">MAJOR:MINOR</span></code> 这样的格式来表示 classid，MAJOR、MINOR 都是十六进制的。在代码中 classid 是 <code class="docutils literal notranslate"><span class="pre">u32</span></code> 类型的，转换方法： <code class="docutils literal notranslate"><span class="pre">classid</span> <span class="pre">=</span> <span class="pre">MAJOR&lt;&lt;16</span> <span class="pre">|</span> <span class="pre">MINOR</span></code> 。</p>
+<p><a class="reference external" href="https://github.com/shemminger/iproute2/blob/v6.4.0/tc/tc_util.c#L89">https://github.com/shemminger/iproute2/blob/v6.4.0/tc/tc_util.c#L89</a></p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;mycls&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">cls_bpf_prog</span><span class="p">(</span><span class="k">struct</span> <span class="nc">__sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(...)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mh">0x10001</span><span class="p">;</span><span class="w"> </span><span class="c1">// classid 1:1</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(...)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mh">0x10002</span><span class="p">;</span><span class="w"> </span><span class="c1">// classid 1:2</span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>挂载 tc cls_bpf 程序：</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>tc filter add dev eth0  bpf obj cls_bpf.o sec mycls
+</pre></div>
+</div>
+<p>cls_bpf、act_bpf、clsact 是三个不同的 tc-bpf 挂载点。cls_bpf 通过返回不同的 classid 来分类包，act_bpf 通过返回 action code（ <code class="docutils literal notranslate"><span class="pre">TC_ACT_OK</span></code>、 <code class="docutils literal notranslate"><span class="pre">TC_ACT_DROP</span></code> 等）来处理包。这两个加载点是老的挂载点。所以加载的时候和前文第一个 tc-bpf 程序加载方式不一样，不需要加 <code class="docutils literal notranslate"><span class="pre">da</span></code> direct-action 参数。关于两者的差别可以参见：<a class="reference external" href="http://arthurchiao.art/blog/understanding-tc-da-mode-zh/">http://arthurchiao.art/blog/understanding-tc-da-mode-zh/</a></p>
+<p>clsact 可以同时完成 cls_bpf 和 act_bpf 的功能，返回值返回 action code，还可以通过传入的上下文参数 <code class="docutils literal notranslate"><span class="pre">skb-&gt;tc_classid</span></code> 字段来改变 classid（但是这个方式没有调通，不知道为啥，わかりませんでした）。</p>
+<p><a class="reference external" href="https://juejin.cn/post/7256795117674233912">https://juejin.cn/post/7256795117674233912</a></p>
+</section>
+<section id="fang-fa-er-jie-he-fq-dui-lie">
+<h3>方法二：结合 FQ 队列<a class="headerlink" href="#fang-fa-er-jie-he-fq-dui-lie" title="Permalink to this headline">¶</a></h3>
+<img alt="../_images/tc-bpf-edt.png" src="../_images/tc-bpf-edt.png" />
+<p><strong>Fair Queue(FQ) 公平队列</strong>，这个方法是 google 在 <a class="reference external" href="https://netdevconf.info/0x14/pub/papers/55/0x14-paper55-talk-paper.pdf">https://netdevconf.info/0x14/pub/papers/55/0x14-paper55-talk-paper.pdf</a> 这个论文里提到的。这个方法中 bpf 程序通过上下文参数中的 <code class="docutils literal notranslate"><span class="pre">skb-&gt;tstamp</span></code> 设置 skb 的 EDT（ Earliest Departure Time），FQ 模块会读取这个时间来调度包的发送。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;myedt&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">cls_bpf_prog1</span><span class="p">(</span><span class="k">struct</span> <span class="nc">__sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 将发送包的时间延后 1 秒</span>
+<span class="w">    </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">tstamp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_ktime_get_ns</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1000000000</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">TC_ACT_OK</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>挂载 tc clsact bpf 程序和 FQ 模块：</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>tc qdisc add dev eth0 root fq
+tc qdisc add dev eth0 clsact
+tc filter add dev eth0 ingress bpf da obj cls_bpf.o sec myedt
+tc filter add dev eth0 egress bpf da obj cls_bpf.o sec myedt
+</pre></div>
+</div>
+<p>这个方法比方法一的性能要好，但是实现稍微复杂点，上面的 bpf 程序只是展示了这种控制的原理，实际应用中 bpf 需要自行通过算法来计算 EDT。</p>
+<p>内核中自带的一个比较完整的示例：</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/progs/test_tc_edt.c">https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/progs/test_tc_edt.c</a></p></li>
+<li><p><a class="reference external" href="https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/test_tc_edt.sh">https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/test_tc_edt.sh</a></p></li>
+</ul>
+</section>
+</section>
 </section>
 
 
@@ -110,6 +172,11 @@
 <li><a class="reference internal" href="#">#1209 tc-bpf</a><ul>
 <li><a class="reference internal" href="#di-yi-ge-tc-bpf-cheng-xu">第一个 tc-bpf 程序</a></li>
 <li><a class="reference internal" href="#tc-zai-wang-luo-zhan-zhong-de-wei-zhi">tc 在网络栈中的位置</a></li>
+<li><a class="reference internal" href="#shi-yong-tc-bpf-lai-shi-xian-dai-kuan-kong-zhi">使用 tc-bpf 来实现带宽控制</a><ul>
+<li><a class="reference internal" href="#fang-fa-yi-jie-he-htb-dui-lie">方法一：结合 HTB 队列</a></li>
+<li><a class="reference internal" href="#fang-fa-er-jie-he-fq-dui-lie">方法二：结合 FQ 队列</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
