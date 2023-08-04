@@ -221,6 +221,34 @@ IPPROTO_IPV6 协议没有，详细可以看上面 ``ipip6_rcv`` 函数， ``ipip
 
 内核 UDP 性能相关的一些优化和版本：https://developers.redhat.com/articles/2021/11/05/improve-udp-performance-rhel-85
 
+外层 checksum 速算法与 LCO
+----------------------------------
+
+不升级内核解决上面 GRO 没生效的一个方法就是填上外面隧道层 UDP 头中的 checksum 字段。外层 checksum 有快速算法。
+
+先看 TCP/UDP 协议是如何计算头里的 checksum 字段的。
+
+.. image:: images/tcp-checksum.png
+
+首先，TCP/UDP 计算 checksum 的时候，除了 TCP/UDP 包自身的数据外，还包含一部分从 IP 层提取的数据（源/目的地址等），这部分数据一般称为 pseduo-header 伪头。计算 checksum 的时候是对这两个数据来做计算。
+
+计算的方法是将这部分数据按照 2 个字节一组作二进制循环加法(循环的意思是如果加完后溢出，溢出的部分要加到低位去)，最后加完后取其补码，将补码填到 TCP/UDP 的 checksum 字段中。计算的时候 checksum 字段填 0。
+
+校验的时候还按照计算的方法，对这部分数据计算其 checksum，此时 checksum 已经填上了值，因为 checksum 是剩余部分的补码，所以此时计算出的结果应该是 ``0xffff``，如果计算结果不是这个，说明传输的数据包有问题。
+
+.. code-block:: c
+
+   checksum(pseudo-header) + checksum(tcp-segment) = 0xffff
+
+https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation
+
+根据 checksum 计算方法可以得出：填上了 checksum 字段后，TCP 包的 checksum 就是 pseudo-header 的 checksum 的反码。好了，大头部分的 checksum 已经快速算完了，剩余部分（外层 pseduo-header，外层 UDP 头、内层 IP 头等）的 checksum 正常计算然后和速算部分相加就可以了。
+
+这个速算方法就是内核中 LCO（Local Checksum Offload）的原理。详细见：
+
+- https://www.kernel.org/doc/html/v5.10/networking/checksum-offloads.html
+- https://elixir.bootlin.com/linux/v6.4.8/source/include/linux/skbuff.h#L5043
+
 TSO/GSO
 ------------------
 

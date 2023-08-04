@@ -393,7 +393,10 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <section id="ru-he-cha-xun-mou-yi-ge-bpf-gua-zai-dian-zhi-chi-de-bpf-han-shu">
 <h2>如何查询某一个 BPF 挂载点支持的 bpf 函数<a class="headerlink" href="#ru-he-cha-xun-mou-yi-ge-bpf-gua-zai-dian-zhi-chi-de-bpf-han-shu" title="Permalink to this headline">¶</a></h2>
 <p>在每个挂载点的 verfier ops 结构中有一个 <code class="docutils literal notranslate"><span class="pre">get_func_proto</span></code> 字段，这个字段指向的函数里列出了这个挂载点可以调用的所有 bpf 函数。比如 xdp 这个挂载点可以调用的函数可以参见 <a class="reference external" href="https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L6486">xdp_func_proto</a> 函数。</p>
+<p>还有一个  <code class="docutils literal notranslate"><span class="pre">is_valid_access</span></code> 字段，通过这个函数可以找到传给 bpf 程序的上下文参数中哪些字段是可读写的，比如 xdp 挂载点可以读写的字段可以参见 <a class="reference external" href="https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L7153">xdp_is_valid_access</a> 。</p>
 <p>详细见： <a class="reference external" href="https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L8879">https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L8879</a></p>
+<p>具体的挂载点可以从 <code class="docutils literal notranslate"><span class="pre">bpf_attach_type</span></code> 挂载点的宏定义顺着引用往下查：</p>
+<p><a class="reference external" href="https://elixir.bootlin.com/linux/v5.9/source/include/uapi/linux/bpf.h#L203">https://elixir.bootlin.com/linux/v5.9/source/include/uapi/linux/bpf.h#L203</a></p>
 </section>
 <section id="bpf-te-xing-yu-xu-yao-de-nei-he-ban-ben">
 <h2>BPF 特性与需要的内核版本<a class="headerlink" href="#bpf-te-xing-yu-xu-yao-de-nei-he-ban-ben" title="Permalink to this headline">¶</a></h2>
@@ -409,6 +412,10 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <span class="gp"># </span>grub2-set-default <span class="m">0</span>
 </pre></div>
 </div>
+</section>
+<section id="qi-ta-lei-xing-de-bpf-cheng-xu-ji-gua-zai-dian">
+<h2>其他类型的 BPF 程序及挂载点<a class="headerlink" href="#qi-ta-lei-xing-de-bpf-cheng-xu-ji-gua-zai-dian" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://docs.kernel.org/bpf/libbpf/program_types.html">https://docs.kernel.org/bpf/libbpf/program_types.html</a></p>
 </section>
 </section>
 
@@ -439,6 +446,7 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <li><a class="reference internal" href="#ru-he-cha-xun-mou-yi-ge-bpf-gua-zai-dian-zhi-chi-de-bpf-han-shu">如何查询某一个 BPF 挂载点支持的 bpf 函数</a></li>
 <li><a class="reference internal" href="#bpf-te-xing-yu-xu-yao-de-nei-he-ban-ben">BPF 特性与需要的内核版本</a></li>
 <li><a class="reference internal" href="#ge-zhong-ban-ben-de-nei-he">各种版本的内核</a></li>
+<li><a class="reference internal" href="#qi-ta-lei-xing-de-bpf-cheng-xu-ji-gua-zai-dian">其他类型的 BPF 程序及挂载点</a></li>
 </ul>
 </li>
 </ul>

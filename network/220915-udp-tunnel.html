@@ -219,6 +219,25 @@
 <p>IPPROTO_IPV6 协议没有，详细可以看上面 <code class="docutils literal notranslate"><span class="pre">ipip6_rcv</span></code> 函数， <code class="docutils literal notranslate"><span class="pre">ipip6_rcv</span></code> 没有做第二次 GRO。</p>
 <p>内核 UDP 性能相关的一些优化和版本：<a class="reference external" href="https://developers.redhat.com/articles/2021/11/05/improve-udp-performance-rhel-85">https://developers.redhat.com/articles/2021/11/05/improve-udp-performance-rhel-85</a></p>
 </section>
+<section id="wai-ceng-checksum-su-suan-fa-yu-lco">
+<h2>外层 checksum 速算法与 LCO<a class="headerlink" href="#wai-ceng-checksum-su-suan-fa-yu-lco" title="Permalink to this headline">¶</a></h2>
+<p>不升级内核解决上面 GRO 没生效的一个方法就是填上外面隧道层 UDP 头中的 checksum 字段。外层 checksum 有快速算法。</p>
+<p>先看 TCP/UDP 协议是如何计算头里的 checksum 字段的。</p>
+<img alt="../_images/tcp-checksum.png" src="../_images/tcp-checksum.png" />
+<p>首先，TCP/UDP 计算 checksum 的时候，除了 TCP/UDP 包自身的数据外，还包含一部分从 IP 层提取的数据（源/目的地址等），这部分数据一般称为 pseduo-header 伪头。计算 checksum 的时候是对这两个数据来做计算。</p>
+<p>计算的方法是将这部分数据按照 2 个字节一组作二进制循环加法(循环的意思是如果加完后溢出，溢出的部分要加到低位去)，最后加完后取其补码，将补码填到 TCP/UDP 的 checksum 字段中。计算的时候 checksum 字段填 0。</p>
+<p>校验的时候还按照计算的方法，对这部分数据计算其 checksum，此时 checksum 已经填上了值，因为 checksum 是剩余部分的补码，所以此时计算出的结果应该是 <code class="docutils literal notranslate"><span class="pre">0xffff</span></code>，如果计算结果不是这个，说明传输的数据包有问题。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">checksum</span><span class="p">(</span><span class="n">pseudo</span><span class="o">-</span><span class="n">header</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">checksum</span><span class="p">(</span><span class="n">tcp</span><span class="o">-</span><span class="n">segment</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0xffff</span><span class="w"></span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation">https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation</a></p>
+<p>根据 checksum 计算方法可以得出：填上了 checksum 字段后，TCP 包的 checksum 就是 pseudo-header 的 checksum 的反码。好了，大头部分的 checksum 已经快速算完了，剩余部分（外层 pseduo-header，外层 UDP 头、内层 IP 头等）的 checksum 正常计算然后和速算部分相加就可以了。</p>
+<p>这个速算方法就是内核中 LCO（Local Checksum Offload）的原理。详细见：</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.kernel.org/doc/html/v5.10/networking/checksum-offloads.html">https://www.kernel.org/doc/html/v5.10/networking/checksum-offloads.html</a></p></li>
+<li><p><a class="reference external" href="https://elixir.bootlin.com/linux/v6.4.8/source/include/linux/skbuff.h#L5043">https://elixir.bootlin.com/linux/v6.4.8/source/include/linux/skbuff.h#L5043</a></p></li>
+</ul>
+</section>
 <section id="tso-gso">
 <h2>TSO/GSO<a class="headerlink" href="#tso-gso" title="Permalink to this headline">¶</a></h2>
 <p>veth 测隧道 TSO 没有问题，但虚拟机 virtio 驱动下 TSO 似乎都有问题？（待进一步测试），在 veth 上测，GRO/GSO 关闭开启对性能影响不是特别大，但是 TSO 对性能影响巨大。</p>
@@ -242,6 +261,7 @@
 <li><a class="reference internal" href="#shou-bao-chu-li-lu-jing">收包处理路径</a></li>
 <li><a class="reference internal" href="#jie-bao">解包</a></li>
 <li><a class="reference internal" href="#gro-mei-qi-zuo-yong">GRO 没起作用？</a></li>
+<li><a class="reference internal" href="#wai-ceng-checksum-su-suan-fa-yu-lco">外层 checksum 速算法与 LCO</a></li>
 <li><a class="reference internal" href="#tso-gso">TSO/GSO</a></li>
 <li><a class="reference internal" href="#ge-zhong-sui-dao-lei-xing">各种隧道类型</a></li>
 </ul>

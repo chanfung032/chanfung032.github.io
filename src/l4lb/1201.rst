@@ -417,7 +417,13 @@ https://nakryiko.com/posts/bpf-tips-printk/
 
 在每个挂载点的 verfier ops 结构中有一个 ``get_func_proto`` 字段，这个字段指向的函数里列出了这个挂载点可以调用的所有 bpf 函数。比如 xdp 这个挂载点可以调用的函数可以参见 `xdp_func_proto <https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L6486>`_ 函数。
 
+还有一个  ``is_valid_access`` 字段，通过这个函数可以找到传给 bpf 程序的上下文参数中哪些字段是可读写的，比如 xdp 挂载点可以读写的字段可以参见 `xdp_is_valid_access <https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L7153>`_ 。
+
 详细见： https://elixir.bootlin.com/linux/v5.9/source/net/core/filter.c#L8879
+
+具体的挂载点可以从 ``bpf_attach_type`` 挂载点的宏定义顺着引用往下查：
+
+https://elixir.bootlin.com/linux/v5.9/source/include/uapi/linux/bpf.h#L203
 
 BPF 特性与需要的内核版本
 ----------------------------
@@ -437,3 +443,8 @@ https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md
     menuentry 'CentOS Linux (6.4.4-1.el7.elrepo.x86_64) 7 (Core)' --class centos --class gnu-linux --class gnu --class os --unrestricted $menuentry_id_option 'gnulinux-3.10.0-1160.el7.x86_64-advanced-9cff3d69-3769-4ad9-8460-9c54050583f9' {
     menuentry 'CentOS Linux (4.19.113-88.8bs.el7.x86_64) 7 (Core)' --class centos --class gnu-linux --class gnu --class os --unrestricted $menuentry_id_option 'gnulinux-3.10.0-1160.el7.x86_64-advanced-9cff3d69-3769-4ad9-8460-9c54050583f9' {
     # grub2-set-default 0
+
+其他类型的 BPF 程序及挂载点
+--------------------------------
+
+https://docs.kernel.org/bpf/libbpf/program_types.html
