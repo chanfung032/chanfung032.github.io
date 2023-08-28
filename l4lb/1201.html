@@ -140,6 +140,16 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <h2>Map<a class="headerlink" href="#map" title="Permalink to this headline">¶</a></h2>
 <p>这个应该可以用来存储 forwading table。</p>
 <p>定义（在 _kernel.c 中定义一个全局变量）：</p>
+<p id="map-syntax">新语法（会在程序的调试信息中带上 map 的信息，详细见后文 BTF 小节）:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_MAP_TYPE_ARRAY</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__type</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="n">__u32</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__type</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">datarec</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">__uint</span><span class="p">(</span><span class="n">max_entries</span><span class="p">,</span><span class="w"> </span><span class="n">XDP_ACTION_MAX</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"> </span><span class="n">xdp_stats_map</span><span class="w"> </span><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;.maps&quot;</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+<p>旧语法：</p>
 <div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">bpf_map_def</span><span class="w"> </span><span class="n">SEC</span><span class="w"> </span><span class="p">(</span><span class="s">&quot;maps&quot;</span><span class="p">)</span><span class="w"> </span><span class="n">xdp_stats_map</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="p">.</span><span class="n">type</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="n">BPF_MAP_TYPE_ARRAY</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="p">.</span><span class="n">key_size</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="k">sizeof</span><span class="w"> </span><span class="p">(</span><span class="n">__u32</span><span class="p">),</span><span class="w"></span>

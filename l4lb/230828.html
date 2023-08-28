@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>#230828 BTF &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#221025 直接使用 bpf_map_lookup_elem helper 函数返回的指针指向的数据安全吗？" href="221025.html" />
+    <link rel="prev" title="基于 XDP 的 L4LB 开发笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="btf">
+<h1>#230828 BTF<a class="headerlink" href="#btf" title="Permalink to this headline">¶</a></h1>
+<section id="gai-shu">
+<h2>概述<a class="headerlink" href="#gai-shu" title="Permalink to this headline">¶</a></h2>
+<p>BPF Type Format (BTF) 里 BPF 用来存储调试信息的格式，类似于 ELF 文件存储调试信息的 <a class="reference external" href="https://en.wikipedia.org/wiki/DWARF">DWARF</a>  格式。但是 BTF 更简单，更紧凑，比如内核的 BTF 信息也才大概 5M，这个大小可以随着内核发行版默认安装，而不是像 <cite>kernel-devel</cite> 这些包需要用到才安装。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>bpftool btf
+<span class="go">1: name [vmlinux]  size 5555738B</span>
+<span class="go">...</span>
+<span class="go">45: name [vboxsf]  size 8723B</span>
+</pre></div>
+</div>
+<p>有了内核自身以及 BPF 程序的调试信息，就可以实现一些之前无法实现的功能。</p>
+<p>编译带 BTF 调试信息的 bpf 程序，加 <code class="docutils literal notranslate"><span class="pre">-g</span></code> 选项：</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>clang -O2 -Wall -g -target bpf -c xdp_prog.c -o xdp_prog.o
+</pre></div>
+</div>
+</section>
+<section id="da-yin-chu-map-zhi-de-jie-gou-pretty-print">
+<h2>打印出 map 值的结构（pretty-print）<a class="headerlink" href="#da-yin-chu-map-zhi-de-jie-gou-pretty-print" title="Permalink to this headline">¶</a></h2>
+<p>使用 bpftool 打印使用 <a class="reference internal" href="1201.html#map-syntax"><span class="std std-ref">新语法</span></a> 定义的 map，会使用人易读的格式打印，如果值的类型是一个结构体，还会打印出详细的结构信息。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>bpftool map dump id <span class="m">79</span>
+<span class="go">[{</span>
+<span class="go">    &quot;key&quot;: 0,</span>
+<span class="go">    &quot;values&quot;: [{</span>
+<span class="go">        &quot;cpu&quot;: 0,</span>
+<span class="go">        &quot;value&quot;: {</span>
+<span class="go">            &quot;processed&quot;: 173,</span>
+<span class="go">            &quot;processed_bytes&quot;: 21524,</span>
+<span class="go">        }</span>
+<span class="go">    },{</span>
+<span class="go">        &quot;cpu&quot;: 1,</span>
+<span class="go">        &quot;value&quot;: {</span>
+<span class="go">            &quot;processed&quot;: 5,</span>
+<span class="go">            &quot;processed_bytes&quot;: 490,</span>
+<span class="go">        }</span>
+<span class="go">    }</span>
+<span class="go">    ]</span>
+<span class="go">}]</span>
+</pre></div>
+</div>
+</section>
+<section id="co-re-compile-once-run-everywhere">
+<h2>CO-RE(Compile Once, Run Everywhere)<a class="headerlink" href="#co-re-compile-once-run-everywhere" title="Permalink to this headline">¶</a></h2>
+<p>CO-RE 让编译出来的 bpf 二进制程序（ <code class="docutils literal notranslate"><span class="pre">.o</span></code> 文件）可以直接在不同的内核版本上运行。而不是分发 bpf 代码（ <code class="docutils literal notranslate"><span class="pre">.c</span></code> 文件），然后不同的内核版本上各自编译出对应内核版本的 bpf 程序。分发 bpf 代码需要运行 bpf 程序的机器安装编译器以及内核开发相关的各种头文件，用起来比较麻烦。</p>
+<p>首先需要使用下面这个 dump 出来的 <code class="docutils literal notranslate"><span class="pre">vmlinux.h</span></code> （provides CO-RE-relocatable type definitions for the kernel）来替代之前需要包含的各种内核头文件。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bpftool btf dump file /sys/kernel/btf/vmlinux format c &gt; vmlinux.h
+</pre></div>
+</div>
+<p>剩余的事就都是编译器的了，编译器会在编译出来的 <code class="docutils literal notranslate"><span class="pre">.o</span></code> 文件中记录下各种可能需要重定向的信息，比如读取结构体中的字段，不同的版本可能字段的偏移量不一样：</p>
+<img alt="../_images/core-field-offset-relocation.png" src="../_images/core-field-offset-relocation.png" />
+<p>编译：</p>
+<img alt="../_images/core-compile.png" src="../_images/core-compile.png" />
+<p>运行的时候，libbpf 会根据内核 btf 信息以及 bpf 程序中的各种重定向信息，修正字段为正确的偏移量：</p>
+<img alt="../_images/core-run.png" src="../_images/core-run.png" />
+<p>更多详细使用参考：<a class="reference external" href="https://nakryiko.com/posts/bpf-core-reference-guide/">https://nakryiko.com/posts/bpf-core-reference-guide/</a></p>
+<p>其他：</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.airplane.dev/blog/btf-bpf-type-format">https://www.airplane.dev/blog/btf-bpf-type-format</a></p></li>
+<li><p><a class="reference external" href="https://facebookmicrosites.github.io/bpf/blog/2020/02/19/bpf-portability-and-co-re.html">https://facebookmicrosites.github.io/bpf/blog/2020/02/19/bpf-portability-and-co-re.html</a></p></li>
+<li><p><a class="reference external" href="http://vger.kernel.org/bpfconf2019_talks/bpf-core.pdf">http://vger.kernel.org/bpfconf2019_talks/bpf-core.pdf</a></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#230828 BTF</a><ul>
+<li><a class="reference internal" href="#gai-shu">概述</a></li>
+<li><a class="reference internal" href="#da-yin-chu-map-zhi-de-jie-gou-pretty-print">打印出 map 值的结构（pretty-print）</a></li>
+<li><a class="reference internal" href="#co-re-compile-once-run-everywhere">CO-RE(Compile Once, Run Everywhere)</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/l4lb/230828.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="https://cn.bing.com/search" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>
+$('#searchbox').show(0);
+document.getElementsByClassName('search')[0].addEventListener('submit', function(event) {
+  event.preventDefault();
+  var form = event.target;
+  var input = form.querySelector('input[name="q"]');
+  var value = input.value;
+  var q = 'ensearch=1&q=site%3Achanfung032.github.io++' + value;
+  var url = form.action + '?' + q;
+  window.location.href = url;
+});
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/l4lb/230828.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

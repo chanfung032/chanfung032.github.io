@@ -143,6 +143,21 @@ Map
 
 定义（在 _kernel.c 中定义一个全局变量）：
 
+.. _map-syntax:
+
+新语法（会在程序的调试信息中带上 map 的信息，详细见后文 BTF 小节）:
+
+.. code-block:: c
+
+    struct {
+        __uint(type, BPF_MAP_TYPE_ARRAY);
+        __type(key, __u32);
+        __type(value, struct datarec);
+        __uint(max_entries, XDP_ACTION_MAX);
+    } xdp_stats_map SEC(".maps");
+
+旧语法：
+
 .. code-block:: c
 
     struct bpf_map_def SEC ("maps") xdp_stats_map = {
