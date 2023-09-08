@@ -71,6 +71,7 @@
   skip = h_2(b) \% (M - 1) + 1 \\
   permutation\left[j\right] = (offset + j \times skip) \% M
 \end{array}\end{split}\end{split}\]</div>
+<p>查找表（偏好序列）的长度需要为 <strong>质数</strong>。因为 <span class="math notranslate nohighlight">\(M\)</span> 是质数，<span class="math notranslate nohighlight">\(M\)</span> 和 <span class="math notranslate nohighlight">\(skip\)</span> 必然互质，每个生成的偏好序列才能都轮一遍查找表中所有的槽位位置（详细可以参考 <a class="reference external" href="https://book.douban.com/subject/26681597/">数学女孩 2：费马大定理</a> 完全巡回的条件）。</p>
 <p>然后我们循环所有的后端，对于每一个后端，使用其偏好序列中的数字作为查找表的位置索引，将后端填充到该位置上，如果该位置已经填充了后端，则顺延使用偏好序列中的下一个数字。如此直到整个查找表填充完成。</p>
 <p>以论文中的示例查找表为例，我们用单步的方式来填充下这个表来理解下填充的整个过程：</p>
 <ol class="arabic simple">
@@ -81,10 +82,9 @@
 <li><p>如上， 直到把整张查找表填充满。</p></li>
 </ol>
 <img alt="../_images/maglev-populate-lookup-table.png" src="../_images/maglev-populate-lookup-table.png" />
-<p>查找表的长度一般为一个大于 <span class="math notranslate nohighlight">\(100 \times N\)</span> 的质数。</p>
 <p>Maglev 的一致性哈希在某个后端挂了的情况下，影响的连接除了分发到这个后端的连接之外，还会稍微关联扰动（disruption）一些其它的连接，我们以下图删除一个后端为例，可以看到，<span class="math notranslate nohighlight">\(Entry\)</span> 中除了为 <span class="math notranslate nohighlight">\(B1\)</span> 的条目改变了之外，还影响了 <span class="math notranslate nohighlight">\(entry \left[6 \right]\)</span> 。</p>
 <img alt="../_images/maglev-remove-backend.png" src="../_images/maglev-remove-backend.png" />
-<p>Maglev 一致哈希的均衡性比普通的一致性哈希和 Rendezvous 哈希都要好。</p>
+<p>Maglev 一致哈希的均衡性比普通的一致性哈希和 Rendezvous 哈希都要好，或者说这个算法设计的目的就是均衡。</p>
 <img alt="../_images/maglev-hash-efficiency.png" src="../_images/maglev-hash-efficiency.png" />
 </section>
 </section>

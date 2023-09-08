@@ -47,6 +47,8 @@ https://writings.sh/post/consistent-hashing-algorithms-part-4-maglev-consistent-
       permutation\left[j\right] = (offset + j \times skip) \% M
     \end{array}\end{split}
 
+查找表（偏好序列）的长度需要为 **质数**。因为 :math:`M` 是质数，:math:`M` 和 :math:`skip` 必然互质，每个生成的偏好序列才能都轮一遍查找表中所有的槽位位置（详细可以参考 `数学女孩 2：费马大定理 <https://book.douban.com/subject/26681597/>`_ 完全巡回的条件）。
+
 然后我们循环所有的后端，对于每一个后端，使用其偏好序列中的数字作为查找表的位置索引，将后端填充到该位置上，如果该位置已经填充了后端，则顺延使用偏好序列中的下一个数字。如此直到整个查找表填充完成。
 
 以论文中的示例查找表为例，我们用单步的方式来填充下这个表来理解下填充的整个过程：
@@ -59,12 +61,10 @@ https://writings.sh/post/consistent-hashing-algorithms-part-4-maglev-consistent-
 
 .. image:: images/maglev-populate-lookup-table.png
 
-查找表的长度一般为一个大于 :math:`100 \times N` 的质数。
-
 Maglev 的一致性哈希在某个后端挂了的情况下，影响的连接除了分发到这个后端的连接之外，还会稍微关联扰动（disruption）一些其它的连接，我们以下图删除一个后端为例，可以看到，:math:`Entry` 中除了为 :math:`B1` 的条目改变了之外，还影响了 :math:`entry \left[6 \right]` 。
 
 .. image:: images/maglev-remove-backend.png
 
-Maglev 一致哈希的均衡性比普通的一致性哈希和 Rendezvous 哈希都要好。
+Maglev 一致哈希的均衡性比普通的一致性哈希和 Rendezvous 哈希都要好，或者说这个算法设计的目的就是均衡。
 
 .. image:: images/maglev-hash-efficiency.png
