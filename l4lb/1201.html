@@ -276,8 +276,8 @@ xdp_pass_user.c -l:libbpf.a -lelf
 </div>
 <p>指针加 1 的时候，如果是 <code class="docutils literal notranslate"><span class="pre">void*</span></code> 指针，指针是往后移一个字节，如果指针有类型，那么则是往后移 <code class="docutils literal notranslate"><span class="pre">sizeof（类型）</span></code> 个字节。所以上面所有 hdr 类型的 bounds checking 的时候都是使用相同的指针加 1 操作。</p>
 </section>
-<section id="wang-luo-bao-rewrite">
-<h2>网络包 Rewrite<a class="headerlink" href="#wang-luo-bao-rewrite" title="Permalink to this headline">¶</a></h2>
+<section id="xiu-gai-wang-luo-bao">
+<h2>修改网络包<a class="headerlink" href="#xiu-gai-wang-luo-bao" title="Permalink to this headline">¶</a></h2>
 <p>xdp 程序可以直接修改 [ctx-&gt;data, ctx-&gt;data_end] 之间的数据，并且可以通过 <code class="docutils literal notranslate"><span class="pre">bpf_xdp_adjust_head</span></code> 函数来扩大 / 缩小网络数据包的 buffer 的大小。</p>
 <dl class="c function">
 <dt class="sig sig-object c" id="c.bpf_xdp_adjust_head">
@@ -290,24 +290,23 @@ xdp_pass_user.c -l:libbpf.a -lelf
 </section>
 <section id="shi-yong-bpf-csum-diff-geng-xin-checksum">
 <h2>使用 bpf_csum_diff 更新 checksum<a class="headerlink" href="#shi-yong-bpf-csum-diff-geng-xin-checksum" title="Permalink to this headline">¶</a></h2>
-<p>以更新 icmp 包的 checksum 为例：</p>
-<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">icmphdr_common</span><span class="w"> </span><span class="o">*</span><span class="n">icmphdr</span><span class="p">;</span><span class="w"></span>
-<span class="k">struct</span> <span class="nc">icmphdr_common</span><span class="w"> </span><span class="n">icmphdr_old</span><span class="p">;</span><span class="w"></span>
-<span class="c1">// 保存当前的 checksum</span>
-<span class="n">__u16</span><span class="w"> </span><span class="n">old_csum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span><span class="p">;</span><span class="w"></span>
-<span class="c1">// 将 checksum 字段清零</span>
-<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
-<span class="c1">// 保存当前的 icmphdr</span>
-<span class="n">icmphdr_old</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">icmphdr</span><span class="p">;</span><span class="w"></span>
-<span class="c1">// 修改 icmphdr 中的字段，修改之后 checksum 就需要更新</span>
-<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ICMP_ECHOREPLY</span><span class="p">;</span><span class="w"></span>
-<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">icmp_checksum_diff</span><span class="p">(</span><span class="o">~</span><span class="n">old_csum</span><span class="p">,</span><span class="w"> </span><span class="n">icmphdr</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">icmphdr_old</span><span class="p">);</span><span class="w"></span>
+<p>修改网络包后很多时候需要更新相应的 checksum，一般可以增量修改，以修改 iphdr 中的目的地址为例：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// ipv4 指向 iphdr 结构</span>
 
-<span class="c1">// 计算新的 checksum</span>
-<span class="n">__u32</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">icmphdr_common</span><span class="p">);</span><span class="w"></span>
-<span class="n">__u32</span><span class="w"> </span><span class="n">csum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_csum_diff</span><span class="p">((</span><span class="n">__be32</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">icmphdr_old</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">__be32</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">icmphdr</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="o">~</span><span class="n">old_csum</span><span class="p">);</span><span class="w"></span>
-<span class="c1">// 将 checksum 从 __u32 转成 __u16</span>
-<span class="n">icmphdr</span><span class="o">-&gt;</span><span class="n">cksum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">csum_fold_helper</span><span class="p">(</span><span class="n">csum</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// 保存旧数据</span>
+<span class="n">__be32</span><span class="w"> </span><span class="n">old_daddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="p">;</span><span class="w"></span>
+<span class="c1">// 修改</span>
+<span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x04030201</span><span class="p">;</span><span class="w"></span>
+<span class="c1">// 调用 bpf_csum_diff 增量计算更新后的 checksum，网络包中的 checksum 字段保存的反码</span>
+<span class="c1">// 所以需要先取反再进入计算</span>
+<span class="n">__u32</span><span class="w"> </span><span class="n">csum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_csum_diff</span><span class="p">(</span><span class="n">old_daddr</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">__be32</span><span class="p">),</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">__be32</span><span class="p">),</span><span class="w"> </span><span class="o">~</span><span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">check</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// bpf_csum_diff 计算返回的是一个 u32，但是 checksum 需要 u16，需要将高于 16 位的</span>
+<span class="c1">// 进位加到低位上去，然后再取反得到反码保存到网络包中</span>
+<span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">check</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">csum_fold_helper</span><span class="p">(</span><span class="n">csum</span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">// 如果是 tcp 包，还需修改内层包的 checksum，因为 tcphdr 中的 checksum 包含了 ip 头</span>
+<span class="c1">// 中的部分字段</span>
+<span class="c1">// ...</span>
 
 <span class="k">static</span><span class="w"> </span><span class="n">__always_inline</span><span class="w"> </span><span class="n">__u16</span><span class="w"> </span><span class="n">csum_fold_helper</span><span class="p">(</span><span class="n">__u32</span><span class="w"> </span><span class="n">csum</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="n">__u32</span><span class="w"> </span><span class="n">sum</span><span class="p">;</span><span class="w"></span>
@@ -317,9 +316,10 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Internet_checksum#Calculating_the_IPv4_header_checksum">https://en.wikipedia.org/wiki/Internet_checksum#Calculating_the_IPv4_header_checksum</a></p>
 </section>
-<section id="wang-luo-bao-redirect">
-<h2>网络包 Redirect<a class="headerlink" href="#wang-luo-bao-redirect" title="Permalink to this headline">¶</a></h2>
+<section id="wang-luo-bao-zhong-ding-xiang-redirect">
+<h2>网络包重定向 Redirect<a class="headerlink" href="#wang-luo-bao-zhong-ding-xiang-redirect" title="Permalink to this headline">¶</a></h2>
 <dl class="c function">
 <dt class="sig sig-object c" id="c.bpf_redirect">
 <span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">bpf_redirect</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">u32</span></span><span class="w"> </span><span class="n"><span class="pre">ifindex</span></span>, <span class="n"><span class="pre">u64</span></span><span class="w"> </span><span class="n"><span class="pre">flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.bpf_redirect" title="Permalink to this definition">¶</a><br /></dt>
@@ -447,9 +447,9 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <li><a class="reference internal" href="#pinning-map">Pinning Map</a></li>
 <li><a class="reference internal" href="#han-shu-nei-lian-xun-huan-zhan-kai">函数内联、循环展开</a></li>
 <li><a class="reference internal" href="#wang-luo-bao-jie-xi">网络包解析</a></li>
-<li><a class="reference internal" href="#wang-luo-bao-rewrite">网络包 Rewrite</a></li>
+<li><a class="reference internal" href="#xiu-gai-wang-luo-bao">修改网络包</a></li>
 <li><a class="reference internal" href="#shi-yong-bpf-csum-diff-geng-xin-checksum">使用 bpf_csum_diff 更新 checksum</a></li>
-<li><a class="reference internal" href="#wang-luo-bao-redirect">网络包 Redirect</a></li>
+<li><a class="reference internal" href="#wang-luo-bao-zhong-ding-xiang-redirect">网络包重定向 Redirect</a></li>
 <li><a class="reference internal" href="#python-bpf-cao-zuo-ku">Python BPF 操作库</a></li>
 <li><a class="reference internal" href="#tiao-shi-ri-zhi">调试日志</a></li>
 <li><a class="reference internal" href="#ru-he-jie-jue-bpf-verifier-bao-cuo">如何解决 BPF Verifier 报错</a></li>
