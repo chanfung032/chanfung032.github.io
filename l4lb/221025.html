@@ -17,7 +17,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="#220721 探活、TIME_WAIT 以及 SO_LINGER" href="220721.html" />
-    <link rel="prev" title="基于 XDP 的 L4LB 开发笔记" href="index.html" />
+    <link rel="prev" title="#230828 BTF" href="230828.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -213,6 +213,7 @@
 <li><p><a class="reference external" href="https://github.com/torvalds/linux/blob/master/Documentation/RCU/Design/Requirements/Requirements.rst#bottom-half-flavor-historical">https://github.com/torvalds/linux/blob/master/Documentation/RCU/Design/Requirements/Requirements.rst#bottom-half-flavor-historical</a></p></li>
 </ul>
 </div></blockquote>
+<p>如果要原地更新指针指向的数据，如果不是 percpu 的 map，需要使用原子操作或者加锁。</p>
 <img alt="../_images/bpf-map-rcu.svg" src="../_images/bpf-map-rcu.svg" /><p>References:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://man7.org/linux/man-pages/man2/bpf.2.html">https://man7.org/linux/man-pages/man2/bpf.2.html</a></p></li>

@@ -207,6 +207,8 @@ local_bh_disable/local_bh_enable 对标记了一个 rcu 的读临界区（critic
    - https://lwn.net/ml/bpf/20210624160609.292325-2-toke@redhat.com/
    - https://github.com/torvalds/linux/blob/master/Documentation/RCU/Design/Requirements/Requirements.rst#bottom-half-flavor-historical
 
+如果要原地更新指针指向的数据，如果不是 percpu 的 map，需要使用原子操作或者加锁。
+
 .. image:: images/bpf-map-rcu.svg
 
 References:
