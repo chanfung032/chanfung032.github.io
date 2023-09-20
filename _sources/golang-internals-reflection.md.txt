@@ -113,3 +113,64 @@ r = tty
 var w io.Writer
 w = r.(io.Writer)
 ```
+
+## 使用场景一：修饰器 Decorator
+
+以修饰 [nats.io](https://pkg.go.dev/github.com/nats-io/nats.go#Conn.Subscribe>) 消息队列客户端的 ``Conn.Subscribe`` 函数的回调处理函数为例，这类处理函数一般都是先解码请求、处理请求生成响应、编码响应这个流程。
+
+```go
+nc.Subscribe("foo", func(m *nats.Msg) {
+    var reqeust requestType
+    json.Unmarshal(m.Data, &request)
+
+    var reply replyType
+    reply.X = "blahblah"
+
+    replyData, _ := json.Marshal(&reply)
+    m.Respond(replyData)
+})
+```
+
+处理函数多了，每个函数都写一遍解码编码很麻烦，如果处理函数能够类似 rpc 处理函数一样，将编解码的部分抽出来，处理函数中直接处理请求/响应的结构体，写起来就会方便得多，类似下面这样：
+
+
+```go
+nc.Subscribe("foo", makeRequestReplyHandler(func (request *requestType, reply *replyType) {
+    reply.X = "blahblah"
+}))
+```
+
+上面的这个 ``makeRequestReplyHandler`` 修饰器需要用到 ``reflect`` 来实现：
+
+```go
+func makeRequestReplyHandler(cb interface{}) nats.MsgHandler {
+    f := reflect.ValueOf(cb)
+    typ := f.Type()
+
+    if typ.Kind() != reflect.Func {
+        panic("not a function")
+    }
+    numParams := typ.NumIn()
+    if numParams != 2 {
+        panic("invalid param number")
+    }
+    reqType := typ.In(0)
+    replyType := typ.In(1)
+    if reqType.Kind() != reflect.Pointer || replyType.Kind() != reflect.Pointer {
+        panic("invalid request/reply type")
+    }
+
+    return func(m *nats.Msg) {
+        req := reflect.New(reqType.Elem())
+        reply := reflect.New(replyType.Elem())
+
+        json.Unmarshal(m.Data, req.Interface())
+        f.Call([]reflect.Value{req, reply})
+        replyData, _ := json.Marshal(reply.Interface())
+
+        m.Respond(replyData)
+    }
+}
+```
+
+最后，通过 [reflect.MakeFunc](https://pkg.go.dev/reflect#MakeFunc) 函数还能实现更复杂的泛型的修饰器，详细可以参考： [https://coolshell.cn/articles/17929.html#泛型的修饰器](https://coolshell.cn/articles/17929.html#%E6%B3%9B%E5%9E%8B%E7%9A%84%E4%BF%AE%E9%A5%B0%E5%99%A8)

@@ -144,6 +144,60 @@
 </pre></div>
 </div>
 </section>
+<section id="shi-yong-chang-jing-yi-xiu-shi-qi-decorator">
+<h2>使用场景一：修饰器 Decorator<a class="headerlink" href="#shi-yong-chang-jing-yi-xiu-shi-qi-decorator" title="Permalink to this headline">¶</a></h2>
+<p>以修饰 <a class="reference external" href="https://pkg.go.dev/github.com/nats-io/nats.go#Conn.Subscribe%3E">nats.io</a> 消息队列客户端的 <code class="docutils literal notranslate"><span class="pre">Conn.Subscribe</span></code> 函数的回调处理函数为例，这类处理函数一般都是先解码请求、处理请求生成响应、编码响应这个流程。</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">nc</span><span class="p">.</span><span class="nx">Subscribe</span><span class="p">(</span><span class="s">&quot;foo&quot;</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">nats</span><span class="p">.</span><span class="nx">Msg</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">reqeust</span> <span class="nx">requestType</span>
+    <span class="nx">json</span><span class="p">.</span><span class="nx">Unmarshal</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Data</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">request</span><span class="p">)</span>
+
+    <span class="kd">var</span> <span class="nx">reply</span> <span class="nx">replyType</span>
+    <span class="nx">reply</span><span class="p">.</span><span class="nx">X</span> <span class="p">=</span> <span class="s">&quot;blahblah&quot;</span>
+
+    <span class="nx">replyData</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">json</span><span class="p">.</span><span class="nx">Marshal</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">reply</span><span class="p">)</span>
+    <span class="nx">m</span><span class="p">.</span><span class="nx">Respond</span><span class="p">(</span><span class="nx">replyData</span><span class="p">)</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+<p>处理函数多了，每个函数都写一遍解码编码很麻烦，如果处理函数能够类似 rpc 处理函数一样，将编解码的部分抽出来，处理函数中直接处理请求/响应的结构体，写起来就会方便得多，类似下面这样：</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">nc</span><span class="p">.</span><span class="nx">Subscribe</span><span class="p">(</span><span class="s">&quot;foo&quot;</span><span class="p">,</span> <span class="nx">makeRequestReplyHandler</span><span class="p">(</span><span class="kd">func</span> <span class="p">(</span><span class="nx">request</span> <span class="o">*</span><span class="nx">requestType</span><span class="p">,</span> <span class="nx">reply</span> <span class="o">*</span><span class="nx">replyType</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">reply</span><span class="p">.</span><span class="nx">X</span> <span class="p">=</span> <span class="s">&quot;blahblah&quot;</span>
+<span class="p">}))</span>
+</pre></div>
+</div>
+<p>上面的这个 <code class="docutils literal notranslate"><span class="pre">makeRequestReplyHandler</span></code> 修饰器需要用到 <code class="docutils literal notranslate"><span class="pre">reflect</span></code> 来实现：</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">makeRequestReplyHandler</span><span class="p">(</span><span class="nx">cb</span> <span class="kd">interface</span><span class="p">{})</span> <span class="nx">nats</span><span class="p">.</span><span class="nx">MsgHandler</span> <span class="p">{</span>
+    <span class="nx">f</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">ValueOf</span><span class="p">(</span><span class="nx">cb</span><span class="p">)</span>
+    <span class="nx">typ</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nx">Type</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="nx">typ</span><span class="p">.</span><span class="nx">Kind</span><span class="p">()</span> <span class="o">!=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Func</span> <span class="p">{</span>
+        <span class="nb">panic</span><span class="p">(</span><span class="s">&quot;not a function&quot;</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">numParams</span> <span class="o">:=</span> <span class="nx">typ</span><span class="p">.</span><span class="nx">NumIn</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nx">numParams</span> <span class="o">!=</span> <span class="mi">2</span> <span class="p">{</span>
+        <span class="nb">panic</span><span class="p">(</span><span class="s">&quot;invalid param number&quot;</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="nx">reqType</span> <span class="o">:=</span> <span class="nx">typ</span><span class="p">.</span><span class="nx">In</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="nx">replyType</span> <span class="o">:=</span> <span class="nx">typ</span><span class="p">.</span><span class="nx">In</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">reqType</span><span class="p">.</span><span class="nx">Kind</span><span class="p">()</span> <span class="o">!=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Pointer</span> <span class="o">||</span> <span class="nx">replyType</span><span class="p">.</span><span class="nx">Kind</span><span class="p">()</span> <span class="o">!=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Pointer</span> <span class="p">{</span>
+        <span class="nb">panic</span><span class="p">(</span><span class="s">&quot;invalid request/reply type&quot;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="kd">func</span><span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">nats</span><span class="p">.</span><span class="nx">Msg</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">req</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">reqType</span><span class="p">.</span><span class="nx">Elem</span><span class="p">())</span>
+        <span class="nx">reply</span> <span class="o">:=</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">replyType</span><span class="p">.</span><span class="nx">Elem</span><span class="p">())</span>
+
+        <span class="nx">json</span><span class="p">.</span><span class="nx">Unmarshal</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">Data</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">Interface</span><span class="p">())</span>
+        <span class="nx">f</span><span class="p">.</span><span class="nx">Call</span><span class="p">([]</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">Value</span><span class="p">{</span><span class="nx">req</span><span class="p">,</span> <span class="nx">reply</span><span class="p">})</span>
+        <span class="nx">replyData</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">json</span><span class="p">.</span><span class="nx">Marshal</span><span class="p">(</span><span class="nx">reply</span><span class="p">.</span><span class="nx">Interface</span><span class="p">())</span>
+
+        <span class="nx">m</span><span class="p">.</span><span class="nx">Respond</span><span class="p">(</span><span class="nx">replyData</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>最后，通过 <a class="reference external" href="https://pkg.go.dev/reflect#MakeFunc">reflect.MakeFunc</a> 函数还能实现更复杂的泛型的修饰器，详细可以参考： <a class="reference external" href="https://coolshell.cn/articles/17929.html#%E6%B3%9B%E5%9E%8B%E7%9A%84%E4%BF%AE%E9%A5%B0%E5%99%A8">https://coolshell.cn/articles/17929.html#泛型的修饰器</a></p>
+</section>
 </section>
 
 
@@ -159,6 +213,7 @@
 <li><a class="reference internal" href="#ji-ben-shi-yong">基本使用</a></li>
 <li><a class="reference internal" href="#fan-she-he-interface">反射和 interface{}</a></li>
 <li><a class="reference internal" href="#jing-tai-lei-xing-static-type-he-shi-ji-lei-xing-underlying-type">静态类型（static type）和实际类型（underlying type）</a></li>
+<li><a class="reference internal" href="#shi-yong-chang-jing-yi-xiu-shi-qi-decorator">使用场景一：修饰器 Decorator</a></li>
 </ul>
 </li>
 </ul>
