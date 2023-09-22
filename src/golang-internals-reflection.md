@@ -114,6 +114,27 @@ var w io.Writer
 w = r.(io.Writer)
 ```
 
+## 方法
+
+```go
+type Person struct{}
+
+func (p Person) SayHello(message string) {}
+
+func main() {
+    p := Person{}
+    fmt.Println(reflect.TypeOf(p.SayHello))
+    // 输出：func(string)
+
+    fmt.Println(reflect.TypeOf(Person.SayHello))
+    // 输出：func(main.Person, string)
+}
+```
+
+``Person.SayHello(Person{}, "me")`` 和 ``Person{}.SayHello("me")`` 这两个调用虽然是等价的，底层最终编译成的代码也是一样的，但是这两个类型是不一样的，一个是 ``未绑定方法（Unbounded method）``，一个是 ``绑定方法（Bounded method）``，这样通过 ``reflect.Value.Call`` 调用方法传参的时候就和正常调用一样，未绑定方法需要传需要绑定的对象，而绑定方法不用。
+
+实现方法就是绑定方法的 ``reflect.ValueOf(p.SayHello)`` 里包含了指向绑定对象的指针和一个适配函数，通过适配函数来完成额外的绑定对象这个参数的传递，详细参见： [https://golang.org/s/go11func](https://golang.org/s/go11func) 。
+
 ## 使用场景一：修饰器 Decorator
 
 以修饰 [nats.io](https://pkg.go.dev/github.com/nats-io/nats.go#Conn.Subscribe>) 消息队列客户端的 ``Conn.Subscribe`` 函数的回调处理函数为例，这类处理函数一般都是先解码请求、处理请求生成响应、编码响应这个流程。

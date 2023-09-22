@@ -144,6 +144,25 @@
 </pre></div>
 </div>
 </section>
+<section id="fang-fa">
+<h2>方法<a class="headerlink" href="#fang-fa" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Person</span> <span class="kd">struct</span><span class="p">{}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="nx">Person</span><span class="p">)</span> <span class="nx">SayHello</span><span class="p">(</span><span class="nx">message</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{}</span>
+
+<span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">p</span> <span class="o">:=</span> <span class="nx">Person</span><span class="p">{}</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">SayHello</span><span class="p">))</span>
+    <span class="c1">// 输出：func(string)</span>
+
+    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">Person</span><span class="p">.</span><span class="nx">SayHello</span><span class="p">))</span>
+    <span class="c1">// 输出：func(main.Person, string)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Person.SayHello(Person{},</span> <span class="pre">&quot;me&quot;)</span></code> 和 <code class="docutils literal notranslate"><span class="pre">Person{}.SayHello(&quot;me&quot;)</span></code> 这两个调用虽然是等价的，底层最终编译成的代码也是一样的，但是这两个类型是不一样的，一个是 <code class="docutils literal notranslate"><span class="pre">未绑定方法（Unbounded</span> <span class="pre">method）</span></code>，一个是 <code class="docutils literal notranslate"><span class="pre">绑定方法（Bounded</span> <span class="pre">method）</span></code>，这样通过 <code class="docutils literal notranslate"><span class="pre">reflect.Value.Call</span></code> 调用方法传参的时候就和正常调用一样，未绑定方法需要传需要绑定的对象，而绑定方法不用。</p>
+<p>实现方法就是绑定方法的 <code class="docutils literal notranslate"><span class="pre">reflect.ValueOf(p.SayHello)</span></code> 里包含了指向绑定对象的指针和一个适配函数，通过适配函数来完成额外的绑定对象这个参数的传递，详细参见： <a class="reference external" href="https://golang.org/s/go11func">https://golang.org/s/go11func</a> 。</p>
+</section>
 <section id="shi-yong-chang-jing-yi-xiu-shi-qi-decorator">
 <h2>使用场景一：修饰器 Decorator<a class="headerlink" href="#shi-yong-chang-jing-yi-xiu-shi-qi-decorator" title="Permalink to this headline">¶</a></h2>
 <p>以修饰 <a class="reference external" href="https://pkg.go.dev/github.com/nats-io/nats.go#Conn.Subscribe%3E">nats.io</a> 消息队列客户端的 <code class="docutils literal notranslate"><span class="pre">Conn.Subscribe</span></code> 函数的回调处理函数为例，这类处理函数一般都是先解码请求、处理请求生成响应、编码响应这个流程。</p>
@@ -213,6 +232,7 @@
 <li><a class="reference internal" href="#ji-ben-shi-yong">基本使用</a></li>
 <li><a class="reference internal" href="#fan-she-he-interface">反射和 interface{}</a></li>
 <li><a class="reference internal" href="#jing-tai-lei-xing-static-type-he-shi-ji-lei-xing-underlying-type">静态类型（static type）和实际类型（underlying type）</a></li>
+<li><a class="reference internal" href="#fang-fa">方法</a></li>
 <li><a class="reference internal" href="#shi-yong-chang-jing-yi-xiu-shi-qi-decorator">使用场景一：修饰器 Decorator</a></li>
 </ul>
 </li>
