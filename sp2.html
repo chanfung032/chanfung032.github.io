@@ -1,0 +1,323 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>最短路径之线性规划求解法 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script src="_static/custom.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="最短路径之 Dijkstra 和 Yen 算法" href="sp.html" />
+    <link rel="prev" title="Feng’s blog" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="zui-duan-lu-jing-zhi-xian-xing-gui-hua-qiu-jie-fa">
+<h1>最短路径之线性规划求解法<a class="headerlink" href="#zui-duan-lu-jing-zhi-xian-xing-gui-hua-qiu-jie-fa" title="Permalink to this headline">¶</a></h1>
+<section id="shen-me-shi-xian-xing-gui-hua">
+<h2>什么是线性规划<a class="headerlink" href="#shen-me-shi-xian-xing-gui-hua" title="Permalink to this headline">¶</a></h2>
+<p>线性规划（Linear Programming，简称 LP），指的是这样一类数学问题及其解决方法： <strong>在 线性约束条件 下求 线性目标函数 的最优解（极大值/极小值）。</strong></p>
+<p>线性规划问题可以用下面的标准形式来描述：</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned} &amp;
+\operatorname{最大化} \quad c_1x_1 + c_2x_2 + \dots + c_nx_n\\ &amp;
+\text{约束条件} \\ &amp;
+\quad l_1 \leq a_{11}x_1 + a_{12}x_2 + \dots + a_{1n}x_n \leq u_1 \\ &amp;
+\quad l_2 \leq a_{21}x_1 + a_{22}x_2 + \dots + a_{2n}x_n \leq u_2 \\ &amp;
+\quad \dots \\ &amp;
+\quad l_m \leq a_{m1}x_1 + a_{m2}x_2 + \dots + a_{mn}x_n \leq u_m \\ &amp;
+\text{取值范围} \\ &amp;
+\quad l_{m+1} \leq x_1 \leq u_{m+1}\\ &amp;
+\quad l_{m+2} \leq x_2 \leq u_{m+2}\\ &amp;
+\quad \dots \\ &amp;
+\quad l_{m+n} \leq x_n \leq u_{m+n}&amp;
+\end{aligned}\end{split}\]</div>
+<p>目标函数和约束函数用矩阵可以简化表示为 : <span class="math notranslate nohighlight">\(c^Tx\)</span> 和 <span class="math notranslate nohighlight">\(Ax\)</span> 。</p>
+<p>线性规划有通用解题算法，一个问题如果如果可以归纳为一个线性规划问题，那么就可以用线性规划工具包（比如 GLPK）提供的通用求解器来解决。</p>
+</section>
+<section id="wen-ti-ding-yi">
+<h2>问题定义<a class="headerlink" href="#wen-ti-ding-yi" title="Permalink to this headline">¶</a></h2>
+<p>要使用线性规划方法来求解最短路径问题，需要先用线性规划的方法将最短路径问题定义出来。</p>
+<p>令 <span class="math notranslate nohighlight">\(x_{ij}\)</span> 表示节点 <span class="math notranslate nohighlight">\(i\)</span> 到节点 <span class="math notranslate nohighlight">\(j\)</span> 的路径是否被选择，如果被选择则 <span class="math notranslate nohighlight">\(x_{ij} = 1\)</span>，否则 <span class="math notranslate nohighlight">\(x_{ij} = 0\)</span> ， <span class="math notranslate nohighlight">\(c_{ij}\)</span> 表示节点 <span class="math notranslate nohighlight">\(i\)</span> 到节点 <span class="math notranslate nohighlight">\(j\)</span> 的路径长度，<span class="math notranslate nohighlight">\(s\)</span> 和 <span class="math notranslate nohighlight">\(t\)</span> 分别表示起点和终点。</p>
+<p>则最短路径可以描述为：</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned} &amp; \operatorname{最小化} \quad \sum_{i, j} c_{i j} x_{i j} \\ &amp; \text { 约束条件 } \quad x_{i j} \in\{0,1\} \quad \forall i, j \\ &amp; \sum_j x_{i j}-\sum_i x_{j i}=\left\{\begin{array}{ll} -1 &amp; i=s \\ 1 &amp; i=t \\ 0 &amp; \text { 其他 } \end{array} \forall i\right. \\ &amp; \end{aligned} \\\end{split}\]</div>
+<p>其中第二个约束条件约束了所有路径连起来必须构成一条起点 <span class="math notranslate nohighlight">\(s\)</span> 到终点 <span class="math notranslate nohighlight">\(t\)</span> 的路径。用白话来翻译这个公式就是， <strong>汇入某个顶点的路径条数减去从这个顶点出发的路径条数</strong> 这个值只能有 3 种情况：</p>
+<ul class="simple">
+<li><p>起点，为 <span class="math notranslate nohighlight">\(-1\)</span>，因为只有从起点出发的路径。</p></li>
+<li><p>终点，为 <span class="math notranslate nohighlight">\(1\)</span>，因为只有路径汇入终点。</p></li>
+<li><p>其他点，为 <span class="math notranslate nohighlight">\(0\)</span>，要么不在路径上，如果在路径上，有汇入的路径，就得有对应的从点出发的路径，两者数量相抵消。</p></li>
+</ul>
+<p>如果没有这个约束，那么显然所有 <span class="math notranslate nohighlight">\(x_{ij}\)</span> 都取 0 的时候目标函数值最小，不符合需求。</p>
+</section>
+<section id="shi-yong-glpk-qiu-jie">
+<h2>使用 GLPK 求解<a class="headerlink" href="#shi-yong-glpk-qiu-jie" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://www.gnu.org/software/glpk/">GLPK</a> 是一个开源的线性规划工具包，包中提供了一些通用的线性规划问题求解器（Solver）。</p>
+<p>使用 GLPK 求解问题第一步，把上面的数学公式翻译成 <em>MathProg</em> 语言。</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="nx">param</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">integer</span><span class="p">,</span> <span class="o">&gt;</span> <span class="mf">0</span><span class="p">;</span>
+<span class="cm">/* 定义有 n 个顶点 */</span>
+
+<span class="nx">set</span> <span class="nx">E</span><span class="p">,</span> <span class="nx">within</span> <span class="p">{</span><span class="nx">i</span> <span class="ow">in</span> <span class="mf">1.</span><span class="p">.</span><span class="nx">n</span><span class="p">,</span> <span class="nx">j</span> <span class="ow">in</span> <span class="mf">1.</span><span class="p">.</span><span class="nx">n</span><span class="p">};</span>
+<span class="cm">/* 定义路径，E_{i,j} 为从点 i 到点 j 的边 */</span>
+
+<span class="nx">param</span> <span class="nx">c</span><span class="p">{(</span><span class="nx">i</span><span class="p">,</span><span class="nx">j</span><span class="p">)</span> <span class="ow">in</span> <span class="nx">E</span><span class="p">};</span>
+<span class="cm">/* 定义路径的长度 */</span>
+
+<span class="nx">param</span> <span class="nx">s</span><span class="p">,</span> <span class="ow">in</span> <span class="p">{</span><span class="mf">1.</span><span class="p">.</span><span class="nx">n</span><span class="p">};</span>
+<span class="nx">param</span> <span class="nx">t</span><span class="p">,</span> <span class="ow">in</span> <span class="p">{</span><span class="mf">1.</span><span class="p">.</span><span class="nx">n</span><span class="p">};</span>
+<span class="cm">/* 定义起点和终点 */</span>
+
+<span class="kd">var</span> <span class="nx">x</span><span class="p">{(</span><span class="nx">i</span><span class="p">,</span><span class="nx">j</span><span class="p">)</span> <span class="ow">in</span> <span class="nx">E</span><span class="p">},</span> <span class="o">&gt;=</span> <span class="mf">0</span><span class="p">;</span>
+<span class="cm">/* 定义 x[i,j] 的取值范围，要么在路径上为 1，要么不在路径上为 0</span>
+<span class="cm">下面约束路径的条件蕴含了 x[i,j] 的上限，所以这里没有限定 */</span>
+
+<span class="nx">s</span><span class="p">.</span><span class="nx">t</span><span class="p">.</span> <span class="nx">r</span><span class="p">{</span><span class="nx">i</span> <span class="ow">in</span> <span class="mf">1.</span><span class="p">.</span><span class="nx">n</span><span class="p">}</span><span class="o">:</span> <span class="nx">sum</span><span class="p">{(</span><span class="nx">j</span><span class="p">,</span><span class="nx">i</span><span class="p">)</span> <span class="ow">in</span> <span class="nx">E</span><span class="p">}</span> <span class="nx">x</span><span class="p">[</span><span class="nx">j</span><span class="p">,</span><span class="nx">i</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="k">if</span> <span class="nx">i</span> <span class="o">=</span> <span class="nx">s</span> <span class="nx">then</span> <span class="mf">1</span><span class="p">)</span> <span class="o">=</span>
+                <span class="nx">sum</span><span class="p">{(</span><span class="nx">i</span><span class="p">,</span><span class="nx">j</span><span class="p">)</span> <span class="ow">in</span> <span class="nx">E</span><span class="p">}</span> <span class="nx">x</span><span class="p">[</span><span class="nx">i</span><span class="p">,</span><span class="nx">j</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="k">if</span> <span class="nx">i</span> <span class="o">=</span> <span class="nx">t</span> <span class="nx">then</span> <span class="mf">1</span><span class="p">);</span>
+<span class="cm">/* 约束成路径，s.t. 是 subject to，英文里约束条件的意思 */</span>
+
+<span class="nx">minimize</span> <span class="nx">Z</span><span class="o">:</span> <span class="nx">sum</span><span class="p">{(</span><span class="nx">i</span><span class="p">,</span><span class="nx">j</span><span class="p">)</span> <span class="ow">in</span> <span class="nx">E</span><span class="p">}</span> <span class="nx">c</span><span class="p">[</span><span class="nx">i</span><span class="p">,</span><span class="nx">j</span><span class="p">]</span> <span class="o">*</span> <span class="nx">x</span><span class="p">[</span><span class="nx">i</span><span class="p">,</span><span class="nx">j</span><span class="p">];</span>
+<span class="cm">/* 定义目标函数 */</span>
+
+<span class="cm">/* 数据 */</span>
+<span class="nx">data</span><span class="p">;</span>
+<span class="nx">param</span> <span class="nx">n</span> <span class="o">:=</span> <span class="mf">8</span><span class="p">;</span>
+<span class="nx">param</span> <span class="nx">s</span> <span class="o">:=</span> <span class="mf">1</span><span class="p">;</span>
+<span class="nx">param</span> <span class="nx">t</span> <span class="o">:=</span> <span class="mf">6</span><span class="p">;</span>
+<span class="nx">param</span> <span class="o">:</span> <span class="nx">E</span> <span class="o">:</span>   <span class="nx">c</span> <span class="o">:=</span>
+    <span class="mf">1</span> <span class="mf">2</span>    <span class="mf">1</span>
+    <span class="mf">1</span> <span class="mf">4</span>    <span class="mf">8</span>
+    <span class="mf">1</span> <span class="mf">7</span>    <span class="mf">6</span>
+    <span class="mf">2</span> <span class="mf">4</span>    <span class="mf">2</span>
+    <span class="mf">3</span> <span class="mf">2</span>   <span class="mf">14</span>
+    <span class="mf">3</span> <span class="mf">4</span>   <span class="mf">10</span>
+    <span class="mf">3</span> <span class="mf">5</span>    <span class="mf">6</span>
+    <span class="mf">3</span> <span class="mf">6</span>   <span class="mf">19</span>
+    <span class="mf">4</span> <span class="mf">5</span>    <span class="mf">8</span>
+    <span class="mf">4</span> <span class="mf">8</span>   <span class="mf">13</span>
+    <span class="mf">5</span> <span class="mf">8</span>   <span class="mf">12</span>
+    <span class="mf">6</span> <span class="mf">5</span>    <span class="mf">7</span>
+    <span class="mf">7</span> <span class="mf">4</span>    <span class="mf">5</span>
+    <span class="mf">8</span> <span class="mf">6</span>    <span class="mf">4</span>
+    <span class="mf">8</span> <span class="mf">7</span>   <span class="mf">10</span><span class="p">;</span>
+<span class="nx">end</span><span class="p">;</span>
+<span class="cm">/* 最优解为路径: s = 1 -&gt; 2 -&gt; 4 -&gt; 8 -&gt; 6 = t</span>
+<span class="cm">  上面都是有向的边，如果是无向图，需要将上面的边逆转过来再指定一遍长度</span>
+<span class="cm">  可以试下，有向图和无向图计算出的结果会不一样。</span>
+<span class="cm">  参考：https://github.com/firedrakeproject/glpk/blob/master/examples/spp.mod */</span>
+</pre></div>
+</div>
+<p>保存代码到 <code class="docutils literal notranslate"><span class="pre">spp.mod</span></code> 文件，求解问题第二步，调用 GLPK 的求解器解这个问题。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>glpsol -m spp.mod -o result.txt
+<span class="go">...</span>
+<span class="go">GLPK Simplex Optimizer, v4.52</span>
+<span class="go">...</span>
+<span class="gp"># </span>cat result.txt
+<span class="go">...</span>
+<span class="go">No. Column name  St   Activity     Lower bound   Upper bound    Marginal</span>
+<span class="go">------ ------------ -- ------------- ------------- ------------- -------------</span>
+<span class="go">    1 x[1,2]       B              1             0</span>
+<span class="go">    2 x[1,4]       NL             0             0                           5</span>
+<span class="go">    3 x[1,7]       B              0             0</span>
+<span class="go">    4 x[3,2]       NL             0             0                          29</span>
+<span class="go">    5 x[2,4]       B              1             0</span>
+<span class="go">    6 x[3,4]       NL             0             0                          23</span>
+<span class="go">    7 x[3,5]       NL             0             0                          18</span>
+<span class="go">    8 x[3,6]       NL             0             0                          15</span>
+<span class="go">    9 x[7,4]       NL             0             0                           8</span>
+<span class="go">   10 x[4,5]       NL             0             0                           7</span>
+<span class="go">   11 x[4,8]       B              1             0</span>
+<span class="go">   12 x[6,5]       NL             0             0                          23</span>
+<span class="go">   13 x[5,8]       B              0             0</span>
+<span class="go">   14 x[8,6]       B              1             0</span>
+<span class="go">   15 x[8,7]       NL             0             0                          20</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+<p>Activity 这一列就是解，遍历所有的 <span class="math notranslate nohighlight">\(x_{ij}\)</span> ，根据选择的路径组合就能得到最短路径。</p>
+<img alt="_images/sp-3.svg" src="_images/sp-3.svg" /><p>GLPK 默认使用 <a class="reference external" href="https://zh.wikipedia.org/zh-hans/%E5%8D%95%E7%BA%AF%E5%BD%A2%E6%B3%95">单纯形法 Simplex</a> 来求解，也可以通过命令行参数选择其他算法，这一类通用算法的性能肯定比不上 Dijkstra/Yen 等专用算法。但是使用线性规划可以通过约束条件实现更复杂的路径需求，比如要求必须通过某条路径、带宽约束等复杂需求。</p>
+</section>
+<section id="cplex-lp">
+<h2>CPLEX LP<a class="headerlink" href="#cplex-lp" title="Permalink to this headline">¶</a></h2>
+<p><em>MathProg</em> 是 GLPK 提供的高级建模工具，GLPK 还可以通过 CPLEX LP 这个底层格式来描述问题。</p>
+<p><code class="docutils literal notranslate"><span class="pre">glpsol</span></code> 可以直接将上面的 <em>MathProg</em> 程序翻译成 GPLEX LP 格式：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>glpsol -m spp.mod --wlp spp.lp
+<span class="go">...</span>
+<span class="gp"># </span>cat spp.lp
+<span class="go">Minimize</span>
+<span class="go">Z: + x(1,2) + 8 x(1,4) + 6 x(1,7) + 14 x(3,2) + 2 x(2,4) + 10 x(3,4)</span>
+<span class="go">+ 6 x(3,5) + 19 x(3,6) + 5 x(7,4) + 8 x(4,5) + 13 x(4,8) + 7 x(6,5)</span>
+<span class="go">+ 12 x(5,8) + 4 x(8,6) + 10 x(8,7)</span>
+
+<span class="go">Subject To</span>
+<span class="go">r(1): - x(1,2) - x(1,4) - x(1,7) = -1</span>
+<span class="go">r(2): + x(1,2) + x(3,2) - x(2,4) = -0</span>
+<span class="go">r(3): - x(3,2) - x(3,4) - x(3,5) - x(3,6) = -0</span>
+<span class="go">r(4): + x(1,4) + x(2,4) + x(3,4) + x(7,4) - x(4,5) - x(4,8) = -0</span>
+<span class="go">r(5): + x(3,5) + x(4,5) + x(6,5) - x(5,8) = -0</span>
+<span class="go">r(6): + x(3,6) - x(6,5) + x(8,6) = 1</span>
+<span class="go">r(7): + x(1,7) - x(7,4) + x(8,7) = -0</span>
+<span class="go">r(8): + x(4,8) + x(5,8) - x(8,6) - x(8,7) = -0</span>
+
+<span class="go">End</span>
+</pre></div>
+</div>
+<p>约束条件里省略了系数为 0 的变量，如果补全就是一个矩阵，矩阵每行代表一个约束条件，每列代表一个变量。在最短路径问题中，行数等于顶点个数，列数等于可选路径个数，注意路径是有向的，<span class="math notranslate nohighlight">\(E[1,2]\)</span> 列代表顶点 1 到顶点 2 的路径，<span class="math notranslate nohighlight">\(E[2,1]\)</span> 代表顶点 2 到顶点 1 的路径，虽然它们是同一条路。</p>
+<p>第 i 行 j 列的参数 <span class="math notranslate nohighlight">\(a_{ij}\)</span> 的取值规则为：如果第 j 列对应的路径是从第 i 个节点出去，值为 -1，如果是汇入，值为 1，其它为 0 。</p>
+</section>
+<section id="glpk-di-ceng-api">
+<h2>GLPK 底层 API<a class="headerlink" href="#glpk-di-ceng-api" title="Permalink to this headline">¶</a></h2>
+<p>从上面 GPLEX LP 格式可以看出，描述一个线性规划的问题核心就是约束系数矩阵，一行对应一个约束条件，一列对应一个变量，其他都可以映射到行、列关联的属性上去。</p>
+<p>GLPK 的底层接口就是就是围绕约束系数矩阵来构建的。来看一个具体的栗子：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">glp_prob</span><span class="w"> </span><span class="o">*</span><span class="n">lp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">glp_create_prob</span><span class="p">();</span><span class="w"></span>
+<span class="n">glp_set_prob_name</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;shortest path&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// 设置算极小值</span>
+<span class="n">glp_set_obj_dir</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="n">GLP_MIN</span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">// 8 个顶点，8 个约束条件，8 行</span>
+<span class="n">glp_add_rows</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">);</span><span class="w"></span>
+<span class="n">glp_set_row_name</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;r1&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// 设置每一个约束条件的取值范围</span>
+<span class="n">glp_set_row_bnds</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">GLP_FX</span><span class="p">,</span><span class="w"> </span><span class="mf">-1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">-1.0</span><span class="p">);</span><span class="w"></span>
+<span class="n">glp_set_row_name</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;r2&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="n">glp_set_row_bnds</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="n">GLP_FX</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+<span class="c1">// 15 条路径，15 列，对应目标函数中 15 个变量，变量和列是一一对应的</span>
+<span class="n">glp_add_cols</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// 设置第一列</span>
+<span class="n">glp_set_col_name</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;x1,2&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="c1">//   设置变量的取值范围</span>
+<span class="n">glp_set_col_bnds</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">GLP_LO</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span><span class="w"></span>
+<span class="c1">//   设置目标函数中对应变量前面的参数，也叫代价系数</span>
+<span class="n">glp_set_obj_coef</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// 添加第二列</span>
+<span class="n">glp_set_col_name</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;x1,4&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="n">glp_set_col_bnds</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="n">GLP_LO</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">);</span><span class="w"></span>
+<span class="n">glp_set_obj_coef</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mf">8.0</span><span class="p">);</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+
+<span class="c1">// 设置约束系数矩阵，这个形式主要是为了方便稀疏矩阵</span>
+<span class="c1">// ia 中为行号，ja 中为列号，ar 中为参数值</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">ia</span><span class="p">[</span><span class="mi">1</span><span class="o">+</span><span class="mi">1000</span><span class="p">],</span><span class="w"> </span><span class="n">ja</span><span class="p">[</span><span class="mi">1</span><span class="o">+</span><span class="mi">1000</span><span class="p">];</span><span class="w"></span>
+<span class="kt">double</span><span class="w"> </span><span class="n">ar</span><span class="p">[</span><span class="mi">1</span><span class="o">+</span><span class="mi">1000</span><span class="p">];</span><span class="w"></span>
+<span class="n">ia</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">ja</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">ar</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-1.0</span><span class="p">;</span><span class="w">     </span><span class="cm">/* a[1,1] = -1 */</span><span class="w"></span>
+<span class="n">ia</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">ja</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="n">ar</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-1.0</span><span class="p">;</span><span class="w">     </span><span class="cm">/* a[1,2] = -1 */</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+<span class="n">ia</span><span class="p">[</span><span class="mi">30</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="n">ja</span><span class="p">[</span><span class="mi">30</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="n">ar</span><span class="p">[</span><span class="mi">30</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-1.0</span><span class="p">;</span><span class="w"> </span><span class="cm">/* a[8,15] = -1 */</span><span class="w"></span>
+<span class="n">glp_load_matrix</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"> </span><span class="n">ia</span><span class="p">,</span><span class="w"> </span><span class="n">ja</span><span class="p">,</span><span class="w"> </span><span class="n">ar</span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">// 指定使用 SimpleX 算法求解</span>
+<span class="n">glp_simplex</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">// 取最小极值，以及求解得到的变量值</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">glp_get_obj_val</span><span class="p">(</span><span class="n">lp</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// 获取第一列变量的解</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">x12</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">glp_get_col_prim</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+<span class="c1">// 获取第二列变量的解</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">x14</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">glp_get_col_prim</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+
+<span class="n">glp_delete_prob</span><span class="p">(</span><span class="n">lp</span><span class="p">);</span><span class="w"></span>
+
+<span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+</pre></div>
+</div>
+<p>References:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://zhuanlan.zhihu.com/p/616487147">https://zhuanlan.zhihu.com/p/616487147</a></p></li>
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/Linear_programming">https://en.wikipedia.org/wiki/Linear_programming</a></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">最短路径之线性规划求解法</a><ul>
+<li><a class="reference internal" href="#shen-me-shi-xian-xing-gui-hua">什么是线性规划</a></li>
+<li><a class="reference internal" href="#wen-ti-ding-yi">问题定义</a></li>
+<li><a class="reference internal" href="#shi-yong-glpk-qiu-jie">使用 GLPK 求解</a></li>
+<li><a class="reference internal" href="#cplex-lp">CPLEX LP</a></li>
+<li><a class="reference internal" href="#glpk-di-ceng-api">GLPK 底层 API</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/sp2.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="https://cn.bing.com/search" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>
+$('#searchbox').show(0);
+document.getElementsByClassName('search')[0].addEventListener('submit', function(event) {
+  event.preventDefault();
+  var form = event.target;
+  var input = form.querySelector('input[name="q"]');
+  var value = input.value;
+  var q = 'ensearch=1&q=site%3Achanfung032.github.io++' + value;
+  var url = form.action + '?' + q;
+  window.location.href = url;
+});
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/sp2.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

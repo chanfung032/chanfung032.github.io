@@ -8,6 +8,7 @@ Feng's blog
 .. toctree::
    :maxdepth: 1
 
+   sp2.rst
    sp.rst
    signed-type-and-type-conversion.rst
    network/index.rst
