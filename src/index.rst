@@ -22,7 +22,6 @@ Feng's blog
    手写一个简单的递归下降 Parser <https://github.com/chanfung032/labs/blob/master/decode-string.py>
    regexp.rst
    raft.rst
-   android-wexin-export-with-no-root.rst
    python3-features.rst
    the-hungry-beast-and-ugly-baby.rst
    spanner.rst
@@ -49,6 +48,7 @@ Feng's blog
    docker-seccomp-bpf.rst
    docker-network.rst
    docker-basics.rst
+   android-wexin-export-with-no-root.rst
    kafka-storage-internals.rst
    speed-matters.rst
    simhash.rst
