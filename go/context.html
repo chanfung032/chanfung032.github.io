@@ -7,19 +7,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
     <title>Go 语言实现——Context &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/doctools.js"></script>
-    <script src="_static/custom.js"></script>
-    <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Go 语言实现——sync.Pool" href="golang-internals-sync-pool.html" />
-    <link rel="prev" title="Go 语言实现——同步原语" href="golang-internals-mutex.html" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Go 语言实现——sync.Pool" href="sync-pool.html" />
+    <link rel="prev" title="Go 语言实现——同步原语" href="mutex.html" />
    
-  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
@@ -46,7 +46,7 @@
 </pre></div>
 </div>
 <p>context 包中提供了 4 种类型的 Context：emptyCtx、cancelCtx、timerCtx、valueCtx，这 4 种类型的 Context 通过 <a class="reference external" href="https://golang.org/doc/effective_go#embedding">Embedding</a> 的方式有如下的继承关系。</p>
-<img alt="_images/go-context.png" src="_images/go-context.png" />
+<img alt="../_images/go-context.png" src="../_images/go-context.png" />
 <p><code class="docutils literal notranslate"><span class="pre">context.Background()</span></code> 和 <code class="docutils literal notranslate"><span class="pre">context.TODO()</span></code> 返回 emptyCtx，这个 Context 不会被 cancel，没有 deadline，也没有 value，emptyCtx 就是一个普通的 int，int 值没有意义。这个 context 一般被用作 root context。</p>
 <div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">emptyCtx</span> <span class="kt">int</span>
 
@@ -70,7 +70,7 @@
 </pre></div>
 </div>
 <p>代码执行后会生成如下的 context 结构：</p>
-<img alt="_images/go-context-tree.png" src="_images/go-context-tree.png" />
+<img alt="../_images/go-context-tree.png" src="../_images/go-context-tree.png" />
 <p><code class="docutils literal notranslate"><span class="pre">context.WithDeadline</span></code> 和 <code class="docutils literal notranslate"><span class="pre">context.WithTimeout</span></code> 都是创建的 timerCtx，<code class="docutils literal notranslate"><span class="pre">context.WithTimeout</span></code> 是 <code class="docutils literal notranslate"><span class="pre">context.WithDeadline</span></code> 的一个简单封装。</p>
 <p>以 <code class="docutils literal notranslate"><span class="pre">context.WithCancel</span></code> 来看下 <code class="docutils literal notranslate"><span class="pre">context.With*</span></code> 干的事情：</p>
 <div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">cancelCtx</span> <span class="kd">struct</span> <span class="p">{</span>
@@ -113,7 +113,7 @@
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/golang-internals-context.rst.txt"
+      <li><a href="../_sources/go/context.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -150,7 +150,7 @@ document.getElementsByClassName('search')[0].addEventListener('submit', function
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="_sources/golang-internals-context.rst.txt"
+      <a href="../_sources/go/context.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

@@ -31,20 +31,20 @@ Feng's blog
    nginx-lua-internals.rst
    user-experience-design-for-apis.rst
    skiplist.rst
-   golang-internals-mutex.rst
-   golang-internals-context.rst
-   golang-internals-sync-pool.rst
-   golang-internals-io-copy-and-zerocopy.rst
-   golang-asynchronous-preemption.rst
-   golang-internals-malloc.rst
-   golang-internals-io.rst
-   golang-internals-goroutine.rst
-   golang-internals-bootstrap.rst
-   golang-internals-function.rst
-   golang-internals-byte-array-and-string.rst
-   golang-internals-reflection.md
-   golang-internals-nil.rst
-   golang-internals-variable.rst
+   go/mutex.rst
+   go/context.rst
+   go/sync-pool.rst
+   go/io-copy-and-zerocopy.rst
+   go/asynchronous-preemption.rst
+   go/malloc.rst
+   go/io.rst
+   go/goroutine.rst
+   go/bootstrap.rst
+   go/function.rst
+   go/byte-array-and-string.rst
+   go/reflection.md
+   go/nil.rst
+   go/variable.rst
    docker-seccomp-bpf.rst
    docker-network.rst
    docker-basics.rst

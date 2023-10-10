@@ -7,19 +7,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
     <title>Go 语言实现——[]byte 和 string &#8212; Feng&#39;s blog 1.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/doctools.js"></script>
-    <script src="_static/custom.js"></script>
-    <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Go 语言实现——反射" href="golang-internals-reflection.html" />
-    <link rel="prev" title="Go 语言实现——函数" href="golang-internals-function.html" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Go 语言实现——nil" href="nil.html" />
+    <link rel="prev" title="Go 语言实现——函数" href="function.html" />
    
-  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
@@ -145,7 +145,7 @@
 <blockquote>
 <div><p>sync.Pool is your best friend</p>
 </div></blockquote>
-<p>sync.Pool 的实现说明参见：<a class="reference internal" href="golang-internals-sync-pool.html"><span class="doc">Go 语言实现——sync.Pool</span></a></p>
+<p>sync.Pool 的实现说明参见：<span class="xref std std-doc">golang-internals-sync-pool</span></p>
 <p>使用样例可以参见：<a class="reference external" href="https://github.com/valyala/fasthttp/search?q=sync.pool">https://github.com/valyala/fasthttp/search?q=sync.pool</a></p>
 </section>
 <section id="bi-mian-byte-he-string-de-lei-xing-zhuan-huan">
@@ -158,7 +158,7 @@
 </section>
 <section id="nil-byte-wu-xu-te-shu-dui-dai">
 <h3>nil []byte 无需特殊对待<a class="headerlink" href="#nil-byte-wu-xu-te-shu-dui-dai" title="Permalink to this headline">¶</a></h3>
-<p>[]byte 的零值 nil 不用特殊对待，可以和空 slice <code class="docutils literal notranslate"><span class="pre">[]byte{}</span></code> 一样的使用（nil 和 空 slice 只是指向底层数组的指针不一样，其它结构都是一样的，详见：<a class="reference internal" href="golang-internals-nil.html"><span class="doc">Go 语言实现——nil</span></a>）。</p>
+<p>[]byte 的零值 nil 不用特殊对待，可以和空 slice <code class="docutils literal notranslate"><span class="pre">[]byte{}</span></code> 一样的使用（nil 和 空 slice 只是指向底层数组的指针不一样，其它结构都是一样的，详见：<span class="xref std std-doc">golang-internals-nil</span>）。</p>
 <p>下面这些都是合法的：</p>
 <div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">var</span> <span class="p">(</span>
     <span class="c1">// both buffers are uninitialized</span>
@@ -248,7 +248,7 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table of Contents</a></h3>
+  <h3><a href="../index.html">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Go 语言实现——[]byte 和 string</a><ul>
 <li><a class="reference internal" href="#byte-he-string-hu-xiang-lei-xing-zhuan-huan-fu-zhi-di-ceng-shu-ju-ma">[]byte 和 string 互相类型转换复制底层数据吗？</a></li>
@@ -268,7 +268,7 @@
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/golang-internals-byte-array-and-string.rst.txt"
+      <li><a href="../_sources/go/byte-array-and-string.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -305,7 +305,7 @@ document.getElementsByClassName('search')[0].addEventListener('submit', function
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="_sources/golang-internals-byte-array-and-string.rst.txt"
+      <a href="../_sources/go/byte-array-and-string.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

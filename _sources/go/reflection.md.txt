@@ -39,7 +39,7 @@ type Value struct {
 
 ## 反射和 interface{}
 
-从 {doc}`golang-internals-variable` 中关于 interface{} 的实现可以看出，interface{} 是 Go 类型信息的注入点，`reflect.TypeOf` 和 `reflect.ValueOf` 的入口参数类型都是 interface{}。
+从 {doc}`variable` 中关于 interface{} 的实现可以看出，interface{} 是 Go 类型信息的注入点，`reflect.TypeOf` 和 `reflect.ValueOf` 的入口参数类型都是 interface{}。
 
 `TypeOf` 直接返回 interface{} 的类型指针。
 
@@ -152,7 +152,7 @@ nc.Subscribe("foo", func(m *nats.Msg) {
 })
 ```
 
-处理函数多了，每个函数都写一遍解码编码很麻烦，如果处理函数能够类似 rpc 处理函数一样，将编解码的部分抽出来，处理函数中直接处理请求/响应的结构体，写起来就会方便得多，类似下面这样：
+处理函数多了，每个函数都写一遍解码编码很麻烦，如果处理函数能够类似 rpc 处理函数一样，将编解码的部分抽出来，处理函数中直接处理请求 / 响应的结构体，写起来就会方便得多，类似下面这样：
 
 
 ```go
