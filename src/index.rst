@@ -8,6 +8,7 @@ Feng's blog
 .. toctree::
    :maxdepth: 1
 
+   b4.rst
    sp2.rst
    sp.rst
    signed-type-and-type-conversion.rst
@@ -22,7 +23,6 @@ Feng's blog
    手写一个简单的递归下降 Parser <https://github.com/chanfung032/labs/blob/master/decode-string.py>
    regexp.rst
    raft.rst
-   python3-features.rst
    the-hungry-beast-and-ugly-baby.rst
    spanner.rst
    percolator.rst
@@ -56,6 +56,7 @@ Feng's blog
    sqlite-file-format.rst
    systemtap.rst
    graphite.rst
+   python3-features.rst
    build-all-in-one-package-for-python-application.rst
    dive-into-python/index.rst
 
