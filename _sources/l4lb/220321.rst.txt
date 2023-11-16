@@ -42,7 +42,7 @@ TCP 没有这个机制，但是如果 TCP 连接的客户端在自己的控制�
 
 .. image:: images/fb-tcp-options.png
 
-- 嵌入 server_id 可以通过 sockops bpf 来实现，参考：https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/progs/test_tcp_hdr_options.c
+嵌入 server_id 通过 sockops bpf 来实现，server_id 在握手阶段由后端服务器生成并带给客户端，客户端收到后解析并保存到连接关联的 local_storage，后续所有的 tcp 包都会在 tcp option 中带上这个字段，从而将 server_id  echo 回去。katran 的实现：https://github.com/facebookincubator/katran/blob/main/katran/tpr/bpf/tcp_pkt_router.bpf.c
 
 - 解析 quic 取 server_id 信息：https://github.com/facebookincubator/katran/blob/main/katran/lib/bpf/balancer_kern.c#:~:text=parse_quic
 - 解析 tcp options 取 server_id 信息：https://github.com/facebookincubator/katran/blob/main/katran/lib/bpf/balancer_kern.c#:~:text=tcp_hdr_opt_lookup

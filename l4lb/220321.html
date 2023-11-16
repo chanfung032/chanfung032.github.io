@@ -67,8 +67,8 @@
 <p>QUIC 协议没有这个问题，因为 QUIC 协议包里包含 connection_id 字段，后端服务器可以将 server_id 嵌入 connection_id 中，客户端发的包会将服务端的 connection_id 原样返回（echo back），L4 从 connection_id 中取出 server_id，查表得到 server_id 对应的后端地址，然后转发过去。server_id 由一个单独的服务分配并同步到各个服务组件。</p>
 <p>TCP 没有这个机制，但是如果 TCP 连接的客户端在自己的控制之内（比如边缘节点的 L7 -&gt; 中心节点的 L7），可以通过将 server_id 嵌入 TCP options 字段里来实现同样的功能，整个流程如下：</p>
 <img alt="../_images/fb-tcp-options.png" src="../_images/fb-tcp-options.png" />
+<p>嵌入 server_id 通过 sockops bpf 来实现，server_id 在握手阶段由后端服务器生成并带给客户端，客户端收到后解析并保存到连接关联的 local_storage，后续所有的 tcp 包都会在 tcp option 中带上这个字段，从而将 server_id  echo 回去。katran 的实现：<a class="reference external" href="https://github.com/facebookincubator/katran/blob/main/katran/tpr/bpf/tcp_pkt_router.bpf.c">https://github.com/facebookincubator/katran/blob/main/katran/tpr/bpf/tcp_pkt_router.bpf.c</a></p>
 <ul class="simple">
-<li><p>嵌入 server_id 可以通过 sockops bpf 来实现，参考：<a class="reference external" href="https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/progs/test_tcp_hdr_options.c">https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/progs/test_tcp_hdr_options.c</a></p></li>
 <li><p>解析 quic 取 server_id 信息：<a class="reference external" href="https://github.com/facebookincubator/katran/blob/main/katran/lib/bpf/balancer_kern.c#:~:text=parse_quic">https://github.com/facebookincubator/katran/blob/main/katran/lib/bpf/balancer_kern.c#:~:text=parse_quic</a></p></li>
 <li><p>解析 tcp options 取 server_id 信息：<a class="reference external" href="https://github.com/facebookincubator/katran/blob/main/katran/lib/bpf/balancer_kern.c#:~:text=tcp_hdr_opt_lookup">https://github.com/facebookincubator/katran/blob/main/katran/lib/bpf/balancer_kern.c#:~:text=tcp_hdr_opt_lookup</a></p></li>
 </ul>
