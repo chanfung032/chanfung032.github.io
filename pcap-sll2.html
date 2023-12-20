@@ -1,0 +1,182 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>pcap 库怎么获取抓到包的网卡信息 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/custom.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="B4 Traffic Engineering Optimization 算法 (2013)" href="b4.html" />
+    <link rel="prev" title="Feng’s blog" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="pcap-ku-zen-me-huo-qu-zhua-dao-bao-de-wang-ka-xin-xi">
+<h1>pcap 库怎么获取抓到包的网卡信息<a class="headerlink" href="#pcap-ku-zen-me-huo-qu-zhua-dao-bao-de-wang-ka-xin-xi" title="Permalink to this headline">¶</a></h1>
+<section id="pcap-de-ji-ben-shi-yong">
+<h2>pcap 的基本使用<a class="headerlink" href="#pcap-de-ji-ben-shi-yong" title="Permalink to this headline">¶</a></h2>
+<p>pcap 包处理函数的原型一般是这样的：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">packet_handler</span><span class="p">(</span><span class="n">u_char</span><span class="w"> </span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">pcap_pkthdr</span><span class="w"> </span><span class="o">*</span><span class="n">pkthdr</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">u_char</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+<p>第三个参数指向一个 buffer，这个 buffer 里是网络包的数据。第二个参数 <cite>pcap_pkthdr</cite> 中只有下面这 3 个字段，记录跟这个网络包相关的一些元数据，然而并没有网卡相关的信息。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">pcap_pkthdr</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">timeval</span><span class="w"> </span><span class="n">ts</span><span class="p">;</span><span class="w">  </span><span class="c1">// 时间戳</span>
+<span class="w">    </span><span class="n">bpf_u_int32</span><span class="w"> </span><span class="n">caplen</span><span class="p">;</span><span class="w"> </span><span class="c1">// 抓到的包的长度，可能截断了</span>
+<span class="w">    </span><span class="n">bpf_u_int32</span><span class="w"> </span><span class="n">len</span><span class="p">;</span><span class="w">    </span><span class="c1">// 包的实际长度</span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>那 <code class="docutils literal notranslate"><span class="pre">tcpdump</span> <span class="pre">-i</span> <span class="pre">any</span> <span class="pre">-e</span></code> （底层用的 pcap 库）看到的网卡信息等是怎么来的呢。</p>
+</section>
+<section id="dlt-linux-sll2-mo-shi">
+<h2>DLT_LINUX_SLL2 模式<a class="headerlink" href="#dlt-linux-sll2-mo-shi" title="Permalink to this headline">¶</a></h2>
+<p>翻 tcpdump 和 pcap 库的代码，发现在网卡是 <code class="docutils literal notranslate"><span class="pre">any</span></code> 的情况下，可以通过  <code class="docutils literal notranslate"><span class="pre">pcap_set_datalink(handle,</span> <span class="pre">DLT_LINUX_SLL2)</span></code> 这个调用让 pcap 库切换到 DLT_LINUX_SLL2 模式去，这个模式下，第二个参数返回不变，第三个参数网络包中的 <em>以太网包头</em> 会被一个 <em>伪包头</em> 替换掉，这个 <em>伪包头</em> 里包含了网卡号，包的类型流向等一些额外信息。</p>
+<p>完整的使用代码如下：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">packet_handler</span><span class="p">(</span><span class="n">u_char</span><span class="w"> </span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">pcap_pkthdr</span><span class="w"> </span><span class="o">*</span><span class="n">pkthdr</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">u_char</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 网络包的一开始是 伪包头</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">sll2_header</span><span class="w"> </span><span class="o">*</span><span class="n">sllp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">sll2_header</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">p</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">if_index</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ntohl</span><span class="p">(</span><span class="n">sllp</span><span class="o">-&gt;</span><span class="n">sll2_if_index</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">ifname</span><span class="p">[</span><span class="n">IF_NAMESIZE</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">if_indextoname</span><span class="p">(</span><span class="n">if_index</span><span class="p">,</span><span class="w"> </span><span class="n">ifname</span><span class="p">))</span><span class="w"></span>
+<span class="w">        </span><span class="n">strncpy</span><span class="p">(</span><span class="n">ifname</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;?&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// 后面开始是 IP 包头，以太网包头被前面的伪包头替换掉了</span>
+<span class="w">    </span><span class="n">p</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">SLL2_HDR_LEN</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pkthdr</span><span class="o">-&gt;</span><span class="n">len</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">SLL2_HDR_LEN</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Nic: %s, Packet Length: %d %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">ifname</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 需要是 any 网卡的时候，设置 DLT_LINUX_SLL2 才会生效</span>
+<span class="w">    </span><span class="n">handle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pcap_open_live</span><span class="p">(</span><span class="s">&quot;any&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">65536</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"> </span><span class="n">errbuf</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">pcap_set_datalink</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span><span class="w"> </span><span class="n">DLT_LINUX_SLL2</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">pcap_loop</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">packet_handler</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>如果编译的时候报 <code class="docutils literal notranslate"><span class="pre">DLT_LINUX_SLL2</span></code> 找不到，需要升级 pcap 库。</p>
+<p><code class="docutils literal notranslate"><span class="pre">sll2_header</span></code> 完整的字段如下：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">sll2_header</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ether type 802.3/802.1Q/...</span>
+<span class="w">    </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">sll2_protocol</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">sll2_reserved_mbz</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 网卡号</span>
+<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">sll2_if_index</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">sll2_hatype</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 包类型，可以是 HOST/BROADCAST/MULTICAST/OTHERHOST/OUTGOING</span>
+<span class="w">    </span><span class="kt">uint8_t</span><span class="w">  </span><span class="n">sll2_pkttype</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">uint8_t</span><span class="w">  </span><span class="n">sll2_halen</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 网卡 MAC 地址</span>
+<span class="w">    </span><span class="kt">uint8_t</span><span class="w">  </span><span class="n">sll2_addr</span><span class="p">[</span><span class="n">SLL_ADDRLEN</span><span class="p">];</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+</pre></div>
+</div>
+<p>还是用 tcpdump 来看一看这个里面可以打印出的一些信息， <code class="docutils literal notranslate"><span class="pre">tcpdump</span> <span class="pre">-i</span> <span class="pre">any</span> <span class="pre">-e</span> <span class="pre">-XX</span></code> 可以看到包的网卡、流向等信息，注意下面 16 进制打印出来的前 20 个字节就是这个 <code class="docutils literal notranslate"><span class="pre">sll2_header</span></code> 了，并不是实际的以太网包头。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>tcpdump -i any -e -XX
+<span class="go">tcpdump: data link type LINUX_SLL2 👈 运行在 SLL2 模式下</span>
+<span class="go">tcpdump: verbose output suppressed, use -v[v]... for full protocol decode</span>
+<span class="go">listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes</span>
+<span class="go">07:37:36.139372 eth0  In  ifindex 2 48:57:02:f4:e2:92 (oui Unknown) ethertype IPv4 (0x0800), length 72: bogon.59104 &gt; arch.10022: Flags [.], ack 474860, win 1156, options [nop,nop,TS val 1170175875 ecr 1805243877], length 0</span>
+<span class="go">    0x0000:  0800 0000 0000 0002 0001 0006 4857 02f4  ............HW..</span>
+<span class="go">    0x0010:  e292 0000 4540 0034 0000 4000 3e06 0dd9  ....E@.4..@.&gt;...</span>
+<span class="go">    ...                👆 从这里开始是 IP 包头</span>
+</pre></div>
+</div>
+<p>更多细节可以参见 tcpdump 项目中 sll2 相关的打印代码： <a class="reference external" href="https://github.com/the-tcpdump-group/tcpdump/blob/master/print-sll.c">https://github.com/the-tcpdump-group/tcpdump/blob/master/print-sll.c</a></p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">pcap 库怎么获取抓到包的网卡信息</a><ul>
+<li><a class="reference internal" href="#pcap-de-ji-ben-shi-yong">pcap 的基本使用</a></li>
+<li><a class="reference internal" href="#dlt-linux-sll2-mo-shi">DLT_LINUX_SLL2 模式</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pcap-sll2.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="https://cn.bing.com/search" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>
+$('#searchbox').show(0);
+document.getElementsByClassName('search')[0].addEventListener('submit', function(event) {
+  event.preventDefault();
+  var form = event.target;
+  var input = form.querySelector('input[name="q"]');
+  var value = input.value;
+  var q = 'ensearch=1&q=site%3Achanfung032.github.io++' + value;
+  var url = form.action + '?' + q;
+  window.location.href = url;
+});
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/pcap-sll2.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
