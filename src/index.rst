@@ -10,10 +10,11 @@ Feng's blog
 .. toctree::
    :maxdepth: 1
 
-   pcap-sll2.rst
    b4.rst
    sp2.rst
    sp.rst
+   pcap-sll2.rst
+   kdump.rst
    signed-type-and-type-conversion.rst
 
 2022
