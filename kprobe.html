@@ -1,0 +1,287 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>如何写一个 kprobe 模块 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/custom.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="有符号类型、负数与类型转换" href="signed-type-and-type-conversion.html" />
+    <link rel="prev" title="如何解决一个内核崩溃问题" href="kdump.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="ru-he-xie-yi-ge-kprobe-mo-kuai">
+<h1>如何写一个 kprobe 模块<a class="headerlink" href="#ru-he-xie-yi-ge-kprobe-mo-kuai" title="Permalink to this headline">¶</a></h1>
+<section id="wen-ti">
+<h2>问题<a class="headerlink" href="#wen-ti" title="Permalink to this headline">¶</a></h2>
+<p>使用 <a class="reference external" href="https://github.com/iovisor/bpftrace">bpftrace</a> 之类的工具可以通过写脚本的方式很方便的 trace 内核函数，打印函数的参数、变量，但是涉及内核中一些比较复杂的数据结构，比如链表，而 bpf 没有提供对应结构的打印函数，自己处理起这些结构又比较麻烦的时候，可以考虑写一个 kprobe 模块，因为是内核模块，可以直接调用内核中的一切函数，比上层的高级工具更自由。</p>
+<p>下面我们用一个实际的例子来看下如何来写一个 kprobe 模块。</p>
+<p>内核中打开文件的时候有一个路径查找的过程，比如 <code class="docutils literal notranslate"><span class="pre">/i9/b2/c3/exam</span></code>，当调用 <code class="docutils literal notranslate"><span class="pre">open</span></code> 系统调用打开这个文件的时候，内核会按照 <code class="docutils literal notranslate"><span class="pre">/</span></code> 、 <code class="docutils literal notranslate"><span class="pre">b2</span></code> 、 <code class="docutils literal notranslate"><span class="pre">c3</span></code> 、 <code class="docutils literal notranslate"><span class="pre">exam</span></code> 这样的顺序一层一层的检查路径存在、权限啊之类的，内核不可能每次都从磁盘去读取这些数据，会将这些数据缓存在一个哈希表中。</p>
+<p>这个路径查找的函数叫 <code class="docutils literal notranslate"><span class="pre">__d_lookup</span></code> ，每一层路径叫一个 <code class="docutils literal notranslate"><span class="pre">dentry</span></code> ，缓存哈希表叫 <code class="docutils literal notranslate"><span class="pre">dentry_hashtable</span></code> ，哈希的键是 <code class="docutils literal notranslate"><span class="pre">(指向父</span> <span class="pre">dentry</span> <span class="pre">的指针,</span> <span class="pre">dentry</span> <span class="pre">名)</span></code> ，哈希表解决冲突使用的是链地址法。我们要写的模块，需要挂载到 <code class="docutils literal notranslate"><span class="pre">__d_lookup</span></code> 函数，打印出每一层路径哈希到表中之后对应的冲突链的长度（遇到的问题是有时候 open 文件时间太长，怀疑和这个冲突链太长有关系，类似 <a class="reference external" href="https://juejin.cn/user/3456520290310397/posts">如何识别并解决复杂的dcache问题</a> 这里的问题）。</p>
+<img alt="_images/dentry-hashtable.png" src="_images/dentry-hashtable.png" />
+<p>下面是 <code class="docutils literal notranslate"><span class="pre">__d_lookup</span></code> 函数中哈希某一层路径到表中并在对应的冲突链中查找这个路径的过程，我们需要做的就是挂载到这个函数上，用类似的逻辑遍历一个冲突链并打印出其长度。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">dentry</span><span class="w"> </span><span class="o">*</span><span class="n">__d_lookup</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">dentry</span><span class="w"> </span><span class="o">*</span><span class="n">parent</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">qstr</span><span class="w"> </span><span class="o">*</span><span class="n">name</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">hash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">name</span><span class="o">-&gt;</span><span class="n">hash</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">hlist_bl_head</span><span class="w"> </span><span class="o">*</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">d_hash</span><span class="p">(</span><span class="n">hash</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">hlist_bl_node</span><span class="w"> </span><span class="o">*</span><span class="n">node</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">dentry</span><span class="w"> </span><span class="o">*</span><span class="n">dentry</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="w">    </span><span class="n">rcu_read_lock</span><span class="p">();</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">hlist_bl_for_each_entry_rcu</span><span class="p">(</span><span class="n">dentry</span><span class="p">,</span><span class="w"> </span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">d_hash</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="kprobe-mo-kuai-de-ji-ben-kuang-jia">
+<h2>kprobe 模块的基本框架<a class="headerlink" href="#kprobe-mo-kuai-de-ji-ben-kuang-jia" title="Permalink to this headline">¶</a></h2>
+<p>代码：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// hlist_count.c</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;linux/kernel.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;linux/module.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;linux/kprobes.h&gt;</span><span class="cp"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">__kprobes</span><span class="w"> </span><span class="n">handler</span><span class="p">(</span><span class="k">struct</span> <span class="nc">kprobe</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">pt_regs</span><span class="w"> </span><span class="o">*</span><span class="n">regs</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">printk</span><span class="p">(</span><span class="s">&quot;hello world!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">struct</span> <span class="nc">kprobe</span><span class="w"> </span><span class="n">kp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 观察 `__d_lookup` 函数</span>
+<span class="w">    </span><span class="p">.</span><span class="n">symbol_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;__d_lookup&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// 在调用 `__d_lookup` 函数之前调用 handler 这个函数</span>
+<span class="w">    </span><span class="p">.</span><span class="n">pre_handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">handler</span><span class="p">,</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">__init</span><span class="w"> </span><span class="n">kprobe_init</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">register_kprobe</span><span class="p">(</span><span class="o">&amp;</span><span class="n">kp</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ret</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">pr_err</span><span class="p">(</span><span class="s">&quot;register_kprobe failed, returned %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">ret</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">ret</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;planted kprobe at %p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">kp</span><span class="p">.</span><span class="n">addr</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">__exit</span><span class="w"> </span><span class="n">kprobe_exit</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">unregister_kprobe</span><span class="p">(</span><span class="o">&amp;</span><span class="n">kp</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">pr_info</span><span class="p">(</span><span class="s">&quot;kprobe at %p unregistered</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">kp</span><span class="p">.</span><span class="n">addr</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="n">module_init</span><span class="p">(</span><span class="n">kprobe_init</span><span class="p">)</span><span class="w"></span>
+<span class="n">module_exit</span><span class="p">(</span><span class="n">kprobe_exit</span><span class="p">)</span><span class="w"></span>
+<span class="n">MODULE_LICENSE</span><span class="p">(</span><span class="s">&quot;GPL&quot;</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Makefile：</p>
+<div class="highlight-Makefile notranslate"><div class="highlight"><pre><span></span><span class="nv">obj-m</span> <span class="o">:=</span> hlist_count.o
+
+<span class="nv">KDIR</span> <span class="o">:=</span> /lib/modules/<span class="k">$(</span>shell uname -r<span class="k">)</span>/build
+<span class="nf">all</span><span class="o">:</span>
+    make -C <span class="k">$(</span>KDIR<span class="k">)</span> <span class="nv">M</span><span class="o">=</span><span class="k">$(</span>PWD<span class="k">)</span> modules
+<span class="nf">clean</span><span class="o">:</span>
+    make -C <span class="k">$(</span>KDIR<span class="k">)</span> <span class="nv">M</span><span class="o">=</span><span class="k">$(</span>PWD<span class="k">)</span> clean
+</pre></div>
+</div>
+<p>编译、加载、查看输出。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>make
+<span class="gp"># </span>insmod hlist_count.ko
+<span class="gp"># </span>dmesg
+<span class="go">...</span>
+<span class="go">[15075.829231] Planted kprobe at ffffffff81278d60</span>
+<span class="go">[15075.832613] hello world!</span>
+</pre></div>
+</div>
+<p>查看生效中的 kprobe：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>cat /sys/kernel/debug/kprobes/list
+<span class="go">ffffffff816aab90  r  tcp_finish_connect+0x0    [FTRACE]</span>
+<span class="go">ffffffff81278d60  k  __d_lookup+0x0    [FTRACE]</span>
+</pre></div>
+</div>
+</section>
+<section id="ru-he-diao-yong-yin-yong-nei-he-si-you-de-han-shu-huo-bian-liang">
+<h2>如何调用/引用内核私有的函数或变量<a class="headerlink" href="#ru-he-diao-yong-yin-yong-nei-he-si-you-de-han-shu-huo-bian-liang" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">dentry_hashtable</span></code> 是个私有变量，没法直接引用，需要使用 <code class="docutils literal notranslate"><span class="pre">kallsyms_lookup_name</span></code> 来查找， <code class="docutils literal notranslate"><span class="pre">kallsyms_lookup_name</span></code> 函数可以返回 <code class="docutils literal notranslate"><span class="pre">/proc/kallsyms</span></code> 里面列出的所有符号的地址。</p>
+<p>另外，哈希表的哈希函数是一个私有內联函数，需要把代码复制到自己代码里来使用，哈希函数里引用了另外一个私有变量，一并获取。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;linux/kallsyms.h&gt;</span><span class="cp"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="k">struct</span> <span class="nc">hlist_bl_head</span><span class="w"> </span><span class="o">*</span><span class="n">dentry_hashtable</span><span class="p">;</span><span class="w"></span>
+<span class="k">static</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">d_hash_shift</span><span class="p">;</span><span class="w"></span>
+
+<span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">addr</span><span class="p">;</span><span class="w"></span>
+<span class="c1">// 返回的是 dentry_hashtable 这个指针变量的地址，也就是 &amp;dentry_hashtable</span>
+<span class="n">addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">kallsyms_lookup_name</span><span class="p">(</span><span class="s">&quot;dentry_hashtable&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">addr</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="o">-</span><span class="n">EINVAL</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="c1">// 解引用</span>
+<span class="n">dentry_hashtable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="k">struct</span> <span class="nc">hlist_bl_head</span><span class="w"> </span><span class="o">**</span><span class="p">)</span><span class="n">addr</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">// 获取哈希函数中引用的私有变量</span>
+<span class="n">addr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">kallsyms_lookup_name</span><span class="p">(</span><span class="s">&quot;d_hash_shift&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">addr</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="o">-</span><span class="n">EINVAL</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="n">d_hash_shift</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">addr</span><span class="p">;</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="ru-he-huo-qu-han-shu-de-can-shu">
+<h2>如何获取函数的参数<a class="headerlink" href="#ru-he-huo-qu-han-shu-de-can-shu" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/X86_calling_conventions#System_V_AMD64_ABI">https://en.wikipedia.org/wiki/X86_calling_conventions#System_V_AMD64_ABI</a></p>
+<p>在 x86_64 架构下，前面 6 个函数的参数通过寄存器传递，分别为 <code class="docutils literal notranslate"><span class="pre">%rdi</span></code> ,  <code class="docutils literal notranslate"><span class="pre">%rsi</span></code>,  <code class="docutils literal notranslate"><span class="pre">%rdx</span></code> ,  <code class="docutils literal notranslate"><span class="pre">%rcx</span></code> ,  <code class="docutils literal notranslate"><span class="pre">%r8</span></code>， <code class="docutils literal notranslate"><span class="pre">%r9</span></code> 。</p>
+<p>对应到代码就是：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">handler_pre</span><span class="p">(</span><span class="k">struct</span> <span class="nc">kprobe</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">pt_regs</span><span class="w"> </span><span class="o">*</span><span class="n">regs</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="w">    </span><span class="n">regs</span><span class="o">-&gt;</span><span class="n">di</span><span class="p">,</span><span class="w"> </span><span class="n">regs</span><span class="o">-&gt;</span><span class="n">si</span><span class="p">,</span><span class="w"> </span><span class="n">regs</span><span class="o">-&gt;</span><span class="n">dx</span><span class="p">,</span><span class="w"> </span><span class="n">regs</span><span class="o">-&gt;</span><span class="n">cx</span><span class="p">,</span><span class="w"> </span><span class="n">regs</span><span class="o">-&gt;</span><span class="n">r8</span><span class="p">,</span><span class="w"> </span><span class="n">regs</span><span class="o">-&gt;</span><span class="n">r9</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>其余参数通过栈来传递。</p>
+</section>
+<section id="ji-suan-he-da-yin-han-shu">
+<h2>计算和打印函数<a class="headerlink" href="#ji-suan-he-da-yin-han-shu" title="Permalink to this headline">¶</a></h2>
+<p>把上面这些组合起来，实现上面框架中未实现的 <code class="docutils literal notranslate"><span class="pre">handler</span></code> 函数，就可以完成我们计算并打印哈希表冲突链长度的核心逻辑啦。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="k">struct</span> <span class="nc">hlist_bl_head</span><span class="w"> </span><span class="o">*</span><span class="n">dentry_hashtable</span><span class="p">;</span><span class="w"></span>
+<span class="k">static</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">d_hash_shift</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">// linux-4.14.69，不同版本的 d_hash 可能会不一样</span>
+<span class="c1">// https://elixir.bootlin.com/linux/v4.14.69/source/fs/dcache.c#L112</span>
+<span class="k">static</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="k">struct</span> <span class="nc">hlist_bl_head</span><span class="w"> </span><span class="o">*</span><span class="n">d_hash</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">hash</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">dentry_hashtable</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">hash</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="p">(</span><span class="mi">32</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">d_hash_shift</span><span class="p">));</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kr">inline</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">hlist_count</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">dentry</span><span class="w"> </span><span class="o">*</span><span class="n">parent</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">qstr</span><span class="w"> </span><span class="o">*</span><span class="n">name</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// 和 __d_lookup 函数中对应的查询循环逻辑类似</span>
+<span class="w">    </span><span class="c1">// https://elixir.bootlin.com/linux/v4.14.69/source/fs/dcache.c#L2281</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">hash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">name</span><span class="o">-&gt;</span><span class="n">hash</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">hlist_bl_head</span><span class="w"> </span><span class="o">*</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">d_hash</span><span class="p">(</span><span class="n">hash</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">hlist_bl_node</span><span class="w"> </span><span class="o">*</span><span class="n">node</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">dentry</span><span class="w"> </span><span class="o">*</span><span class="n">dentry</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">rcu_read_lock</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="n">hlist_bl_for_each_entry_rcu</span><span class="p">(</span><span class="n">dentry</span><span class="p">,</span><span class="w"> </span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">d_hash</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">count</span><span class="o">++</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="n">rcu_read_unlock</span><span class="p">();</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">printk</span><span class="p">(</span><span class="s">&quot;hlist_bl_head=%p, count=%ld, name=%s, hash=%u</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">count</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">-&gt;</span><span class="n">hash</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">count</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">__kprobes</span><span class="w"> </span><span class="n">handler</span><span class="p">(</span><span class="k">struct</span> <span class="nc">kprobe</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span> <span class="nc">pt_regs</span><span class="w"> </span><span class="o">*</span><span class="n">regs</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">hlist_count</span><span class="p">(</span><span class="n">regs</span><span class="o">-&gt;</span><span class="n">di</span><span class="p">,</span><span class="w"> </span><span class="n">regs</span><span class="o">-&gt;</span><span class="n">si</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>完整代码： <a class="reference external" href="https://github.com/chanfung032/labs/blob/master/hlist-count/hlist_count.c">https://github.com/chanfung032/labs/blob/master/hlist-count/hlist_count.c</a></p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">如何写一个 kprobe 模块</a><ul>
+<li><a class="reference internal" href="#wen-ti">问题</a></li>
+<li><a class="reference internal" href="#kprobe-mo-kuai-de-ji-ben-kuang-jia">kprobe 模块的基本框架</a></li>
+<li><a class="reference internal" href="#ru-he-diao-yong-yin-yong-nei-he-si-you-de-han-shu-huo-bian-liang">如何调用/引用内核私有的函数或变量</a></li>
+<li><a class="reference internal" href="#ru-he-huo-qu-han-shu-de-can-shu">如何获取函数的参数</a></li>
+<li><a class="reference internal" href="#ji-suan-he-da-yin-han-shu">计算和打印函数</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/kprobe.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="https://cn.bing.com/search" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>
+$('#searchbox').show(0);
+document.getElementsByClassName('search')[0].addEventListener('submit', function(event) {
+  event.preventDefault();
+  var form = event.target;
+  var input = form.querySelector('input[name="q"]');
+  var value = input.value;
+  var q = 'ensearch=1&q=site%3Achanfung032.github.io++' + value;
+  var url = form.action + '?' + q;
+  window.location.href = url;
+});
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/kprobe.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

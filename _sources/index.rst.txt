@@ -15,6 +15,7 @@ Feng's blog
    sp.rst
    pcap-sll2.rst
    kdump.rst
+   kprobe.rst
    signed-type-and-type-conversion.rst
 
 2022
