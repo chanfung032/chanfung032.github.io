@@ -246,6 +246,68 @@
 <h2>各种隧道类型<a class="headerlink" href="#ge-zhong-sui-dao-lei-xing" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels">https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels</a></p>
 </section>
+<section id="fa-bao-chu-li-lu-jing">
+<h2>发包处理路径<a class="headerlink" href="#fa-bao-chu-li-lu-jing" title="Permalink to this headline">¶</a></h2>
+<p>udp 隧道的封包一般是在虚拟网卡的驱动中去做的，以 fou 隧道为例：</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ip link add name tun1 <span class="nb">type</span> ipip remote <span class="m">192</span>.168.1.1 <span class="nb">local</span> <span class="m">192</span>.168.1.2 encap fou encap-sport auto encap-dport <span class="m">5555</span>
+</pre></div>
+</div>
+<p>从 fou 隧道的创建命令可以看出，fou 隧道底层实际上创建的是一个 ipip 隧道，只不过参数中指定了封包的类型为 fou。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">net_device_ops</span><span class="w"> </span><span class="n">ipip_netdev_ops</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">ndo_start_xmit</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">ipip_tunnel_xmit</span><span class="p">,</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+</pre></div>
+</div>
+<p>ipip 类型的虚拟网卡设置的其网络驱动层的发包函数为 <code class="docutils literal notranslate"><span class="pre">ipip_tunnel_xmit</span></code>，这个函数会根据注册的封包协议找到对应的封包函数，封包，然后和其他 ipip 包一样去处理。</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ipip_tunnel_xmit</span>
+<span class="o">|-</span> <span class="o">...</span>
+<span class="o">|-</span> <span class="n">struct</span> <span class="n">ip_tunnel</span> <span class="o">*</span><span class="n">tunnel</span> <span class="o">=</span> <span class="n">netdev_priv</span><span class="p">(</span><span class="n">dev</span><span class="p">);</span>
+<span class="o">|-</span> <span class="n">ip_tunnel_xmit</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="n">dev</span><span class="p">,</span> <span class="n">tiph</span><span class="p">,</span> <span class="n">ipproto</span><span class="p">);</span>
+   <span class="o">|-</span> <span class="o">...</span>
+   <span class="o">|-</span> <span class="n">ip_tunnel_encap</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="n">tunnel</span><span class="p">,</span> <span class="o">...</span><span class="p">);</span>
+   <span class="o">|</span>  <span class="o">|-</span> <span class="o">...</span>
+   <span class="o">|</span>  <span class="o">|-</span> <span class="n">ops</span> <span class="o">=</span> <span class="n">rcu_dereference</span><span class="p">(</span><span class="n">iptun_encaps</span><span class="p">[</span><span class="n">tunnel</span><span class="o">-&gt;</span><span class="n">encap</span><span class="o">.</span><span class="n">type</span><span class="p">])</span>
+   <span class="o">|</span>  <span class="o">|-</span> <span class="n">ops</span><span class="o">-&gt;</span><span class="n">build_header</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">t</span><span class="o">-&gt;</span><span class="n">encap</span><span class="p">,</span> <span class="n">protocol</span><span class="p">,</span> <span class="n">fl4</span><span class="p">)</span>
+   <span class="o">|</span>  <span class="o">|-</span> <span class="o">....</span>
+   <span class="o">|</span>
+   <span class="o">|-</span> <span class="n">iptunnel_xmit</span><span class="p">(</span><span class="n">NULL</span><span class="p">,</span> <span class="n">rt</span><span class="p">,</span> <span class="n">skb</span><span class="p">,</span> <span class="n">fl4</span><span class="o">.</span><span class="n">saddr</span><span class="p">,</span> <span class="n">fl4</span><span class="o">.</span><span class="n">daddr</span><span class="p">,</span> <span class="n">protocol</span><span class="p">,</span> <span class="o">...</span><span class="p">);</span>
+      <span class="o">|-</span> <span class="o">...</span>
+      <span class="o">|-</span> <span class="n">skb_push</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">struct</span> <span class="n">iphdr</span><span class="p">));</span>
+      <span class="o">|-</span> <span class="n">skb_reset_network_header</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span>
+      <span class="o">|-</span> <span class="n">iph</span> <span class="o">=</span> <span class="n">ip_hdr</span><span class="p">(</span><span class="n">skb</span><span class="p">);</span>
+      <span class="o">|-</span> <span class="n">iph</span><span class="o">-&gt;</span><span class="n">version</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+      <span class="o">|-</span> <span class="o">...</span>
+      <span class="o">|-</span> <span class="n">ip_local_out</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">sk</span><span class="p">,</span> <span class="n">skb</span><span class="p">);</span>
+      <span class="o">|-</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>对应的封包函数是 fou 模块在初始化的时候注册的。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// fou_init 调用本函数注册 fou 封包的回调函数</span>
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">ip_tunnel_encap_add_fou_ops</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="w">   </span><span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ip_tunnel_encap_add_ops</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fou_iptun_ops</span><span class="p">,</span><span class="w"> </span><span class="n">TUNNEL_ENCAP_FOU</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">ip_tunnel_encap_add_ops</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">ip_tunnel_encap_ops</span><span class="w"> </span><span class="o">*</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">num</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="p">...</span><span class="w"></span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="o">!</span><span class="n">cmpxchg</span><span class="p">((</span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">ip_tunnel_encap_ops</span><span class="w"> </span><span class="o">**</span><span class="p">)</span><span class="w"></span>
+<span class="w">         </span><span class="o">&amp;</span><span class="n">iptun_encaps</span><span class="p">[</span><span class="n">num</span><span class="p">],</span><span class="w"></span>
+<span class="w">         </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">ops</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">struct</span> <span class="nc">ip_tunnel_encap_ops</span><span class="w"> </span><span class="n">fou_iptun_ops</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">encap_hlen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fou_encap_hlen</span><span class="p">,</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">build_header</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fou_build_header</span><span class="p">,</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">err_handler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gue_err</span><span class="p">,</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+</pre></div>
+</div>
+<p>因为封包是在网络驱动层去做的，在抓包程序的挂载点（网络设备层）之下，所以从虚拟网卡上可以抓包看到原始要发送的包。</p>
+</section>
 </section>
 
 
@@ -264,6 +326,7 @@
 <li><a class="reference internal" href="#wai-ceng-checksum-su-suan-fa-yu-lco">外层 checksum 速算法与 LCO</a></li>
 <li><a class="reference internal" href="#tso-gso">TSO/GSO</a></li>
 <li><a class="reference internal" href="#ge-zhong-sui-dao-lei-xing">各种隧道类型</a></li>
+<li><a class="reference internal" href="#fa-bao-chu-li-lu-jing">发包处理路径</a></li>
 </ul>
 </li>
 </ul>

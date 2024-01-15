@@ -258,3 +258,74 @@ veth 测隧道 TSO 没有问题，但虚拟机 virtio 驱动下 TSO 似乎都有
 --------------
 
 https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels
+
+发包处理路径
+---------------
+
+udp 隧道的封包一般是在虚拟网卡的驱动中去做的，以 fou 隧道为例：
+
+.. code-block:: console
+
+   # ip link add name tun1 type ipip remote 192.168.1.1 local 192.168.1.2 encap fou encap-sport auto encap-dport 5555
+
+从 fou 隧道的创建命令可以看出，fou 隧道底层实际上创建的是一个 ipip 隧道，只不过参数中指定了封包的类型为 fou。
+
+.. code-block:: c
+
+   static const struct net_device_ops ipip_netdev_ops = {
+      ...
+      .ndo_start_xmit	= ipip_tunnel_xmit,
+      ...
+   };
+
+ipip 类型的虚拟网卡设置的其网络驱动层的发包函数为 ``ipip_tunnel_xmit``，这个函数会根据注册的封包协议找到对应的封包函数，封包，然后和其他 ipip 包一样去处理。
+
+::
+
+   ipip_tunnel_xmit
+   |- ...
+   |- struct ip_tunnel *tunnel = netdev_priv(dev);
+   |- ip_tunnel_xmit(skb, dev, tiph, ipproto);
+      |- ...
+      |- ip_tunnel_encap(skb, tunnel, ...);
+      |  |- ...
+      |  |- ops = rcu_dereference(iptun_encaps[tunnel->encap.type])
+      |  |- ops->build_header(skb, &t->encap, protocol, fl4)
+      |  |- ....
+      |
+      |- iptunnel_xmit(NULL, rt, skb, fl4.saddr, fl4.daddr, protocol, ...);
+         |- ...
+         |- skb_push(skb, sizeof(struct iphdr));
+         |- skb_reset_network_header(skb);
+         |- iph = ip_hdr(skb);
+         |- iph->version = 4;
+         |- ...
+         |- ip_local_out(net, sk, skb);
+         |- ...
+
+对应的封包函数是 fou 模块在初始化的时候注册的。
+
+.. code-block:: c
+
+   // fou_init 调用本函数注册 fou 封包的回调函数
+   static int ip_tunnel_encap_add_fou_ops(void)
+   {
+      ...
+      ret = ip_tunnel_encap_add_ops(&fou_iptun_ops, TUNNEL_ENCAP_FOU);
+      ...
+   }
+   int ip_tunnel_encap_add_ops(const struct ip_tunnel_encap_ops *ops, unsigned int num)
+   {
+      ...
+      return !cmpxchg((const struct ip_tunnel_encap_ops **)
+            &iptun_encaps[num],
+            NULL, ops) ? 0 : -1;
+   }
+
+   static const struct ip_tunnel_encap_ops fou_iptun_ops = {
+      .encap_hlen = fou_encap_hlen,
+      .build_header = fou_build_header,
+      .err_handler = gue_err,
+   };
+
+因为封包是在网络驱动层去做的，在抓包程序的挂载点（网络设备层）之下，所以从虚拟网卡上可以抓包看到原始要发送的包。
