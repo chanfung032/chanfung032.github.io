@@ -95,26 +95,34 @@
 <p>第一种在发送大包（jumbo frame）的时候常用到，多余的数据存放在另外的物理页中，skb_shared_info 中有一个数组 frags，存放一组（页面、偏移、大小）结构体用来记录这些数据在哪。</p>
 <img alt="../_images/skb-frags.svg" src="../_images/skb-frags.svg" /><p>第二种是 IP 数据分片（fragment）的时候用到的 frag_list。每片数据有各自自己的 skb 结构体，通过 skb-&gt;next 组成一个单链表，skb_shared_info 中的 frag_list 指针指向链表头。</p>
 <img alt="../_images/skb-fraglist.svg" src="../_images/skb-fraglist.svg" /><p>最后一种是 gso 分段，当一个 TCP 数据包大小超过 mtu 后，会被切割成几个 &lt;=mtu 大小的数据包，这几个包是通过简单的 skb-&gt;next 链接到一起，相关分段信息保存在第一个 skb-&gt;skb_shared_info 的 gso_segs 和 gso_size 里。</p>
-<img alt="../_images/skb-gso-frags.svg" src="../_images/skb-gso-frags.svg" /><p>判断线性还是非线性 skb 的方式比较简单：</p>
-<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">data_len</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">  </span><span class="n">printk</span><span class="p">(</span><span class="s">&quot; skb is linear, skb_len is %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">);</span><span class="w"></span>
-<span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">  </span><span class="c1">// len 为当前 skb 以及后续所有级联的 skb 中的数据长度</span>
-<span class="w">  </span><span class="c1">// data_len 中是后面级联的 skb 中的数据长度</span>
-<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">data_len</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">data_len</span><span class="p">);</span><span class="w"></span>
-<span class="w">  </span><span class="p">}</span><span class="w"></span>
-<span class="w">  </span><span class="n">printk</span><span class="p">(</span><span class="s">&quot;skb is NOT linear, skb_len is %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">);</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
-</section>
+<img alt="../_images/skb-gso-frags.svg" src="../_images/skb-gso-frags.svg" /></section>
 <section id="san-ge-chang-du-zi-duan">
 <h2>三个长度字段<a class="headerlink" href="#san-ge-chang-du-zi-duan" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">len</span></code> 是整个网络包数据的长度。</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">data_len</span></code> 是非线性区网络包数据的长度。</p></li>
 </ul>
+<p>判断线性还是非线性 skb 的方式比较简单：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">data_len</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">printk</span><span class="p">(</span><span class="s">&quot; skb is linear, skb_len is %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">printk</span><span class="p">(</span><span class="s">&quot;skb is NOT linear, skb_len is %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="c1">// len 为当前 skb 以及后续所有级联的 skb 中的数据长度</span>
+<span class="w">  </span><span class="c1">// data_len 中是后面级联的 skb 中的数据长度</span>
+<span class="w">  </span><span class="n">printk</span><span class="p">(</span><span class="s">&quot;skb linear data len: %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">data_len</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>协议栈每一层的入口函数开头都会有类似下面的一段（以 tcp 层为例）， <code class="docutils literal notranslate"><span class="pre">pskb_may_pull</span></code> 函数可以确保线性区有足够长度的数据（不够从非线性区拿），这样方便处理。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">tcp_v4_rcv</span><span class="p">(</span><span class="k">struct</span> <span class="nc">sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">pskb_may_pull</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">tcphdr</span><span class="p">)))</span><span class="w"></span>
+<span class="w">        </span><span class="k">goto</span><span class="w"> </span><span class="n">discard_it</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
 <p>除了这两个长度之外，skb 中还有一个 <code class="docutils literal notranslate"><span class="pre">truesize</span></code> 长度字段。</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">truesize</span></code> 是网络包数据加上元数据结构体 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sk_buff</span></code> 的大小，这个字段主要用于后面 socket buffer 统计计算（accounting）用。</p></li>

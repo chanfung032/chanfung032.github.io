@@ -103,6 +103,12 @@ skb_push 的反操作是 skb_pull，这个操作在解包的时候经常使用�
 
 .. image:: images/skb-gso-frags.svg
 
+三个长度字段
+----------------
+
+- ``len`` 是整个网络包数据的长度。
+- ``data_len`` 是非线性区网络包数据的长度。
+
 判断线性还是非线性 skb 的方式比较简单：
 
 .. code-block:: c
@@ -110,19 +116,23 @@ skb_push 的反操作是 skb_pull，这个操作在解包的时候经常使用�
     if (skb->data_len == 0) {
       printk(" skb is linear, skb_len is %d", skb->len);
     } else {
+      printk("skb is NOT linear, skb_len is %d", skb->len);
       // len 为当前 skb 以及后续所有级联的 skb 中的数据长度
       // data_len 中是后面级联的 skb 中的数据长度
-      if (skb->data_len != 0) {
-        skb->len = (skb->len) - (skb->data_len);
-      }
-      printk("skb is NOT linear, skb_len is %d", skb->len);
+      printk("skb linear data len: %d", skb->len - skb->data_len);
     }
 
-三个长度字段
-----------------
+协议栈每一层的入口函数开头都会有类似下面的一段（以 tcp 层为例）， ``pskb_may_pull`` 函数可以确保线性区有足够长度的数据（不够从非线性区拿），这样方便处理。
 
-- ``len`` 是整个网络包数据的长度。
-- ``data_len`` 是非线性区网络包数据的长度。
+.. code-block:: c
+
+    int tcp_v4_rcv(struct sk_buff *skb)
+    {
+        ...
+        if (!pskb_may_pull(skb, sizeof(struct tcphdr)))
+            goto discard_it;
+        ...
+    }
 
 除了这两个长度之外，skb 中还有一个 ``truesize`` 长度字段。
 
