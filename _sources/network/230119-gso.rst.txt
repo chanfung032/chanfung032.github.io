@@ -1,0 +1,97 @@
+#230119 TSO & GSO
+=====================
+
+概述
+-----------
+
+TSO 和 GSO 是内核协议栈中的两个优化策略，把大的数据包分段成一个一个网卡可以发出去的小包这个操作延迟到协议栈的底层去做。
+
+-  TSO（TCP Segment Offloading）是把 TCP 分段延迟到网卡去操作。
+-  GSO（Generic Segment
+   Offloading）是把分段给延迟到网络设备子系统层（网卡驱动之前）去操作。
+
+这两个优化的实现依赖于协议栈上下的通力合作。
+
+TCP/IP 层
+-------------
+
+TCP 客户端连接函数 ``tcp_v4_connect`` ，服务端三次握手成功回调函数 ``tcp_v4_syn_recv_sock`` 中初始化 sk 的时候，会设置 GSO 相关的设置。
+
+.. code-block:: c
+
+   tcp_v4_connect
+   |- sk_setup_caps
+      |- if sk_can_gso(sk)
+      |    |- sk->sk_route_caps |= NETIF_F_SG | NETIF_F_HW_CSUM;
+      |    |- sk->sk_gso_max_size = sk_dst_gso_max_size(sk, dst);
+      |    |- max_segs = max_t(u32, READ_ONCE(dst->dev->gso_max_segs), 1)
+      |- sk->sk_gso_max_segs = max_segs
+
+在 ``tcp_write_xmit`` 发包函数中，会判断是否支持 GSO，不支持按 mss 去分段，支持的话按 GSO 的规则分段（比 mss 大很多）。
+
+.. code-block:: c
+
+   tcp_tsq_write(struct sock *sk)
+   |- tcp_write_xmit(sk, tcp_current_mss(sk), ...);
+      |- ...
+      |- max_segs = tcp_tso_segs(sk, mss_now)
+      |  |- tso_segs = tcp_tso_authorize(sk, mss_now, min_tso)
+      |  |  |- bytes = min_t(unsigned long, bytes, sk->sk_gso_max_size)
+      |  |  |- return max_t(u32, bytes / mss_now, min_tso_segs)
+      |  |- return min_t(u32, tso_segs, sk->sk_gso_max_segs);
+      |- tso_fragment()
+
+IP 层在 ``__ip_finish_output`` 中判断是 GSO 分段之后，调用 ``ip_finish_output_gso`` 来处理分段，一般就直接往下传，特殊情况下会在这里直接分段后再调 ``ip_fragment`` 函数对 IP 包分片。
+
+对于 TCP/IP 层来说，TSO/GSO 的处理是一样的。到了底层驱动之前才根据硬件是否支持 TSO 来决定是软件分段还是硬件分段。
+
+网络设备子系统层
+-------------------
+
+如果网卡硬件不支持 TSO，从上层下来的大包会在网络设备层被软件拆成网卡可以发送的小包，这个操作在网卡抓包的 hook 点之后，所以如果通过 tcpdump 看可以看到大于网卡 mtu 的包，说明 GSO/TSO 是生效的。
+
+.. code-block:: c
+
+   __dev_queue_xmit
+   |- skb = sch_handle_egress(skb, &rc, dev); 👈 抓包发生在这个里面
+   |- if (q->enqueue) 👈 硬件网卡走这边
+   |  |- rc = __dev_xmit_skb(skb, q, dev, txq);
+   |  |      |- sch_direct_xmit
+   |  |         |- validate_xmit_skb_list
+   |  |         |  |- validate_xmit_skb
+   |  |         |- skb = dev_hard_start_xmit(skb, dev, txq, &ret);
+   |  |- goto out;
+   |- if (dev->flags & IFF_UP) 👈 虚拟网卡（lo，tunnel 啊之类的）
+   |  |- validate_xmit_skb
+   |  |- skb = dev_hard_start_xmit(skb, dev, txq, &rc)
+
+``validate_xmit_skb`` 函数里面是实际执行分段的地方。
+
+.. code-block:: c
+
+   validate_xmit_skb
+   |- if (netif_needs_gso(skb, features)
+   |  |- segs = skb_gso_segment(skb, features)
+   |            |- __skb_gso_segment
+   |               |- skb_mac_gso_segment
+   |                  |- ptype->callbacks.gso_segment(skb, features)
+   |- else
+   |  |- if (skb_needs_linearize(skb, features) && __skb_linearize(skb))
+
+上面的 ``ptype->callbacks.gso_segment`` 回调 IP 层注册的回调函数，IPv4 是 `inet_gso_segment <https://elixir.bootlin.com/linux/v5.19/C/ident/inet_gso_segment>`__ ，IPv6 是 `ipv6_gso_segment <https://elixir.bootlin.com/linux/v5.19/C/ident/ipv6_gso_segment>`__ 。然后再依次调用上层的 gso_segment 函数。
+
+``dev_hard_start_xmit`` 是驱动程序的入口程序。
+
+.. code-block:: c
+
+   dev_hard_start_xmit
+   |- xmit_one for each skb
+      |- netdev_start_xmit
+         |- __netdev_start_xmit
+            |- dev->netdev_ops->ndo_start_xmit
+
+如果是 ipip 隧道协议， ``ndo_start_xmit`` 回调函数就是 `ipip_tunnel_xmit <https://elixir.bootlin.com/linux/v5.19/C/ident/ipip_tunnel_xmit>`__ 。
+
+- `25 张图，一万字，拆解 Linux 网络包发送过程 <https://mp.weixin.qq.com/s/wThfD9th9e_-YGHJJ3HXNQ>`_
+-  https://blog.csdn.net/wangquan1992/article/details/109018488
+-  https://www.cnblogs.com/dream397/p/14500939.html
