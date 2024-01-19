@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>#240120 使用 lwtunnel bpf 写隧道控制面程序 &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#230119 TSO &amp; GSO" href="230119-gso.html" />
+    <link rel="prev" title="内核网络栈笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="shi-yong-lwtunnel-bpf-xie-sui-dao-kong-zhi-mian-cheng-xu">
+<h1>#240120 使用 lwtunnel bpf 写隧道控制面程序<a class="headerlink" href="#shi-yong-lwtunnel-bpf-xie-sui-dao-kong-zhi-mian-cheng-xu" title="Permalink to this headline">¶</a></h1>
+<p>使用 <code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">link</span></code> 只能创建点对点的静态隧道，点多了之后，两两互联就需要创建大量的隧道，会产生一大堆的虚拟网卡设备，管理起来麻烦，解决的一个方法就是使用 lwtunnel（Light Weight Tunnel 轻量级隧道），将复杂的隧道控制/路由逻辑移到路由表中，lwtunnel 还支持挂载 bpf 程序，可以进一步将逻辑移到 bpf map 中，灵活的实现更加复杂的控制路由逻辑。</p>
+<p>lwtunnel 支持以下 3 种 bpf 程序：</p>
+<ul class="simple">
+<li><p>BPF_PROG_TYPE_LWT_IN</p></li>
+<li><p>BPF_PROG_TYPE_LWT_OUT</p></li>
+<li><p>BPF_PROG_TYPE_LWT_XMIT</p></li>
+</ul>
+<p>在内核中的调用入口： <a class="reference external" href="https://elixir.bootlin.com/linux/latest/source/net/core/lwt_bpf.c">https://elixir.bootlin.com/linux/latest/source/net/core/lwt_bpf.c</a></p>
+<p>这 3 种 bpf 程序中比较有用的 BPF_PROG_TYPE_LWT_XMIT 类型的 bpf 程序，一般隧道控制面都是使用这个类型。</p>
+<blockquote>
+<div><p>Programs attached to input and output are read-only. Programs attached to lwtunnel_xmit() can modify and redirect, push headers and redirect packets.</p>
+<p><a class="reference external" href="https://lwn.net/Articles/708020/">https://lwn.net/Articles/708020/</a></p>
+</div></blockquote>
+<p>一个简单的 BPF_PROG_TYPE_LWT_XMIT 程序：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">SEC</span><span class="p">(</span><span class="s">&quot;encap_gre&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="kt">int</span><span class="w"> </span><span class="n">bpf_lwt_encap_gre</span><span class="p">(</span><span class="k">struct</span> <span class="nc">__sk_buff</span><span class="w"> </span><span class="o">*</span><span class="n">skb</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">struct</span> <span class="nc">encap_hdr</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="k">struct</span> <span class="nc">iphdr</span><span class="w"> </span><span class="n">iph</span><span class="p">;</span><span class="w"></span>
+<span class="w">            </span><span class="k">struct</span> <span class="nc">grehdr</span><span class="w"> </span><span class="n">greh</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="n">hdr</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">err</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">hdr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">encap_hdr</span><span class="p">));</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">hdr</span><span class="p">.</span><span class="n">iph</span><span class="p">.</span><span class="n">ihl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">hdr</span><span class="p">.</span><span class="n">iph</span><span class="p">.</span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">hdr</span><span class="p">.</span><span class="n">iph</span><span class="p">.</span><span class="n">ttl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x40</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">hdr</span><span class="p">.</span><span class="n">iph</span><span class="p">.</span><span class="n">protocol</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">47</span><span class="p">;</span><span class="w">          </span><span class="c1">// IPPROTO_GRE</span>
+<span class="w">    </span><span class="n">hdr</span><span class="p">.</span><span class="n">iph</span><span class="p">.</span><span class="n">saddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0xa601a8c0</span><span class="p">;</span><span class="w">     </span><span class="c1">// 192.168.1.165</span>
+<span class="w">    </span><span class="c1">// 现实程序中目标 IP 可以从 bpf map 中查询</span>
+<span class="w">    </span><span class="n">hdr</span><span class="p">.</span><span class="n">iph</span><span class="p">.</span><span class="n">daddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0xa501a8c0</span><span class="p">;</span><span class="w">     </span><span class="c1">// 192.168.1.166</span>
+<span class="w">    </span><span class="n">hdr</span><span class="p">.</span><span class="n">iph</span><span class="p">.</span><span class="n">tot_len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_htons</span><span class="p">(</span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">len</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">encap_hdr</span><span class="p">));</span><span class="w"></span>
+<span class="w">    </span><span class="n">hdr</span><span class="p">.</span><span class="n">greh</span><span class="p">.</span><span class="n">protocol</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">skb</span><span class="o">-&gt;</span><span class="n">protocol</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_lwt_push_encap</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_LWT_ENCAP_IP</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">hdr</span><span class="p">,</span><span class="w"></span>
+<span class="w">                            </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">encap_hdr</span><span class="p">));</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">err</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">BPF_DROP</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">BPF_LWT_REROUTE</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>编译为 bpf object 文件，加载使用以下命令：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ip</span> <span class="n">route</span> <span class="n">add</span> <span class="o">&lt;</span><span class="n">route</span><span class="o">&gt;</span> <span class="n">encap</span> <span class="n">bpf</span> <span class="n">xmit</span> <span class="n">obj</span> <span class="o">&lt;</span><span class="n">bpf</span> <span class="n">obj</span> <span class="n">file</span><span class="o">.</span><span class="n">o</span><span class="o">&gt;</span> <span class="n">section</span> <span class="o">&lt;</span><span class="n">ELF</span> <span class="n">section</span><span class="o">&gt;</span> <span class="n">dev</span> <span class="o">&lt;</span><span class="n">device</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>最后，创建给这个隧道用的网卡以及添加隧道 IP，创建网卡的时候使用 <code class="docutils literal notranslate"><span class="pre">external</span></code> 关键字（要不得指定隧道的 local 和 remote 参数）。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ip link add gre01 <span class="nb">type</span> gre external
+<span class="gp"># </span>ip a add &lt;ip/mask&gt; dev gre01
+</pre></div>
+</div>
+<p>隧道包的解包和静态隧道一样，内核处理，不用管了。</p>
+<hr class="docutils" />
+<p>BPF_PROG_TYPE_LWT_IN 也可以调用 bpf_lwt_push_encap 函数，使用场景是？</p>
+<p><a class="reference external" href="https://elixir.bootlin.com/linux/v5.19/source/net/core/filter.c#L8061">https://elixir.bootlin.com/linux/v5.19/source/net/core/filter.c#L8061</a></p>
+<hr class="docutils" />
+<p>其他示例程序：</p>
+<ul class="simple">
+<li><p>数据面 <a class="reference external" href="https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/progs/test_lwt_redirect.c">https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/progs/test_lwt_redirect.c</a></p></li>
+<li><p>控制面 <a class="reference external" href="https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/prog_tests/lwt_redirect.c">https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/prog_tests/lwt_redirect.c</a></p></li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/network/240120-lwtunnel-bpf.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="https://cn.bing.com/search" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>
+$('#searchbox').show(0);
+document.getElementsByClassName('search')[0].addEventListener('submit', function(event) {
+  event.preventDefault();
+  var form = event.target;
+  var input = form.querySelector('input[name="q"]');
+  var value = input.value;
+  var q = 'ensearch=1&q=site%3Achanfung032.github.io++' + value;
+  var url = form.action + '?' + q;
+  window.location.href = url;
+});
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/network/240120-lwtunnel-bpf.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
