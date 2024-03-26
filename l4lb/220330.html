@@ -392,6 +392,31 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <p><a class="reference external" href="https://stackoverflow.com/questions/34842224/when-to-use-const-void">https://stackoverflow.com/questions/34842224/when-to-use-const-void</a></p>
 <p>const 指针指向的内容也是可以改变的，但这种情况编译器应该考虑吗？</p>
 </section>
+<section id="can-t-get-map-by-id-2637-device-or-resource-busy">
+<h2>can’t get map by id(2637): Device or resource busy<a class="headerlink" href="#can-t-get-map-by-id-2637-device-or-resource-busy" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>bpftool map show
+<span class="go">2001: hash  flags 0x0</span>
+<span class="go">    key 24B  value 48B  max_entries 256  memlock 40960B</span>
+<span class="go">2636: percpu_array  name l4lb_director_m  flags 0x0</span>
+<span class="go">    key 4B  value 120B  max_entries 1  memlock 8192B</span>
+<span class="go">Error: can&#39;t get map by id(2637): Device or resource busy</span>
+</pre></div>
+</div>
+<p>这个可能是用户空间程序打开了太多的 2637 这个 id 的 bpf map fd 导致的。内核代码限制了一个 map 最多可以打开 32768 个 fd。</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#define BPF_MAX_REFCNT 32768</span>
+
+<span class="n">SYSCALL_DEFINE3</span><span class="p">(</span><span class="n">bpf</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="n">cmd</span><span class="p">,</span><span class="w"> </span><span class="k">union</span> <span class="nc">bpf_attr</span><span class="w"> </span><span class="n">__user</span><span class="w"> </span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="n">uattr</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">bpf_map_get_fd_by_id</span><span class="p">()</span><span class="w"></span>
+<span class="w">   </span><span class="o">|-</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+<span class="w">   </span><span class="o">|-</span><span class="w"> </span><span class="n">bpf_map_inc_not_zero</span><span class="p">()</span><span class="w"></span>
+<span class="w">      </span><span class="o">|-</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+<span class="w">      </span><span class="o">|-</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">refold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">atomic_fetch_add_unless</span><span class="p">(</span><span class="o">&amp;</span><span class="n">map</span><span class="o">-&gt;</span><span class="n">refcnt</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
+<span class="w">      </span><span class="o">|-</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">refold</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">BPF_MAX_REFCNT</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="o">|-</span><span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="n">ERR_PTR</span><span class="p">(</span><span class="o">-</span><span class="n">EBUSY</span><span class="p">);</span><span class="w"></span>
+<span class="w">      </span><span class="o">|-</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
 </section>
 
 
@@ -412,6 +437,7 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><a class="reference internal" href="#tcpdump-neng-kan-dao-vlan-header-dan-shi-xdp-kan-bu-dao">tcpdump 能看到 vlan header，但是 xdp 看不到</a></li>
 <li><a class="reference internal" href="#xdp-pass-sysctl-net-ipv4-conf-interface-accept-local">XDP_PASS &amp; sysctl net.ipv4.conf.interface.accept_local</a></li>
 <li><a class="reference internal" href="#clang-loop-unroll-full-shi-bai-dao-zhi-de-bpf-jia-zai-shi-bai">clang loop unroll(full) 失败导致的 BPF 加载失败</a></li>
+<li><a class="reference internal" href="#can-t-get-map-by-id-2637-device-or-resource-busy">can’t get map by id(2637): Device or resource busy</a></li>
 </ul>
 </li>
 </ul>

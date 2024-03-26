@@ -397,3 +397,31 @@ clang loop unroll(full) 失败导致的 BPF 加载失败
 https://stackoverflow.com/questions/34842224/when-to-use-const-void
 
 const 指针指向的内容也是可以改变的，但这种情况编译器应该考虑吗？
+
+can't get map by id(2637): Device or resource busy
+------------------------------------------------------
+
+.. code-block:: console
+
+    # bpftool map show
+    2001: hash  flags 0x0
+        key 24B  value 48B  max_entries 256  memlock 40960B
+    2636: percpu_array  name l4lb_director_m  flags 0x0
+        key 4B  value 120B  max_entries 1  memlock 8192B
+    Error: can't get map by id(2637): Device or resource busy
+
+这个可能是用户空间程序打开了太多的 2637 这个 id 的 bpf map fd 导致的。内核代码限制了一个 map 最多可以打开 32768 个 fd。
+
+.. code-block:: c
+
+    #define BPF_MAX_REFCNT 32768
+
+    SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, size)
+    |- bpf_map_get_fd_by_id()
+       |- ...
+       |- bpf_map_inc_not_zero()
+          |- ...
+          |- int refold = atomic_fetch_add_unless(&map->refcnt, 1, 0);
+          |- if (refold >= BPF_MAX_REFCNT)
+          |-   return ERR_PTR(-EBUSY);
+          |- ...
