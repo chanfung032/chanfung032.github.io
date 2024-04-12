@@ -494,6 +494,21 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><p><a class="reference external" href="https://discourse.llvm.org/t/forcing-llvm-to-not-spill-specific-variables-to-the-stack-when-compiling-to-bpf/59002">https://discourse.llvm.org/t/forcing-llvm-to-not-spill-specific-variables-to-the-stack-when-compiling-to-bpf/59002</a></p></li>
 </ul>
 </section>
+<section id="zhuan-fa-biao-fen-pei-jun-yun-dan-shi-you-hou-duan-ji-qi-de-liu-liang-hen-xiao">
+<h2>转发表分配均匀但是有后端机器的流量很小<a class="headerlink" href="#zhuan-fa-biao-fen-pei-jun-yun-dan-shi-you-hou-duan-ji-qi-de-liu-liang-hen-xiao" title="Permalink to this headline">¶</a></h2>
+<p>程序、转发表所有一切都正常，但是就是有后端机器的流量很小，采样统计也是如此，这个时候可以进一步采样转发的 GUE 流量并解包，看看转发的流量是否有特征。</p>
+<p>线上曾经出现过的一个问题就是升级的时候由于代码 BUG，导致某些机器上 fou 模块没有成功加载，调度到这些后端的流量无法被处理，syn 包会一直重试，就会出现上面说的这种现象。</p>
+</section>
+<section id="systemd-shi-yong-root-yong-hu-qi-dong-fu-wu-bao-bpf-map-create-failed-permission-denied">
+<h2>systemd 使用 root 用户启动服务报 bpf map create failed: permission denied<a class="headerlink" href="#systemd-shi-yong-root-yong-hu-qi-dong-fu-wu-bao-bpf-map-create-failed-permission-denied" title="Permalink to this headline">¶</a></h2>
+<p>但是手工启动没有问题，这个可能是 selinux 的问题。</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>getenforce
+<span class="go">Enforcing</span>
+</pre></div>
+</div>
+<p>检查 selinux 是不是在 Enforcing 状态，是的话检查 <code class="docutils literal notranslate"><span class="pre">/var/log/audit/audit.log</span></code> 看是不是被 selinux 拦了。简单的处理方式是关了 selinux <code class="docutils literal notranslate"><span class="pre">setenforce</span> <span class="pre">0</span></code> 。</p>
+<p><a class="reference external" href="https://superuser.com/questions/1125250/systemctl-access-denied-when-root">https://superuser.com/questions/1125250/systemctl-access-denied-when-root</a></p>
+</section>
 </section>
 
 
@@ -517,6 +532,8 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><a class="reference internal" href="#can-t-get-map-by-id-2637-device-or-resource-busy">can’t get map by id(2637): Device or resource busy</a></li>
 <li><a class="reference internal" href="#bpf-map-type-prog-array-lei-xing-map-xie-ru-cheng-gong-dan-shi-bpftool-dump-map-fa-xian-mei-you-xie-ru-de-yuan-su">BPF_MAP_TYPE_PROG_ARRAY 类型 map 写入成功但是 bpftool dump map 发现没有写入的元素</a></li>
 <li><a class="reference internal" href="#bpf-yan-zheng-qi-bao-math-between-pkt-pointer-and-register-with-unbounded-min-value-is-not-allowed">bpf 验证器报 math between pkt pointer and register with unbounded min value is not allowed</a></li>
+<li><a class="reference internal" href="#zhuan-fa-biao-fen-pei-jun-yun-dan-shi-you-hou-duan-ji-qi-de-liu-liang-hen-xiao">转发表分配均匀但是有后端机器的流量很小</a></li>
+<li><a class="reference internal" href="#systemd-shi-yong-root-yong-hu-qi-dong-fu-wu-bao-bpf-map-create-failed-permission-denied">systemd 使用 root 用户启动服务报 bpf map create failed: permission denied</a></li>
 </ul>
 </li>
 </ul>

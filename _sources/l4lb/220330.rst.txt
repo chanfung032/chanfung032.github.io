@@ -516,3 +516,24 @@ bpf 验证器报 math between pkt pointer and register with unbounded min value 
 
 - https://www.mail-archive.com/iovisor-dev@lists.iovisor.org/msg01390.html
 - https://discourse.llvm.org/t/forcing-llvm-to-not-spill-specific-variables-to-the-stack-when-compiling-to-bpf/59002
+
+转发表分配均匀但是有后端机器的流量很小
+-----------------------------------------
+
+程序、转发表所有一切都正常，但是就是有后端机器的流量很小，采样统计也是如此，这个时候可以进一步采样转发的 GUE 流量并解包，看看转发的流量是否有特征。
+
+线上曾经出现过的一个问题就是升级的时候由于代码 BUG，导致某些机器上 fou 模块没有成功加载，调度到这些后端的流量无法被处理，syn 包会一直重试，就会出现上面说的这种现象。
+
+systemd 使用 root 用户启动服务报 bpf map create failed: permission denied
+------------------------------------------------------------------------------------
+
+但是手工启动没有问题，这个可能是 selinux 的问题。
+
+.. code-block:: console
+
+	# getenforce
+	Enforcing
+
+检查 selinux 是不是在 Enforcing 状态，是的话检查 ``/var/log/audit/audit.log`` 看是不是被 selinux 拦了。简单的处理方式是关了 selinux ``setenforce 0`` 。
+
+https://superuser.com/questions/1125250/systemctl-access-denied-when-root

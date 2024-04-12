@@ -40,6 +40,18 @@ CentOS 系统一般预装了 kdump ，没有的话可以通过以下命令安装
    # cat /proc/cmdline
    BOOT_IMAGE=/boot/vmlinuz-4.19.113-88.8bs.el7.x86_64 ... crashkernel=auto ...
 
+确认 kdump 服务是否正常
+
+.. code-block:: console
+
+   # systemctl status kdump
+   ● kdump.service - Crash recovery kernel arming
+   Loaded: loaded (/usr/lib/systemd/system/kdump.service; enabled; vendor preset: enabled)
+   Active: active (exited) since Tue 2024-05-14 10:36:56 CST; 1h 15min ago
+   ...
+
+有些时候 ``crashkernel=auto`` 参数会失败，这个时候可以尝试将 ``auto`` 改成具体的内存大小。
+
 一个真实的崩溃现场
 ------------------
 

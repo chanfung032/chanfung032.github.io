@@ -16,7 +16,7 @@
     <script src="_static/custom.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="有符号类型、负数与类型转换" href="signed-type-and-type-conversion.html" />
+    <link rel="next" title="如何写一个 kprobe 模块" href="kprobe.html" />
     <link rel="prev" title="pcap 库怎么获取抓到包的网卡信息" href="pcap-sll2.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -65,6 +65,15 @@ reboot
 <span class="go">BOOT_IMAGE=/boot/vmlinuz-4.19.113-88.8bs.el7.x86_64 ... crashkernel=auto ...</span>
 </pre></div>
 </div>
+<p>确认 kdump 服务是否正常</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>systemctl status kdump
+<span class="go">● kdump.service - Crash recovery kernel arming</span>
+<span class="go">Loaded: loaded (/usr/lib/systemd/system/kdump.service; enabled; vendor preset: enabled)</span>
+<span class="go">Active: active (exited) since Tue 2024-05-14 10:36:56 CST; 1h 15min ago</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+<p>有些时候 <code class="docutils literal notranslate"><span class="pre">crashkernel=auto</span></code> 参数会失败，这个时候可以尝试将 <code class="docutils literal notranslate"><span class="pre">auto</span></code> 改成具体的内存大小。</p>
 </section>
 <section id="yi-ge-zhen-shi-de-beng-kui-xian-chang">
 <h2>一个真实的崩溃现场<a class="headerlink" href="#yi-ge-zhen-shi-de-beng-kui-xian-chang" title="Permalink to this headline">¶</a></h2>
