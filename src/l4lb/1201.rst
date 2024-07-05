@@ -307,32 +307,54 @@ https://en.wikipedia.org/wiki/IPv4_header_checksum
 使用 bpf_csum_diff 更新 checksum
 --------------------------------------
 
-修改网络包后很多时候需要更新相应的 checksum，一般可以增量修改，以修改 iphdr 中的目的地址为例：
+修改网络包后很多时候需要更新相应的 checksum，一般可以增量修改，以修改一个 tcp 包的目的地址为例：
 
 .. code-block:: c
 
     // ipv4 指向 iphdr 结构
+    // ipv6 指向 ipv6hdr 结构
+    // tcp 指向 tcphdr 结构
 
-    // 保存旧数据
+    // 保存旧地址（增量计算 checksum 要用）
+    struct in6_addr old_daddr = ipv6->daddr;
+    // 修改目的地址为 1:2:3:4::
+    struct in6_addr new_daddr = {
+        .in6_u.u6_addr32 = { bpf_htonl(0x00010002), bpf_htonl(0x00030004), 0, 0 }
+    };
+    ipv6->daddr = new_daddr;
+
+    // ipv6 的 ip 头没有 checksum，只需要更新 tcp 层的即可
+    // 网络包中的 checksum 字段保存的反码，所以需要先取反再进入计算
+    // bpf_csum_diff 计算返回的是一个 u32，但是 checksum 需要 u16，csum_fold 将 u32 转为 u16
+    tcp->check = csum_fold(bpf_csum_diff((__be32*)&old_daddr, sizeof(struct in6_addr), (__be32*)&ipv6->daddr, sizeof(struct in6_addr), ~tcp->check));
+
+    // ==== ipv6/ipv4 分割线 ====
+
+    // 保存旧地址（增量计算 checksum 要用）
     __be32 old_daddr = ipv4->daddr;
-    // 修改
+    // 修改目的地址
     ipv4->daddr = 0x04030201;
-    // 调用 bpf_csum_diff 增量计算更新后的 checksum，网络包中的 checksum 字段保存的反码
-    // 所以需要先取反再进入计算
-    __u32 csum = bpf_csum_diff(old_daddr, sizeof(__be32), &ipv4->daddr, sizeof(__be32), ~ipv4->check);
-    // bpf_csum_diff 计算返回的是一个 u32，但是 checksum 需要 u16，需要将高于 16 位的
-    // 进位加到低位上去，然后再取反得到反码保存到网络包中
-    ipv4->check = csum_fold_helper(csum);
 
-    // 如果是 tcp 包，还需修改内层包的 checksum，因为 tcphdr 中的 checksum 包含了 ip 头
-    // 中的部分字段
-    // ...
+    // 调用 bpf_csum_diff 计算 checksum 差值
+    __u32 csum_diff = bpf_csum_diff(&old_daddr, sizeof(__be32), &ipv4->daddr, sizeof(__be32), 0);
 
-    static __always_inline __u16 csum_fold_helper(__u32 csum) {
+    // 更新 ip 和 tcp 层的 checksum
+    ipv4->check = csum_fold(csum_add(~ipv4->check, csum_diff));
+    tcp->check = csum_fold(csum_add(~tcp->check csum_diff));
+
+    // ==== helper 函数 ====
+
+    static __always_inline __u16 csum_fold(__u32 csum) {
         __u32 sum;
         sum = (csum >> 16) + (csum & 0xffff);
         sum += (sum >> 16);
         return ~sum;
+    }
+
+    static __always_inline __wsum csum_add(__wsum csum, __wsum addend)
+    {
+            csum += addend;
+            return csum + (csum < addend);
     }
 
 https://en.wikipedia.org/wiki/Internet_checksum#Calculating_the_IPv4_header_checksum

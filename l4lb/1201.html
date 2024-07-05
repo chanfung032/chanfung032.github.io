@@ -290,29 +290,51 @@ xdp_pass_user.c -l:libbpf.a -lelf
 </section>
 <section id="shi-yong-bpf-csum-diff-geng-xin-checksum">
 <h2>使用 bpf_csum_diff 更新 checksum<a class="headerlink" href="#shi-yong-bpf-csum-diff-geng-xin-checksum" title="Permalink to this headline">¶</a></h2>
-<p>修改网络包后很多时候需要更新相应的 checksum，一般可以增量修改，以修改 iphdr 中的目的地址为例：</p>
+<p>修改网络包后很多时候需要更新相应的 checksum，一般可以增量修改，以修改一个 tcp 包的目的地址为例：</p>
 <div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// ipv4 指向 iphdr 结构</span>
+<span class="c1">// ipv6 指向 ipv6hdr 结构</span>
+<span class="c1">// tcp 指向 tcphdr 结构</span>
 
-<span class="c1">// 保存旧数据</span>
+<span class="c1">// 保存旧地址（增量计算 checksum 要用）</span>
+<span class="k">struct</span> <span class="nc">in6_addr</span><span class="w"> </span><span class="n">old_daddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ipv6</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="p">;</span><span class="w"></span>
+<span class="c1">// 修改目的地址为 1:2:3:4::</span>
+<span class="k">struct</span> <span class="nc">in6_addr</span><span class="w"> </span><span class="n">new_daddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">in6_u</span><span class="p">.</span><span class="n">u6_addr32</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">bpf_htonl</span><span class="p">(</span><span class="mh">0x00010002</span><span class="p">),</span><span class="w"> </span><span class="n">bpf_htonl</span><span class="p">(</span><span class="mh">0x00030004</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+<span class="n">ipv6</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">new_daddr</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">// ipv6 的 ip 头没有 checksum，只需要更新 tcp 层的即可</span>
+<span class="c1">// 网络包中的 checksum 字段保存的反码，所以需要先取反再进入计算</span>
+<span class="c1">// bpf_csum_diff 计算返回的是一个 u32，但是 checksum 需要 u16，csum_fold 将 u32 转为 u16</span>
+<span class="n">tcp</span><span class="o">-&gt;</span><span class="n">check</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">csum_fold</span><span class="p">(</span><span class="n">bpf_csum_diff</span><span class="p">((</span><span class="n">__be32</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">old_daddr</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">in6_addr</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="n">__be32</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">ipv6</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="nc">in6_addr</span><span class="p">),</span><span class="w"> </span><span class="o">~</span><span class="n">tcp</span><span class="o">-&gt;</span><span class="n">check</span><span class="p">));</span><span class="w"></span>
+
+<span class="c1">// ==== ipv6/ipv4 分割线 ====</span>
+
+<span class="c1">// 保存旧地址（增量计算 checksum 要用）</span>
 <span class="n">__be32</span><span class="w"> </span><span class="n">old_daddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="p">;</span><span class="w"></span>
-<span class="c1">// 修改</span>
+<span class="c1">// 修改目的地址</span>
 <span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x04030201</span><span class="p">;</span><span class="w"></span>
-<span class="c1">// 调用 bpf_csum_diff 增量计算更新后的 checksum，网络包中的 checksum 字段保存的反码</span>
-<span class="c1">// 所以需要先取反再进入计算</span>
-<span class="n">__u32</span><span class="w"> </span><span class="n">csum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_csum_diff</span><span class="p">(</span><span class="n">old_daddr</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">__be32</span><span class="p">),</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">__be32</span><span class="p">),</span><span class="w"> </span><span class="o">~</span><span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">check</span><span class="p">);</span><span class="w"></span>
-<span class="c1">// bpf_csum_diff 计算返回的是一个 u32，但是 checksum 需要 u16，需要将高于 16 位的</span>
-<span class="c1">// 进位加到低位上去，然后再取反得到反码保存到网络包中</span>
-<span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">check</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">csum_fold_helper</span><span class="p">(</span><span class="n">csum</span><span class="p">);</span><span class="w"></span>
 
-<span class="c1">// 如果是 tcp 包，还需修改内层包的 checksum，因为 tcphdr 中的 checksum 包含了 ip 头</span>
-<span class="c1">// 中的部分字段</span>
-<span class="c1">// ...</span>
+<span class="c1">// 调用 bpf_csum_diff 计算 checksum 差值</span>
+<span class="n">__u32</span><span class="w"> </span><span class="n">csum_diff</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_csum_diff</span><span class="p">(</span><span class="o">&amp;</span><span class="n">old_daddr</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">__be32</span><span class="p">),</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">__be32</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
 
-<span class="k">static</span><span class="w"> </span><span class="n">__always_inline</span><span class="w"> </span><span class="n">__u16</span><span class="w"> </span><span class="n">csum_fold_helper</span><span class="p">(</span><span class="n">__u32</span><span class="w"> </span><span class="n">csum</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="c1">// 更新 ip 和 tcp 层的 checksum</span>
+<span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">check</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">csum_fold</span><span class="p">(</span><span class="n">csum_add</span><span class="p">(</span><span class="o">~</span><span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">check</span><span class="p">,</span><span class="w"> </span><span class="n">csum_diff</span><span class="p">));</span><span class="w"></span>
+<span class="n">tcp</span><span class="o">-&gt;</span><span class="n">check</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">csum_fold</span><span class="p">(</span><span class="n">csum_add</span><span class="p">(</span><span class="o">~</span><span class="n">tcp</span><span class="o">-&gt;</span><span class="n">check</span><span class="w"> </span><span class="n">csum_diff</span><span class="p">));</span><span class="w"></span>
+
+<span class="c1">// ==== helper 函数 ====</span>
+
+<span class="k">static</span><span class="w"> </span><span class="n">__always_inline</span><span class="w"> </span><span class="n">__u16</span><span class="w"> </span><span class="n">csum_fold</span><span class="p">(</span><span class="n">__u32</span><span class="w"> </span><span class="n">csum</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="n">__u32</span><span class="w"> </span><span class="n">sum</span><span class="p">;</span><span class="w"></span>
 <span class="w">    </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">csum</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">16</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">csum</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mh">0xffff</span><span class="p">);</span><span class="w"></span>
 <span class="w">    </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="p">(</span><span class="n">sum</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="mi">16</span><span class="p">);</span><span class="w"></span>
 <span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">~</span><span class="n">sum</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">static</span><span class="w"> </span><span class="n">__always_inline</span><span class="w"> </span><span class="n">__wsum</span><span class="w"> </span><span class="n">csum_add</span><span class="p">(</span><span class="n">__wsum</span><span class="w"> </span><span class="n">csum</span><span class="p">,</span><span class="w"> </span><span class="n">__wsum</span><span class="w"> </span><span class="n">addend</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">csum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">addend</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">csum</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">csum</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">addend</span><span class="p">);</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
