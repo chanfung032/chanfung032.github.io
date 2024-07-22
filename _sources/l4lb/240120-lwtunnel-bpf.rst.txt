@@ -1,6 +1,9 @@
 #240120 使用 lwtunnel bpf 写隧道控制面程序
 =============================================
 
+第一个 lwtunnel bpf 程序
+---------------------------
+
 使用 ``ip link`` 只能创建点对点的静态隧道，点多了之后，两两互联就需要创建大量的隧道，会产生一大堆的虚拟网卡设备，管理起来麻烦，解决的一个方法就是使用 lwtunnel（Light Weight Tunnel 轻量级隧道），将复杂的隧道控制/路由逻辑移到路由表中，lwtunnel 还支持挂载 bpf 程序，可以进一步将逻辑移到 bpf map 中，灵活的实现更加复杂的控制路由逻辑。
 
 lwtunnel 支持以下 3 种 bpf 程序：
@@ -78,3 +81,10 @@ https://elixir.bootlin.com/linux/v5.19/source/net/core/filter.c#L8061
 
 - 数据面 https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/progs/test_lwt_redirect.c
 - 控制面 https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/prog_tests/lwt_redirect.c
+
+bpf_redirect 前需要加上二层头
+----------------------------------
+
+lwtunnel bpf 程序的入口参数 ``struct __sk_buff *skb`` 指向的网络包 `skb->data` 开始就是三层头（iphdr/ipv6hdr)，不包含二层头，如果目标网卡是个物理网卡， bpf_redirect 需要网络包是个完整的网路包，所以 bpf_redirect 之前需要加上正确的二层头才行，否则 redirect 会失败。详细见：
+
+https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/progs/test_lwt_redirect.c

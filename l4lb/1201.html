@@ -339,6 +339,11 @@ xdp_pass_user.c -l:libbpf.a -lelf
 </pre></div>
 </div>
 <p><a class="reference external" href="https://en.wikipedia.org/wiki/Internet_checksum#Calculating_the_IPv4_header_checksum">https://en.wikipedia.org/wiki/Internet_checksum#Calculating_the_IPv4_header_checksum</a></p>
+<p>另外， <code class="docutils literal notranslate"><span class="pre">bpf_csum_diff</span></code> 也可以直接用来计算校验码：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">check</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="n">ipv4</span><span class="o">-&gt;</span><span class="n">check</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">csum_fold</span><span class="p">(</span><span class="n">bpf_csum_diff</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">ipv4</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">ipv4</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">));</span><span class="w"></span>
+</pre></div>
+</div>
 </section>
 <section id="wang-luo-bao-zhong-ding-xiang-redirect">
 <h2>网络包重定向 Redirect<a class="headerlink" href="#wang-luo-bao-zhong-ding-xiang-redirect" title="Permalink to this headline">¶</a></h2>
@@ -348,6 +353,10 @@ xdp_pass_user.c -l:libbpf.a -lelf
 <dd></dd></dl>
 
 <p>直接在处理函数的最后调用 <code class="docutils literal notranslate"><span class="pre">return</span> <span class="pre">bpf_redirect(ifindex,</span> <span class="pre">0)</span></code> redirect 网络包。</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>在调用之前需要修改目地 mac 地址为 ifindex 对应的网卡的 mac 地址，否则会失败。</p>
+</div>
 <dl class="c function">
 <dt class="sig sig-object c" id="c.bpf_redirect_map">
 <span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">bpf_redirect_map</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">bpf_map</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">map</span></span>, <span class="n"><span class="pre">u32</span></span><span class="w"> </span><span class="n"><span class="pre">key</span></span>, <span class="n"><span class="pre">u64</span></span><span class="w"> </span><span class="n"><span class="pre">flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.bpf_redirect_map" title="Permalink to this definition">¶</a><br /></dt>

@@ -80,80 +80,80 @@ i40e 驱动，网卡是 X722 型号的，在加载 xdp 的时候会报这个错�
 
 错误信息如下： ::
 
-	i40e 0000:3d:00.0: failed to get tracking for 256 queues for VSI 0 err -12
-	i40e 0000:3d:00.0: setup of MAIN VSI failed
-	i40e 0000:3d:00.0: can't remove VEB 160 with 0 VSIs left
-	BUG: unable to handle kernel NULL pointer dereference at 0000000000000000
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	PGD 1fe4ee7067 P4D 1fe4ee7067 PUD 1ef96f8067 PMD 0
-	Oops: 0000 [#1] SMP NOPTI
-	CPU: 21 PID: 809441 Comm: l4lb Tainted: G           OE     4.19.113-88.6bs.el7.x86_64 #1
-	Hardware name: Sugon I420-G30/60P16-US, BIOS 0JGST219 05/30/2019
-	RIP: 0010:i40e_xdp+0xae/0x110 [i40e]
-	i40e 0000:3d:00.0: failed to get tracking for 256 queues for VSI 0 err -12
-	i40e 0000:3d:00.0: setup of MAIN VSI failed
-	i40e 0000:3d:00.0: can't remove VEB 160 with 0 VSIs left
-	BUG: unable to handle kernel NULL pointer dereference at 0000000000000000
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	PGD 1fe4ee7067 P4D 1fe4ee7067 PUD 1ef96f8067 PMD 0
-	Oops: 0000 [#1] SMP NOPTI
-	Oops: 0000 [#1] SMP NOPTI
-	CPU: 21 PID: 809441 Comm: l4lb Tainted: G           OE     4.19.113-88.6bs.el7.x86_64 #1
-	Hardware name: Sugon I420-G30/60P16-US, BIOS 0JGST219 05/30/2019
-	RIP: 0010:i40e_xdp+0xae/0x110 [i40e]
-	Code: 87 ab d0 0c 00 00 84 c0 75 60 31 c0 66 83 bb f6 0c 00 00 00 74 27 48 8b 93 90 0c 00 00 48 63 f0 48 8b 8b d0 0c 00 00 83 c0 01 <48> 8b 14 f2 48 89 4a 20 0f b7 93 f6 0c 00 00 39 d0 7c d9 48 85 ed
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	RSP: 0018:ffff9d00ea6af8c0 EFLAGS: 00010202
-	RAX: 0000000000000001 RBX: ffff88f5f75fc000 RCX: ffff9d00c01ef000
-	RDX: 0000000000000000 RSI: 0000000000000000 RDI: ffff88f5ffcd68f0
-	RBP: 0000000000000000 R08: 0000000000000070 R09: 0000000000027e7c
-	R10: ffff89063ff468c0 R11: 0000000000000707 R12: ffff88f5f7600000
-	R13: ffffffffc0308aa0 R14: ffffffffc032c5a0 R15: 000000000000000f
-	FS:  00007f25f9ffb700(0000) GS:ffff88f5ffcc0000(0000) knlGS:0000000000000000
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
-	CR2: 0000000000000000 CR3: 0000001fb3828004 CR4: 00000000007606e0
-	DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
-	DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
-	PKRU: 55555554
-	Call Trace:
-	 dev_xdp_install+0x4f/0x70
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	 dev_change_xdp_fd+0x103/0x210
-	 ? dev_disable_lro+0xa0/0xa0
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	 do_setlink+0xd63/0xd90
-	 ? cpumask_next+0x16/0x20
-	 ? do_kernel_range_flush+0x50/0x50
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	 ? nla_parse+0xa4/0x120
-	 rtnl_setlink+0xd7/0x140
-	 ? security_capset+0x50/0x70
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	 rtnetlink_rcv_msg+0x28f/0x350
-	 ? _cond_resched+0x15/0x30
-	 ? __kmalloc_node_track_caller+0x188/0x280
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	 ? rtnl_calcit.isra.27+0x110/0x110
-	 netlink_rcv_skb+0xd4/0x110
-	 netlink_unicast+0x182/0x230
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	 netlink_sendmsg+0x2ed/0x3e0
-	 sock_sendmsg+0x36/0x50
-	 __sys_sendto+0xdc/0x160
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	 ? sock_setsockopt+0x3b9/0xc80
-	 ? syscall_trace_enter+0x1c9/0x2c0
-	 ? __audit_syscall_exit+0x213/0x350
-	 __x64_sys_sendto+0x24/0x30
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	 do_syscall_64+0x5b/0x1a0
-	 entry_SYSCALL_64_after_hwframe+0x44/0xa9
-	RIP: 0033:0x4aeeea
-	bond0: link status down for interface enp61s0f0, disabling it in 200 ms
-	Code: e8 5b 9c fb ff 48 8b 7c 24 10 48 8b 74 24 18 48 8b 54 24 20 4c 8b 54 24 28 4c 8b 44 24 30 4c 8b 4c 24 38 48 8b 44 24 08 0f 05 <48> 3d 01 f0 ff ff 76 20 48 c7 44 24 40 ff ff ff ff 48 c7 44 24 4
+    i40e 0000:3d:00.0: failed to get tracking for 256 queues for VSI 0 err -12
+    i40e 0000:3d:00.0: setup of MAIN VSI failed
+    i40e 0000:3d:00.0: can't remove VEB 160 with 0 VSIs left
+    BUG: unable to handle kernel NULL pointer dereference at 0000000000000000
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+    PGD 1fe4ee7067 P4D 1fe4ee7067 PUD 1ef96f8067 PMD 0
+    Oops: 0000 [#1] SMP NOPTI
+    CPU: 21 PID: 809441 Comm: l4lb Tainted: G           OE     4.19.113-88.6bs.el7.x86_64 #1
+    Hardware name: Sugon I420-G30/60P16-US, BIOS 0JGST219 05/30/2019
+    RIP: 0010:i40e_xdp+0xae/0x110 [i40e]
+    i40e 0000:3d:00.0: failed to get tracking for 256 queues for VSI 0 err -12
+    i40e 0000:3d:00.0: setup of MAIN VSI failed
+    i40e 0000:3d:00.0: can't remove VEB 160 with 0 VSIs left
+    BUG: unable to handle kernel NULL pointer dereference at 0000000000000000
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+    PGD 1fe4ee7067 P4D 1fe4ee7067 PUD 1ef96f8067 PMD 0
+    Oops: 0000 [#1] SMP NOPTI
+    Oops: 0000 [#1] SMP NOPTI
+    CPU: 21 PID: 809441 Comm: l4lb Tainted: G           OE     4.19.113-88.6bs.el7.x86_64 #1
+    Hardware name: Sugon I420-G30/60P16-US, BIOS 0JGST219 05/30/2019
+    RIP: 0010:i40e_xdp+0xae/0x110 [i40e]
+    Code: 87 ab d0 0c 00 00 84 c0 75 60 31 c0 66 83 bb f6 0c 00 00 00 74 27 48 8b 93 90 0c 00 00 48 63 f0 48 8b 8b d0 0c 00 00 83 c0 01 <48> 8b 14 f2 48 89 4a 20 0f b7 93 f6 0c 00 00 39 d0 7c d9 48 85 ed
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+    RSP: 0018:ffff9d00ea6af8c0 EFLAGS: 00010202
+    RAX: 0000000000000001 RBX: ffff88f5f75fc000 RCX: ffff9d00c01ef000
+    RDX: 0000000000000000 RSI: 0000000000000000 RDI: ffff88f5ffcd68f0
+    RBP: 0000000000000000 R08: 0000000000000070 R09: 0000000000027e7c
+    R10: ffff89063ff468c0 R11: 0000000000000707 R12: ffff88f5f7600000
+    R13: ffffffffc0308aa0 R14: ffffffffc032c5a0 R15: 000000000000000f
+    FS:  00007f25f9ffb700(0000) GS:ffff88f5ffcc0000(0000) knlGS:0000000000000000
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+    CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+    CR2: 0000000000000000 CR3: 0000001fb3828004 CR4: 00000000007606e0
+    DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+    DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+    PKRU: 55555554
+    Call Trace:
+     dev_xdp_install+0x4f/0x70
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+     dev_change_xdp_fd+0x103/0x210
+     ? dev_disable_lro+0xa0/0xa0
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+     do_setlink+0xd63/0xd90
+     ? cpumask_next+0x16/0x20
+     ? do_kernel_range_flush+0x50/0x50
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+     ? nla_parse+0xa4/0x120
+     rtnl_setlink+0xd7/0x140
+     ? security_capset+0x50/0x70
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+     rtnetlink_rcv_msg+0x28f/0x350
+     ? _cond_resched+0x15/0x30
+     ? __kmalloc_node_track_caller+0x188/0x280
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+     ? rtnl_calcit.isra.27+0x110/0x110
+     netlink_rcv_skb+0xd4/0x110
+     netlink_unicast+0x182/0x230
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+     netlink_sendmsg+0x2ed/0x3e0
+     sock_sendmsg+0x36/0x50
+     __sys_sendto+0xdc/0x160
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+     ? sock_setsockopt+0x3b9/0xc80
+     ? syscall_trace_enter+0x1c9/0x2c0
+     ? __audit_syscall_exit+0x213/0x350
+     __x64_sys_sendto+0x24/0x30
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+     do_syscall_64+0x5b/0x1a0
+     entry_SYSCALL_64_after_hwframe+0x44/0xa9
+    RIP: 0033:0x4aeeea
+    bond0: link status down for interface enp61s0f0, disabling it in 200 ms
+    Code: e8 5b 9c fb ff 48 8b 7c 24 10 48 8b 74 24 18 48 8b 54 24 20 4c 8b 54 24 28 4c 8b 44 24 30 4c 8b 4c 24 38 48 8b 44 24 08 0f 05 <48> 3d 01 f0 ff ff 76 20 48 c7 44 24 40 ff ff ff ff 48 c7 44 24 4
 
-	RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
+    RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 
 这个是驱动 BUG，升级驱动可解决。
 
@@ -167,8 +167,8 @@ i40e 驱动，网卡是 X722 型号的，在加载 xdp 的时候会报这个错�
 
 .. code-block:: console
 
-	# cat /etc/depmod.d/kmod-i40e.conf
-	override i40e * weak-updates/i40e
+    # cat /etc/depmod.d/kmod-i40e.conf
+    override i40e * weak-updates/i40e
 
 https://linux.die.net/man/8/depmod
 
@@ -217,9 +217,9 @@ IPv4 VIP 访问正常、IPv6 访问异常可能的问题
 
 .. code-block:: console
 
-	# tail /tmp/bird.log
-	2022-12-03 20:30:51.893 <RMT> ospfv2: MTU mismatch with nbr 61.184.215.126 on bond0 (remote 9000, local 1500)
-	...
+    # tail /tmp/bird.log
+    2022-12-03 20:30:51.893 <RMT> ospfv2: MTU mismatch with nbr 61.184.215.126 on bond0 (remote 9000, local 1500)
+    ...
 
 这个是 bird v2.0.7 版本开始加上的一个验证，之前只是一个 warning。
 
@@ -229,107 +229,107 @@ https://github.com/CZ-NIC/bird/commit/267da8138d7f429941f2d829b44cf9bdd94a14d6
 
 .. code-block:: diff
 
-	diff -ru a/proto/ospf/config.Y b/proto/ospf/config.Y
-	--- a/proto/ospf/config.Y	2019-10-16 18:45:08.000000000 +0800
-	+++ b/proto/ospf/config.Y	2022-12-05 16:36:46.334051267 +0800
-	@@ -191,7 +191,7 @@
-	 CF_DECLS
-	 
-	 CF_KEYWORDS(OSPF, V2, V3, OSPF_METRIC1, OSPF_METRIC2, OSPF_TAG, OSPF_ROUTER_ID)
-	-CF_KEYWORDS(AREA, NEIGHBORS, RFC1583COMPAT, STUB, TICK, COST, COST2, RETRANSMIT)
-	+CF_KEYWORDS(AREA, NEIGHBORS, RFC1583COMPAT, STUB, TICK, COST, COST2, RETRANSMIT, IGNOREMTU)
-	 CF_KEYWORDS(HELLO, TRANSMIT, PRIORITY, DEAD, TYPE, BROADCAST, BCAST, DEFAULT)
-	 CF_KEYWORDS(NONBROADCAST, NBMA, POINTOPOINT, PTP, POINTOMULTIPOINT, PTMP)
-	 CF_KEYWORDS(NONE, SIMPLE, AUTHENTICATION, STRICT, CRYPTOGRAPHIC, TTL, SECURITY)
-	@@ -258,6 +258,7 @@
-		proto_item
-	  | ospf_channel { this_proto->net_type = $1->net_type; }
-	  | RFC1583COMPAT bool { OSPF_CFG->rfc1583 = $2; }
-	+ | IGNOREMTU bool { OSPF_CFG->ignoremtu = $2; }
-	  | RFC5838 bool { OSPF_CFG->af_ext = $2; if (!ospf_cfg_is_v3()) cf_error("RFC5838 option requires OSPFv3"); }
-	  | VPN PE bool { OSPF_CFG->vpn_pe = $3; }
-	  | STUB ROUTER bool { OSPF_CFG->stub_router = $3; }
-	diff -ru a/proto/ospf/dbdes.c b/proto/ospf/dbdes.c
-	--- a/proto/ospf/dbdes.c	2019-10-16 18:45:08.000000000 +0800
-	+++ b/proto/ospf/dbdes.c	2022-12-05 16:54:41.919077802 +0800
-	@@ -360,9 +360,11 @@
-		   (rcv_iface_mtu != ifa->iface->mtu) &&
-		   (rcv_iface_mtu != 0) && (ifa->iface->mtu != 0))
-	   {
-	-    LOG_PKT("MTU mismatch with nbr %R on %s (remote %d, local %d)",
-	-	    n->rid, ifa->ifname, rcv_iface_mtu, ifa->iface->mtu);
-	-    return;
-	+    LOG_PKT("MTU mismatch with nbr %R on %s (remote %d, local %d) %d",
-	+	    n->rid, ifa->ifname, rcv_iface_mtu, ifa->iface->mtu, p->ignoremtu);
-	+    if (!p->ignoremtu) {
-	+       return;
-	+    }
-	   }
-	 
-	   switch (n->state)
-	diff -ru a/proto/ospf/ospf.c b/proto/ospf/ospf.c
-	--- a/proto/ospf/ospf.c	2019-10-16 18:45:08.000000000 +0800
-	+++ b/proto/ospf/ospf.c	2022-12-05 16:57:16.415081613 +0800
-	@@ -287,6 +287,7 @@
-	   p->af_ext = c->af_ext;
-	   p->af_mc = c->af_mc;
-	   p->rfc1583 = c->rfc1583;
-	+  p->ignoremtu = c->ignoremtu;
-	   p->stub_router = c->stub_router;
-	   p->merge_external = c->merge_external;
-	   p->instance_id = c->instance_id;
-	@@ -708,6 +709,9 @@
-	   if (p->rfc1583 != new->rfc1583)
-		 return 0;
-	 
-	+  if (p->ignoremtu != new->ignoremtu)
-	+    return 0;
-	+
-	   if (p->instance_id != new->instance_id)
-		 return 0;
-	 
-	@@ -832,6 +836,7 @@
-	 
-	   cli_msg(-1014, "%s:", p->p.name);
-	   cli_msg(-1014, "RFC1583 compatibility: %s", (p->rfc1583 ? "enabled" : "disabled"));
-	+  cli_msg(-1014, "Ignore MTU: %s", (p->ignoremtu? "enabled" : "disabled"));
-	   cli_msg(-1014, "Stub router: %s", (p->stub_router ? "Yes" : "No"));
-	   cli_msg(-1014, "RT scheduler tick: %d", p->tick);
-	   cli_msg(-1014, "Number of areas: %u", p->areano);
-	diff -ru a/proto/ospf/ospf.h b/proto/ospf/ospf.h
-	--- a/proto/ospf/ospf.h	2019-10-16 18:45:08.000000000 +0800
-	+++ b/proto/ospf/ospf.h	2022-12-05 15:19:47.161937314 +0800
-	@@ -94,6 +94,7 @@
-	   u8 af_ext;
-	   u8 af_mc;
-	   u8 rfc1583;
-	+  u8 ignoremtu;
-	   u8 stub_router;
-	   u8 merge_external;
-	   u8 instance_id;
-	@@ -232,6 +233,7 @@
-	   u8 af_ext;			/* OSPFv3-AF extension */
-	   u8 af_mc;			/* OSPFv3-AF multicast */
-	   u8 rfc1583;			/* RFC1583 compatibility */
-	+  u8 ignoremtu;
-	   u8 stub_router;		/* Do not forward transit traffic */
-	   u8 merge_external;		/* Should i merge external routes? */
-	   u8 instance_id;		/* Differentiate between more OSPF instances */
+    diff -ru a/proto/ospf/config.Y b/proto/ospf/config.Y
+    --- a/proto/ospf/config.Y	2019-10-16 18:45:08.000000000 +0800
+    +++ b/proto/ospf/config.Y	2022-12-05 16:36:46.334051267 +0800
+    @@ -191,7 +191,7 @@
+     CF_DECLS
+     
+     CF_KEYWORDS(OSPF, V2, V3, OSPF_METRIC1, OSPF_METRIC2, OSPF_TAG, OSPF_ROUTER_ID)
+    -CF_KEYWORDS(AREA, NEIGHBORS, RFC1583COMPAT, STUB, TICK, COST, COST2, RETRANSMIT)
+    +CF_KEYWORDS(AREA, NEIGHBORS, RFC1583COMPAT, STUB, TICK, COST, COST2, RETRANSMIT, IGNOREMTU)
+     CF_KEYWORDS(HELLO, TRANSMIT, PRIORITY, DEAD, TYPE, BROADCAST, BCAST, DEFAULT)
+     CF_KEYWORDS(NONBROADCAST, NBMA, POINTOPOINT, PTP, POINTOMULTIPOINT, PTMP)
+     CF_KEYWORDS(NONE, SIMPLE, AUTHENTICATION, STRICT, CRYPTOGRAPHIC, TTL, SECURITY)
+    @@ -258,6 +258,7 @@
+        proto_item
+      | ospf_channel { this_proto->net_type = $1->net_type; }
+      | RFC1583COMPAT bool { OSPF_CFG->rfc1583 = $2; }
+    + | IGNOREMTU bool { OSPF_CFG->ignoremtu = $2; }
+      | RFC5838 bool { OSPF_CFG->af_ext = $2; if (!ospf_cfg_is_v3()) cf_error("RFC5838 option requires OSPFv3"); }
+      | VPN PE bool { OSPF_CFG->vpn_pe = $3; }
+      | STUB ROUTER bool { OSPF_CFG->stub_router = $3; }
+    diff -ru a/proto/ospf/dbdes.c b/proto/ospf/dbdes.c
+    --- a/proto/ospf/dbdes.c	2019-10-16 18:45:08.000000000 +0800
+    +++ b/proto/ospf/dbdes.c	2022-12-05 16:54:41.919077802 +0800
+    @@ -360,9 +360,11 @@
+           (rcv_iface_mtu != ifa->iface->mtu) &&
+           (rcv_iface_mtu != 0) && (ifa->iface->mtu != 0))
+       {
+    -    LOG_PKT("MTU mismatch with nbr %R on %s (remote %d, local %d)",
+    -	    n->rid, ifa->ifname, rcv_iface_mtu, ifa->iface->mtu);
+    -    return;
+    +    LOG_PKT("MTU mismatch with nbr %R on %s (remote %d, local %d) %d",
+    +	    n->rid, ifa->ifname, rcv_iface_mtu, ifa->iface->mtu, p->ignoremtu);
+    +    if (!p->ignoremtu) {
+    +       return;
+    +    }
+       }
+     
+       switch (n->state)
+    diff -ru a/proto/ospf/ospf.c b/proto/ospf/ospf.c
+    --- a/proto/ospf/ospf.c	2019-10-16 18:45:08.000000000 +0800
+    +++ b/proto/ospf/ospf.c	2022-12-05 16:57:16.415081613 +0800
+    @@ -287,6 +287,7 @@
+       p->af_ext = c->af_ext;
+       p->af_mc = c->af_mc;
+       p->rfc1583 = c->rfc1583;
+    +  p->ignoremtu = c->ignoremtu;
+       p->stub_router = c->stub_router;
+       p->merge_external = c->merge_external;
+       p->instance_id = c->instance_id;
+    @@ -708,6 +709,9 @@
+       if (p->rfc1583 != new->rfc1583)
+         return 0;
+     
+    +  if (p->ignoremtu != new->ignoremtu)
+    +    return 0;
+    +
+       if (p->instance_id != new->instance_id)
+         return 0;
+     
+    @@ -832,6 +836,7 @@
+     
+       cli_msg(-1014, "%s:", p->p.name);
+       cli_msg(-1014, "RFC1583 compatibility: %s", (p->rfc1583 ? "enabled" : "disabled"));
+    +  cli_msg(-1014, "Ignore MTU: %s", (p->ignoremtu? "enabled" : "disabled"));
+       cli_msg(-1014, "Stub router: %s", (p->stub_router ? "Yes" : "No"));
+       cli_msg(-1014, "RT scheduler tick: %d", p->tick);
+       cli_msg(-1014, "Number of areas: %u", p->areano);
+    diff -ru a/proto/ospf/ospf.h b/proto/ospf/ospf.h
+    --- a/proto/ospf/ospf.h	2019-10-16 18:45:08.000000000 +0800
+    +++ b/proto/ospf/ospf.h	2022-12-05 15:19:47.161937314 +0800
+    @@ -94,6 +94,7 @@
+       u8 af_ext;
+       u8 af_mc;
+       u8 rfc1583;
+    +  u8 ignoremtu;
+       u8 stub_router;
+       u8 merge_external;
+       u8 instance_id;
+    @@ -232,6 +233,7 @@
+       u8 af_ext;			/* OSPFv3-AF extension */
+       u8 af_mc;			/* OSPFv3-AF multicast */
+       u8 rfc1583;			/* RFC1583 compatibility */
+    +  u8 ignoremtu;
+       u8 stub_router;		/* Do not forward transit traffic */
+       u8 merge_external;		/* Should i merge external routes? */
+       u8 instance_id;		/* Differentiate between more OSPF instances */
 
 tcpdump 能看到 vlan header，但是 xdp 看不到
 ------------------------------------------------
 
-	Since XDP needs to see the VLAN headers as part of the packet headers, it is important to turn off VLAN hardware offload (which most hardware NICs support), since that will remove the VLAN tag from the packet header and instead communicate it out of band to the kernel via the packet hardware descriptor.
+    Since XDP needs to see the VLAN headers as part of the packet headers, it is important to turn off VLAN hardware offload (which most hardware NICs support), since that will remove the VLAN tag from the packet header and instead communicate it out of band to the kernel via the packet hardware descriptor.
 
-	https://github.com/xdp-project/xdp-tutorial/tree/master/packet01-parsing
+    https://github.com/xdp-project/xdp-tutorial/tree/master/packet01-parsing
 
 一般网卡都有 vlan 解析/插入的硬件加速：
 
 .. code-block:: console
 
-	# ethtool -k eth0|grep vlan-offload
-	rx-vlan-offload: on
-	tx-vlan-offload: on [fixed]
+    # ethtool -k eth0|grep vlan-offload
+    rx-vlan-offload: on
+    tx-vlan-offload: on [fixed]
 
 网卡会直接硬件解析 vlan header，然后将 vlan id 等信息直接给驱动，DMA 给驱动的网络包会删除掉 vlan header 变成一个普通的网络包。这样 XDP 就看不到 vlan header 了。解决的方法是关闭这个硬件加速：
 
@@ -353,19 +353,19 @@ clang loop unroll(full) 失败导致的 BPF 加载失败
 
 .. code-block:: c
 
-	#pragma clang loop unroll(full)
-	for (int i = 1; i < L4LB_GUE_IPS_ARRAY_SIZE; i++) {
-	    uint32_t *ip = (uint32_t *)bpf_map_lookup_elem(&l4lb_gue_ips, &i);
-	    ...
-	}
+    #pragma clang loop unroll(full)
+    for (int i = 1; i < L4LB_GUE_IPS_ARRAY_SIZE; i++) {
+        uint32_t *ip = (uint32_t *)bpf_map_lookup_elem(&l4lb_gue_ips, &i);
+        ...
+    }
 
 报 *警告*：
 
-	warning: loop not unrolled: the optimizer was unable to perform the requested transformation; the transformation might be part of an unsupported transformation ordering [-Wpass-failed=transform-warning]
+    warning: loop not unrolled: the optimizer was unable to perform the requested transformation; the transformation might be part of an unsupported transformation ordering [-Wpass-failed=transform-warning]
 
 这样编译出的 bpf 会加载失败，报 *错误*。
 
-	invalid argument: back-edge from insn 1456 to 1458
+    invalid argument: back-edge from insn 1456 to 1458
 
 搜索 Linux 内核代码可以看到这个错误是说 bpf 代码中有往回的 jump 了，在我们的场景下就是上面的这个循环，bpf 不允许循环。
 
@@ -373,12 +373,12 @@ clang loop unroll(full) 失败导致的 BPF 加载失败
 
 .. code-block:: c
 
-	#pragma clang loop unroll(full)
-	for (int i = 1; i < L4LB_GUE_IPS_ARRAY_SIZE; i++) {
-	    int j = i;   // 👈
-	    uint32_t *ip = (uint32_t *)bpf_map_lookup_elem(&l4lb_gue_ips, &j);
-	    ...
-	}
+    #pragma clang loop unroll(full)
+    for (int i = 1; i < L4LB_GUE_IPS_ARRAY_SIZE; i++) {
+        int j = i;   // 👈
+        uint32_t *ip = (uint32_t *)bpf_map_lookup_elem(&l4lb_gue_ips, &j);
+        ...
+    }
 
 邮件列表里也有人遇到过同样问题（https://lists.linuxfoundation.org/pipermail/iovisor-dev/2017-April/000733.html），给出的解释是将 ``&i`` 这个循环计数变量的指针传给 ``bpf_map_lookup_elem`` 函数，函数中可能会改变指针指向的内容，但是从这个函数的原型 ``static void *(*bpf_map_lookup_elem)(void *map, const void *key) = (void *) 1`` 来看，这个参数前面带了 const 关键字，编译器应该可以知道这个变量是一个只读变量的。
 
@@ -386,13 +386,13 @@ clang loop unroll(full) 失败导致的 BPF 加载失败
 
 .. code-block:: c
 
-	int a = 24;
-	const int *p = &a;
+    int a = 24;
+    const int *p = &a;
 
-	// 报 error: assignment of read-only location ‘*p’
-	*p = 10;
-	// 但是做一个强制转换后，像下面这样是可以编译通过的
-	*(int*)p = 10;
+    // 报 error: assignment of read-only location ‘*p’
+    *p = 10;
+    // 但是做一个强制转换后，像下面这样是可以编译通过的
+    *(int*)p = 10;
 
 https://stackoverflow.com/questions/34842224/when-to-use-const-void
 
@@ -426,6 +426,17 @@ can't get map by id(2637): Device or resource busy
           |-   return ERR_PTR(-EBUSY);
           |- ...
 
+如何获得一个进程打开的 bpf map fd 对应的 map id
+--------------------------------------------------------
+
+.. code-block:: console
+
+    # lsof -p 3248691 |grep bpf-map
+    nginx   3248691 nobody    4u  a_inode               0,13        0      14337 bpf-map
+    # cat /proc/3248691/fdinfo/4
+    ...
+    map_id:	16392
+
 BPF_MAP_TYPE_PROG_ARRAY 类型 map 写入成功但是 bpftool dump map 发现没有写入的元素
 ------------------------------------------------------------------------------------
 
@@ -455,10 +466,10 @@ bpf 验证器报 math between pkt pointer and register with unbounded min value 
 
 .. code-block:: c
 
-	if (ipv4->ihl <= 5) {
-	    return true;
-	}
-	return buf_skip(buf, (ipv4->ihl - 5) * 4);
+    if (ipv4->ihl <= 5) {
+        return true;
+    }
+    return buf_skip(buf, (ipv4->ihl - 5) * 4);
 
 这段代码有些时候编译的时候没问题，有些时候（其他代码变了）编译之后在高版本内核上没问题，在低版本比如 4.19 内核上就报 ``math between pkt pointer and register with unbounded min value is not allowed`` 错误。
 
@@ -479,7 +490,7 @@ bpf 验证器报 math between pkt pointer and register with unbounded min value 
         192:       r4 <<= 2
     ; if (buf->head + len > buf->tail) {
         193:       r8 += r4
-	
+    
 有问题的：
 
 .. code-block:: objdump
@@ -505,12 +516,12 @@ bpf 验证器报 math between pkt pointer and register with unbounded min value 
 
 .. code-block:: c
 
-	uint8_t a;
-	asm volatile ("%0 = %1" : "=r"(a) : "r"(ipv4->ihl)); /* a = ipv4->ihl */
-	if (a <= 5) {
-	    return true;
-	}
-	return buf_skip(buf, (a - 5) * 4);
+    uint8_t a;
+    asm volatile ("%0 = %1" : "=r"(a) : "r"(ipv4->ihl)); /* a = ipv4->ihl */
+    if (a <= 5) {
+        return true;
+    }
+    return buf_skip(buf, (a - 5) * 4);
 
 另外高内核（5.3 之后）应该就没有这个问题了。
 
@@ -531,9 +542,103 @@ systemd 使用 root 用户启动服务报 bpf map create failed: permission deni
 
 .. code-block:: console
 
-	# getenforce
-	Enforcing
+    # getenforce
+    Enforcing
 
 检查 selinux 是不是在 Enforcing 状态，是的话检查 ``/var/log/audit/audit.log`` 看是不是被 selinux 拦了。简单的处理方式是关了 selinux ``setenforce 0`` 。
 
 https://superuser.com/questions/1125250/systemctl-access-denied-when-root
+
+用户空间 bpf_map_lookup_elem 返回 ENOENT 
+------------------------------------------------
+
+这个不是错误，是 key 不存在。
+
+https://elixir.bootlin.com/linux/v4.19/source/kernel/bpf/syscall.c#L718
+
+.. code-block:: c
+
+    static int map_lookup_elem(union bpf_attr *attr)
+    {
+        ..
+        rcu_read_lock();
+        ptr = map->ops->map_lookup_elem(map, key);
+        if (ptr)
+            memcpy(value, ptr, value_size);
+        rcu_read_unlock();
+        err = ptr ? 0 : -ENOENT;
+        ...
+    }
+
+跨机房调度 ttl 太小导致转发失败
+-----------------------------------------
+
+如题。
+
+virtio-net 驱动加载 xdp driver 模式失败
+------------------------------------------
+
+加载 xdp 程序报错 ``load xdp root failed: cannot allocate memory`` 。
+
+dmesg 内核错误信息：  ::
+
+    [  717.248974] virtio_net virtio0 eth0: request 4 queues but max is 2
+
+报错的点：
+
+.. code-block:: c
+
+    curr_qp = vi->curr_queue_pairs - vi->xdp_queue_pairs;
+    if (prog)
+        xdp_qp = nr_cpu_ids;
+
+    /* XDP requires extra queues for XDP_TX */
+    if (curr_qp + xdp_qp > vi->max_queue_pairs) {
+        netdev_warn(dev, "request %i queues but max is %i\n",
+            curr_qp + xdp_qp, vi->max_queue_pairs);
+        return -ENOMEM;
+    }
+
+- https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=672aafd5d88a951f394334802b938b502010d9eb
+- https://elixir.bootlin.com/linux/v4.17.2/source/drivers/net/virtio_net.c#L2213
+- https://github.com/iovisor/bcc/issues/1833#issuecomment-397882174
+
+.. code-block:: console
+
+    # ethtool -l eth0
+    Channel parameters for eth0:
+    Pre-set maximums:
+    RX:		0
+    TX:		0
+    Other:		0
+    Combined:	2
+    Current hardware settings:
+    RX:		0
+    TX:		0
+    Other:		0
+    Combined:	2
+
+    # nproc
+    2
+
+xdp 默认要申请独立的 queue，但网卡最大就 2 个 queue，已经申请了 2 个用作 rx+tx（combined 就是共用）队列，不支持再额外申请 xdp tx queue 了。
+
+怎么解决？
+
+简单的方式共用现有的 queue，参见提交：https://github.com/torvalds/linux/commit/97c2c69e1926260c78c7f1c0b2c987934f1dc7a1。要做的就是升级驱动即可。
+
+或者可以改硬件的 max（# Enable multiqueue virtio-net）？ https://en.opensuse.org/Testing_XDP_with_virtio-net
+
+bpf 验证器报 invalid indirect read from stack
+----------------------------------------------------
+
+.. code-block:: c
+
+    struct ethhdr eth;
+    // memset(&eth, 0, sizeof(eth));
+    eth.h_proto = bpf_ntohs(ETH_P_IPV6);
+    if (bpf_skb_store_bytes(skb, 0, &eth, sizeof(eth), 0)) {  // 👈 这里报错
+            return -1;
+    }
+
+未初始化栈内元素，就传递该栈地址。把上面 memset 前面的注释去掉就没问题了。

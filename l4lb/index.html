@@ -16,7 +16,7 @@
     <script src="../_static/custom.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="#230828 BTF" href="230828.html" />
+    <link rel="next" title="#240120 使用 lwtunnel bpf 写隧道控制面程序" href="240120-lwtunnel-bpf.html" />
     <link rel="prev" title="#220810 sk_buff 结构体及其基本操作" href="../network/220810-skbuff.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -38,6 +38,11 @@
 <h1>基于 XDP 的 L4LB 开发笔记<a class="headerlink" href="#ji-yu-xdp-de-l4lb-kai-fa-bi-ji" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="240120-lwtunnel-bpf.html">#240120 使用 lwtunnel bpf 写隧道控制面程序</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="240120-lwtunnel-bpf.html#di-yi-ge-lwtunnel-bpf-cheng-xu">第一个 lwtunnel bpf 程序</a></li>
+<li class="toctree-l2"><a class="reference internal" href="240120-lwtunnel-bpf.html#bpf-redirect-qian-xu-yao-jia-shang-er-ceng-tou">bpf_redirect 前需要加上二层头</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="230828.html">#230828 BTF</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="230828.html#gai-shu">概述</a></li>
 <li class="toctree-l2"><a class="reference internal" href="230828.html#da-yin-chu-map-zhi-de-jie-gou-pretty-print">打印出 map 值的结构（pretty-print）</a></li>
@@ -66,10 +71,15 @@
 <li class="toctree-l2"><a class="reference internal" href="220330.html#xdp-pass-sysctl-net-ipv4-conf-interface-accept-local">XDP_PASS &amp; sysctl net.ipv4.conf.interface.accept_local</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220330.html#clang-loop-unroll-full-shi-bai-dao-zhi-de-bpf-jia-zai-shi-bai">clang loop unroll(full) 失败导致的 BPF 加载失败</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220330.html#can-t-get-map-by-id-2637-device-or-resource-busy">can’t get map by id(2637): Device or resource busy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220330.html#ru-he-huo-de-yi-ge-jin-cheng-da-kai-de-bpf-map-fd-dui-ying-de-map-id">如何获得一个进程打开的 bpf map fd 对应的 map id</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220330.html#bpf-map-type-prog-array-lei-xing-map-xie-ru-cheng-gong-dan-shi-bpftool-dump-map-fa-xian-mei-you-xie-ru-de-yuan-su">BPF_MAP_TYPE_PROG_ARRAY 类型 map 写入成功但是 bpftool dump map 发现没有写入的元素</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220330.html#bpf-yan-zheng-qi-bao-math-between-pkt-pointer-and-register-with-unbounded-min-value-is-not-allowed">bpf 验证器报 math between pkt pointer and register with unbounded min value is not allowed</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220330.html#zhuan-fa-biao-fen-pei-jun-yun-dan-shi-you-hou-duan-ji-qi-de-liu-liang-hen-xiao">转发表分配均匀但是有后端机器的流量很小</a></li>
 <li class="toctree-l2"><a class="reference internal" href="220330.html#systemd-shi-yong-root-yong-hu-qi-dong-fu-wu-bao-bpf-map-create-failed-permission-denied">systemd 使用 root 用户启动服务报 bpf map create failed: permission denied</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220330.html#yong-hu-kong-jian-bpf-map-lookup-elem-fan-hui-enoent">用户空间 bpf_map_lookup_elem 返回 ENOENT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220330.html#kua-ji-fang-diao-du-ttl-tai-xiao-dao-zhi-zhuan-fa-shi-bai">跨机房调度 ttl 太小导致转发失败</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220330.html#virtio-net-qu-dong-jia-zai-xdp-driver-mo-shi-shi-bai">virtio-net 驱动加载 xdp driver 模式失败</a></li>
+<li class="toctree-l2"><a class="reference internal" href="220330.html#bpf-yan-zheng-qi-bao-invalid-indirect-read-from-stack">bpf 验证器报 invalid indirect read from stack</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="220321.html">#220321 FB: From XDP to Socket</a><ul>

@@ -359,12 +359,21 @@ https://en.wikipedia.org/wiki/IPv4_header_checksum
 
 https://en.wikipedia.org/wiki/Internet_checksum#Calculating_the_IPv4_header_checksum
 
+另外， ``bpf_csum_diff`` 也可以直接用来计算校验码：
+
+.. code-block:: c
+
+    ipv4->check = 0;
+    ipv4->check = csum_fold(bpf_csum_diff(0, 0, &ipv4, sizeof(ipv4), 0));
+
 网络包重定向 Redirect
 -------------------------
 
 .. c:function:: long bpf_redirect(u32 ifindex, u64 flags)
 
 直接在处理函数的最后调用 ``return bpf_redirect(ifindex, 0)`` redirect 网络包。
+
+.. note:: 在调用之前需要修改目地 mac 地址为 ifindex 对应的网卡的 mac 地址，否则会失败。
 
 .. c:function:: long bpf_redirect_map(struct bpf_map *map, u32 key, u64 flags)
 

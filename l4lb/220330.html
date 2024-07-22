@@ -239,8 +239,8 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <p><a class="reference external" href="https://github.com/CZ-NIC/bird/commit/267da8138d7f429941f2d829b44cf9bdd94a14d6">https://github.com/CZ-NIC/bird/commit/267da8138d7f429941f2d829b44cf9bdd94a14d6</a></p>
 <p>可以加个选项支持将这个验证关闭。</p>
 <div class="highlight-diff notranslate"><div class="highlight"><pre><span></span><span class="gh">diff -ru a/proto/ospf/config.Y b/proto/ospf/config.Y</span>
-<span class="gd">--- a/proto/ospf/config.Y       2019-10-16 18:45:08.000000000 +0800</span>
-<span class="gi">+++ b/proto/ospf/config.Y       2022-12-05 16:36:46.334051267 +0800</span>
+<span class="gd">--- a/proto/ospf/config.Y   2019-10-16 18:45:08.000000000 +0800</span>
+<span class="gi">+++ b/proto/ospf/config.Y   2022-12-05 16:36:46.334051267 +0800</span>
 <span class="gu">@@ -191,7 +191,7 @@</span>
  CF_DECLS
 
@@ -251,7 +251,7 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
  CF_KEYWORDS(NONBROADCAST, NBMA, POINTOPOINT, PTP, POINTOMULTIPOINT, PTMP)
  CF_KEYWORDS(NONE, SIMPLE, AUTHENTICATION, STRICT, CRYPTOGRAPHIC, TTL, SECURITY)
 <span class="gu">@@ -258,6 +258,7 @@</span>
-        proto_item
+    proto_item
   | ospf_channel { this_proto-&gt;net_type = $1-&gt;net_type; }
   | RFC1583COMPAT bool { OSPF_CFG-&gt;rfc1583 = $2; }
 <span class="gi">+ | IGNOREMTU bool { OSPF_CFG-&gt;ignoremtu = $2; }</span>
@@ -259,17 +259,17 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
   | VPN PE bool { OSPF_CFG-&gt;vpn_pe = $3; }
   | STUB ROUTER bool { OSPF_CFG-&gt;stub_router = $3; }
 <span class="gh">diff -ru a/proto/ospf/dbdes.c b/proto/ospf/dbdes.c</span>
-<span class="gd">--- a/proto/ospf/dbdes.c        2019-10-16 18:45:08.000000000 +0800</span>
-<span class="gi">+++ b/proto/ospf/dbdes.c        2022-12-05 16:54:41.919077802 +0800</span>
+<span class="gd">--- a/proto/ospf/dbdes.c    2019-10-16 18:45:08.000000000 +0800</span>
+<span class="gi">+++ b/proto/ospf/dbdes.c    2022-12-05 16:54:41.919077802 +0800</span>
 <span class="gu">@@ -360,9 +360,11 @@</span>
-           (rcv_iface_mtu != ifa-&gt;iface-&gt;mtu) &amp;&amp;
-           (rcv_iface_mtu != 0) &amp;&amp; (ifa-&gt;iface-&gt;mtu != 0))
+       (rcv_iface_mtu != ifa-&gt;iface-&gt;mtu) &amp;&amp;
+       (rcv_iface_mtu != 0) &amp;&amp; (ifa-&gt;iface-&gt;mtu != 0))
    {
 <span class="gd">-    LOG_PKT(&quot;MTU mismatch with nbr %R on %s (remote %d, local %d)&quot;,</span>
-<span class="gd">-           n-&gt;rid, ifa-&gt;ifname, rcv_iface_mtu, ifa-&gt;iface-&gt;mtu);</span>
+<span class="gd">-       n-&gt;rid, ifa-&gt;ifname, rcv_iface_mtu, ifa-&gt;iface-&gt;mtu);</span>
 <span class="gd">-    return;</span>
 <span class="gi">+    LOG_PKT(&quot;MTU mismatch with nbr %R on %s (remote %d, local %d) %d&quot;,</span>
-<span class="gi">+           n-&gt;rid, ifa-&gt;ifname, rcv_iface_mtu, ifa-&gt;iface-&gt;mtu, p-&gt;ignoremtu);</span>
+<span class="gi">+       n-&gt;rid, ifa-&gt;ifname, rcv_iface_mtu, ifa-&gt;iface-&gt;mtu, p-&gt;ignoremtu);</span>
 <span class="gi">+    if (!p-&gt;ignoremtu) {</span>
 <span class="gi">+       return;</span>
 <span class="gi">+    }</span>
@@ -277,8 +277,8 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 
    switch (n-&gt;state)
 <span class="gh">diff -ru a/proto/ospf/ospf.c b/proto/ospf/ospf.c</span>
-<span class="gd">--- a/proto/ospf/ospf.c 2019-10-16 18:45:08.000000000 +0800</span>
-<span class="gi">+++ b/proto/ospf/ospf.c 2022-12-05 16:57:16.415081613 +0800</span>
+<span class="gd">--- a/proto/ospf/ospf.c     2019-10-16 18:45:08.000000000 +0800</span>
+<span class="gi">+++ b/proto/ospf/ospf.c     2022-12-05 16:57:16.415081613 +0800</span>
 <span class="gu">@@ -287,6 +287,7 @@</span>
    p-&gt;af_ext = c-&gt;af_ext;
    p-&gt;af_mc = c-&gt;af_mc;
@@ -289,13 +289,13 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
    p-&gt;instance_id = c-&gt;instance_id;
 <span class="gu">@@ -708,6 +709,9 @@</span>
    if (p-&gt;rfc1583 != new-&gt;rfc1583)
-         return 0;
+     return 0;
 
 <span class="gi">+  if (p-&gt;ignoremtu != new-&gt;ignoremtu)</span>
 <span class="gi">+    return 0;</span>
 <span class="gi">+</span>
    if (p-&gt;instance_id != new-&gt;instance_id)
-         return 0;
+     return 0;
 
 <span class="gu">@@ -832,6 +836,7 @@</span>
 
@@ -306,8 +306,8 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
    cli_msg(-1014, &quot;RT scheduler tick: %d&quot;, p-&gt;tick);
    cli_msg(-1014, &quot;Number of areas: %u&quot;, p-&gt;areano);
 <span class="gh">diff -ru a/proto/ospf/ospf.h b/proto/ospf/ospf.h</span>
-<span class="gd">--- a/proto/ospf/ospf.h 2019-10-16 18:45:08.000000000 +0800</span>
-<span class="gi">+++ b/proto/ospf/ospf.h 2022-12-05 15:19:47.161937314 +0800</span>
+<span class="gd">--- a/proto/ospf/ospf.h     2019-10-16 18:45:08.000000000 +0800</span>
+<span class="gi">+++ b/proto/ospf/ospf.h     2022-12-05 15:19:47.161937314 +0800</span>
 <span class="gu">@@ -94,6 +94,7 @@</span>
    u8 af_ext;
    u8 af_mc;
@@ -317,13 +317,13 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
    u8 merge_external;
    u8 instance_id;
 <span class="gu">@@ -232,6 +233,7 @@</span>
-   u8 af_ext;                   /* OSPFv3-AF extension */
-   u8 af_mc;                    /* OSPFv3-AF multicast */
-   u8 rfc1583;                  /* RFC1583 compatibility */
+   u8 af_ext;                       /* OSPFv3-AF extension */
+   u8 af_mc;                        /* OSPFv3-AF multicast */
+   u8 rfc1583;                      /* RFC1583 compatibility */
 <span class="gi">+  u8 ignoremtu;</span>
-   u8 stub_router;              /* Do not forward transit traffic */
-   u8 merge_external;           /* Should i merge external routes? */
-   u8 instance_id;              /* Differentiate between more OSPF instances */
+   u8 stub_router;          /* Do not forward transit traffic */
+   u8 merge_external;               /* Should i merge external routes? */
+   u8 instance_id;          /* Differentiate between more OSPF instances */
 </pre></div>
 </div>
 </section>
@@ -414,6 +414,16 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <span class="w">      </span><span class="o">|-</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">refold</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">BPF_MAX_REFCNT</span><span class="p">)</span><span class="w"></span>
 <span class="w">      </span><span class="o">|-</span><span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="n">ERR_PTR</span><span class="p">(</span><span class="o">-</span><span class="n">EBUSY</span><span class="p">);</span><span class="w"></span>
 <span class="w">      </span><span class="o">|-</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="ru-he-huo-de-yi-ge-jin-cheng-da-kai-de-bpf-map-fd-dui-ying-de-map-id">
+<h2>如何获得一个进程打开的 bpf map fd 对应的 map id<a class="headerlink" href="#ru-he-huo-de-yi-ge-jin-cheng-da-kai-de-bpf-map-fd-dui-ying-de-map-id" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>lsof -p <span class="m">3248691</span> <span class="p">|</span>grep bpf-map
+<span class="go">nginx   3248691 nobody    4u  a_inode               0,13        0      14337 bpf-map</span>
+<span class="gp"># </span>cat /proc/3248691/fdinfo/4
+<span class="go">...</span>
+<span class="go">map_id:     16392</span>
 </pre></div>
 </div>
 </section>
@@ -509,6 +519,87 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <p>检查 selinux 是不是在 Enforcing 状态，是的话检查 <code class="docutils literal notranslate"><span class="pre">/var/log/audit/audit.log</span></code> 看是不是被 selinux 拦了。简单的处理方式是关了 selinux <code class="docutils literal notranslate"><span class="pre">setenforce</span> <span class="pre">0</span></code> 。</p>
 <p><a class="reference external" href="https://superuser.com/questions/1125250/systemctl-access-denied-when-root">https://superuser.com/questions/1125250/systemctl-access-denied-when-root</a></p>
 </section>
+<section id="yong-hu-kong-jian-bpf-map-lookup-elem-fan-hui-enoent">
+<h2>用户空间 bpf_map_lookup_elem 返回 ENOENT<a class="headerlink" href="#yong-hu-kong-jian-bpf-map-lookup-elem-fan-hui-enoent" title="Permalink to this headline">¶</a></h2>
+<p>这个不是错误，是 key 不存在。</p>
+<p><a class="reference external" href="https://elixir.bootlin.com/linux/v4.19/source/kernel/bpf/syscall.c#L718">https://elixir.bootlin.com/linux/v4.19/source/kernel/bpf/syscall.c#L718</a></p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">map_lookup_elem</span><span class="p">(</span><span class="k">union</span> <span class="nc">bpf_attr</span><span class="w"> </span><span class="o">*</span><span class="n">attr</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="p">..</span><span class="w"></span>
+<span class="w">    </span><span class="n">rcu_read_lock</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">map</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">map_lookup_elem</span><span class="p">(</span><span class="n">map</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ptr</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="n">memcpy</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">value_size</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">rcu_read_unlock</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ptr</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">-</span><span class="n">ENOENT</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="kua-ji-fang-diao-du-ttl-tai-xiao-dao-zhi-zhuan-fa-shi-bai">
+<h2>跨机房调度 ttl 太小导致转发失败<a class="headerlink" href="#kua-ji-fang-diao-du-ttl-tai-xiao-dao-zhi-zhuan-fa-shi-bai" title="Permalink to this headline">¶</a></h2>
+<p>如题。</p>
+</section>
+<section id="virtio-net-qu-dong-jia-zai-xdp-driver-mo-shi-shi-bai">
+<h2>virtio-net 驱动加载 xdp driver 模式失败<a class="headerlink" href="#virtio-net-qu-dong-jia-zai-xdp-driver-mo-shi-shi-bai" title="Permalink to this headline">¶</a></h2>
+<p>加载 xdp 程序报错 <code class="docutils literal notranslate"><span class="pre">load</span> <span class="pre">xdp</span> <span class="pre">root</span> <span class="pre">failed:</span> <span class="pre">cannot</span> <span class="pre">allocate</span> <span class="pre">memory</span></code> 。</p>
+<p>dmesg 内核错误信息：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>  <span class="mf">717.248974</span><span class="p">]</span> <span class="n">virtio_net</span> <span class="n">virtio0</span> <span class="n">eth0</span><span class="p">:</span> <span class="n">request</span> <span class="mi">4</span> <span class="n">queues</span> <span class="n">but</span> <span class="nb">max</span> <span class="ow">is</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<p>报错的点：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">curr_qp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vi</span><span class="o">-&gt;</span><span class="n">curr_queue_pairs</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">vi</span><span class="o">-&gt;</span><span class="n">xdp_queue_pairs</span><span class="p">;</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">prog</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="n">xdp_qp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">nr_cpu_ids</span><span class="p">;</span><span class="w"></span>
+
+<span class="cm">/* XDP requires extra queues for XDP_TX */</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">curr_qp</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">xdp_qp</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">vi</span><span class="o">-&gt;</span><span class="n">max_queue_pairs</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">netdev_warn</span><span class="p">(</span><span class="n">dev</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;request %i queues but max is %i</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="n">curr_qp</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">xdp_qp</span><span class="p">,</span><span class="w"> </span><span class="n">vi</span><span class="o">-&gt;</span><span class="n">max_queue_pairs</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">-</span><span class="n">ENOMEM</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=672aafd5d88a951f394334802b938b502010d9eb">https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=672aafd5d88a951f394334802b938b502010d9eb</a></p></li>
+<li><p><a class="reference external" href="https://elixir.bootlin.com/linux/v4.17.2/source/drivers/net/virtio_net.c#L2213">https://elixir.bootlin.com/linux/v4.17.2/source/drivers/net/virtio_net.c#L2213</a></p></li>
+<li><p><a class="reference external" href="https://github.com/iovisor/bcc/issues/1833#issuecomment-397882174">https://github.com/iovisor/bcc/issues/1833#issuecomment-397882174</a></p></li>
+</ul>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>ethtool -l eth0
+<span class="go">Channel parameters for eth0:</span>
+<span class="go">Pre-set maximums:</span>
+<span class="go">RX:         0</span>
+<span class="go">TX:         0</span>
+<span class="go">Other:              0</span>
+<span class="go">Combined:   2</span>
+<span class="go">Current hardware settings:</span>
+<span class="go">RX:         0</span>
+<span class="go">TX:         0</span>
+<span class="go">Other:              0</span>
+<span class="go">Combined:   2</span>
+
+<span class="gp"># </span>nproc
+<span class="go">2</span>
+</pre></div>
+</div>
+<p>xdp 默认要申请独立的 queue，但网卡最大就 2 个 queue，已经申请了 2 个用作 rx+tx（combined 就是共用）队列，不支持再额外申请 xdp tx queue 了。</p>
+<p>怎么解决？</p>
+<p>简单的方式共用现有的 queue，参见提交：<a class="reference external" href="https://github.com/torvalds/linux/commit/97c2c69e1926260c78c7f1c0b2c987934f1dc7a1">https://github.com/torvalds/linux/commit/97c2c69e1926260c78c7f1c0b2c987934f1dc7a1</a>。要做的就是升级驱动即可。</p>
+<p>或者可以改硬件的 max（# Enable multiqueue virtio-net）？ <a class="reference external" href="https://en.opensuse.org/Testing_XDP_with_virtio-net">https://en.opensuse.org/Testing_XDP_with_virtio-net</a></p>
+</section>
+<section id="bpf-yan-zheng-qi-bao-invalid-indirect-read-from-stack">
+<h2>bpf 验证器报 invalid indirect read from stack<a class="headerlink" href="#bpf-yan-zheng-qi-bao-invalid-indirect-read-from-stack" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">ethhdr</span><span class="w"> </span><span class="n">eth</span><span class="p">;</span><span class="w"></span>
+<span class="c1">// memset(&amp;eth, 0, sizeof(eth));</span>
+<span class="n">eth</span><span class="p">.</span><span class="n">h_proto</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bpf_ntohs</span><span class="p">(</span><span class="n">ETH_P_IPV6</span><span class="p">);</span><span class="w"></span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">bpf_skb_store_bytes</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">eth</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">eth</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// 👈 这里报错</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>未初始化栈内元素，就传递该栈地址。把上面 memset 前面的注释去掉就没问题了。</p>
+</section>
 </section>
 
 
@@ -530,10 +621,15 @@ RSP: 002b:000000c0003d8f98 EFLAGS: 00000216 ORIG_RAX: 000000000000002c
 <li><a class="reference internal" href="#xdp-pass-sysctl-net-ipv4-conf-interface-accept-local">XDP_PASS &amp; sysctl net.ipv4.conf.interface.accept_local</a></li>
 <li><a class="reference internal" href="#clang-loop-unroll-full-shi-bai-dao-zhi-de-bpf-jia-zai-shi-bai">clang loop unroll(full) 失败导致的 BPF 加载失败</a></li>
 <li><a class="reference internal" href="#can-t-get-map-by-id-2637-device-or-resource-busy">can’t get map by id(2637): Device or resource busy</a></li>
+<li><a class="reference internal" href="#ru-he-huo-de-yi-ge-jin-cheng-da-kai-de-bpf-map-fd-dui-ying-de-map-id">如何获得一个进程打开的 bpf map fd 对应的 map id</a></li>
 <li><a class="reference internal" href="#bpf-map-type-prog-array-lei-xing-map-xie-ru-cheng-gong-dan-shi-bpftool-dump-map-fa-xian-mei-you-xie-ru-de-yuan-su">BPF_MAP_TYPE_PROG_ARRAY 类型 map 写入成功但是 bpftool dump map 发现没有写入的元素</a></li>
 <li><a class="reference internal" href="#bpf-yan-zheng-qi-bao-math-between-pkt-pointer-and-register-with-unbounded-min-value-is-not-allowed">bpf 验证器报 math between pkt pointer and register with unbounded min value is not allowed</a></li>
 <li><a class="reference internal" href="#zhuan-fa-biao-fen-pei-jun-yun-dan-shi-you-hou-duan-ji-qi-de-liu-liang-hen-xiao">转发表分配均匀但是有后端机器的流量很小</a></li>
 <li><a class="reference internal" href="#systemd-shi-yong-root-yong-hu-qi-dong-fu-wu-bao-bpf-map-create-failed-permission-denied">systemd 使用 root 用户启动服务报 bpf map create failed: permission denied</a></li>
+<li><a class="reference internal" href="#yong-hu-kong-jian-bpf-map-lookup-elem-fan-hui-enoent">用户空间 bpf_map_lookup_elem 返回 ENOENT</a></li>
+<li><a class="reference internal" href="#kua-ji-fang-diao-du-ttl-tai-xiao-dao-zhi-zhuan-fa-shi-bai">跨机房调度 ttl 太小导致转发失败</a></li>
+<li><a class="reference internal" href="#virtio-net-qu-dong-jia-zai-xdp-driver-mo-shi-shi-bai">virtio-net 驱动加载 xdp driver 模式失败</a></li>
+<li><a class="reference internal" href="#bpf-yan-zheng-qi-bao-invalid-indirect-read-from-stack">bpf 验证器报 invalid indirect read from stack</a></li>
 </ul>
 </li>
 </ul>
