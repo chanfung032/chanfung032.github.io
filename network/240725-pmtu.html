@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>#240725 PMTU &#8212; Feng&#39;s blog 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/custom.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="#240119 TSO &amp; GSO" href="240119-gso.html" />
+    <link rel="prev" title="内核网络栈笔记" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="pmtu">
+<h1>#240725 PMTU<a class="headerlink" href="#pmtu" title="Permalink to this headline">¶</a></h1>
+<section id="df-he-icmp-packet-too-big">
+<h2>DF 和 ICMP Packet Too Big<a class="headerlink" href="#df-he-icmp-packet-too-big" title="Permalink to this headline">¶</a></h2>
+<p>除了网卡和路由可以设置 MTU 之外，还有一个更细的主机粒度的 MTU，这个 MTU 不可以直接设置，而是根据返回机器的特定类型的 ICMP 包记录下来的。</p>
+<p>对于发往另一个主机的 IPv4 包，如果中间某跳发现包太大，无法直接转发，这个包还设置了 DF（Don’t Fragment）标志，该跳会丢弃包并给发包的机器发送一个 ICMP Unreach 包，包里面会带上正确的 MTU。IPv6 同理，但回复的是 ICMP Packt Too Large 。</p>
+<p>这个 MTU 又叫 PTMU，P 是 Path 的意思。</p>
+</section>
+<section id="pmtu-cun-zai-nei-he-zhong-shen-me-di-fang">
+<h2>PMTU 存在内核中什么地方<a class="headerlink" href="#pmtu-cun-zai-nei-he-zhong-shen-me-di-fang" title="Permalink to this headline">¶</a></h2>
+<p>存在路由里面，下面是内核中 ICMP 收包之后的处理路径：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">icmp_rcv</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">icmp_pointers</span><span class="p">[</span><span class="n">icmph</span><span class="o">-&gt;</span><span class="n">type</span><span class="p">].</span><span class="n">handler</span><span class="p">(</span><span class="n">skb</span><span class="p">)</span><span class="o">/</span><span class="n">icmp_unreach</span><span class="o">/</span><span class="p">...</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ntohs</span><span class="p">(</span><span class="n">icmph</span><span class="o">-&gt;</span><span class="n">un</span><span class="p">.</span><span class="n">frag</span><span class="p">.</span><span class="n">mtu</span><span class="p">)</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">icmp_socket_deliver</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">info</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="o">|-</span><span class="w"> </span><span class="n">ipprot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">inet_protos</span><span class="p">[</span><span class="n">protocol</span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="o">|-</span><span class="w"> </span><span class="n">ipprot</span><span class="o">-&gt;</span><span class="n">err_handler</span><span class="p">(</span><span class="n">skb</span><span class="p">,</span><span class="w"> </span><span class="n">info</span><span class="p">)</span><span class="o">/</span><span class="n">tcp_v4_err</span><span class="o">/</span><span class="n">__udp4_lib_err</span><span class="w"></span>
+</pre></div>
+</div>
+<p>ICMP Unreach/Packet Too Big 包里面会附带上被丢弃包的包头数据，ICMP 包的处理函数中会根据这个包头中 IP 头的协议类型，然后调用对应的 <code class="docutils literal notranslate"><span class="pre">err_handler</span></code>，对于 IPv4 TCP 就是 <code class="docutils literal notranslate"><span class="pre">tcp_v4_err</span></code> 函数。</p>
+<p>下面是 <code class="docutils literal notranslate"><span class="pre">tcp_v4_err</span></code> 的处理路径：</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">tcp_v4_err</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">tcp_v4_mtu_reduced</span><span class="p">(</span><span class="n">sk</span><span class="p">)</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">inet_csk_update_pmtu</span><span class="p">(</span><span class="n">sk</span><span class="p">,</span><span class="w"> </span><span class="n">mtu</span><span class="p">)</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|-</span><span class="w"> </span><span class="k">struct</span> <span class="nc">dst_entry</span><span class="w"> </span><span class="o">*</span><span class="n">dst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__sk_dst_check</span><span class="p">(</span><span class="n">sk</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
+<span class="o">|</span><span class="w">  </span><span class="o">|-</span><span class="w"> </span><span class="n">dst</span><span class="o">-&gt;</span><span class="n">ops</span><span class="o">-&gt;</span><span class="n">update_pmtu</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span><span class="w"> </span><span class="n">sk</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">mtu</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="p">)</span><span class="o">/</span><span class="n">ip_rt_update_pmtu</span><span class="w"></span>
+<span class="o">|</span><span class="w">     </span><span class="o">|-</span><span class="w"> </span><span class="n">__ip_rt_update_pmtu</span><span class="p">(</span><span class="n">rt</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">fl4</span><span class="p">,</span><span class="w"> </span><span class="n">mtu</span><span class="p">)</span><span class="w"></span>
+<span class="o">|</span><span class="w">        </span><span class="o">|-</span><span class="w"> </span><span class="n">fib_lookup</span><span class="p">(</span><span class="n">net</span><span class="p">,</span><span class="w"> </span><span class="n">fl4</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">res</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
+<span class="o">|</span><span class="w">        </span><span class="o">|-</span><span class="w"> </span><span class="n">nhc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FIB_RES_NHC</span><span class="p">(</span><span class="n">res</span><span class="p">)</span><span class="w"></span>
+<span class="o">|</span><span class="w">        </span><span class="o">|-</span><span class="w"> </span><span class="n">update_or_create_fnhe</span><span class="p">(</span><span class="n">nhc</span><span class="p">,</span><span class="w"> </span><span class="n">fl4</span><span class="o">-&gt;</span><span class="n">daddr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">mtu</span><span class="p">,</span><span class="w"> </span><span class="n">lock</span><span class="p">,</span><span class="w"></span>
+<span class="o">|</span><span class="w">           </span><span class="o">|</span><span class="w">   </span><span class="n">jiffies</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">net</span><span class="o">-&gt;</span><span class="n">ipv4</span><span class="p">.</span><span class="n">ip_rt_mtu_expires</span><span class="p">)</span><span class="w"></span>
+<span class="o">|</span><span class="w">           </span><span class="o">|-</span><span class="w"> </span><span class="n">hash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rcu_dereference</span><span class="p">(</span><span class="n">nhc</span><span class="o">-&gt;</span><span class="n">nhc_exceptions</span><span class="p">)</span><span class="w"></span>
+<span class="o">|</span><span class="w">           </span><span class="o">|-</span><span class="w"> </span><span class="n">fnhe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">kzalloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">fnhe</span><span class="p">),</span><span class="w"> </span><span class="n">GFP_ATOMIC</span><span class="p">)</span><span class="w"></span>
+<span class="o">|</span><span class="w">           </span><span class="o">|-</span><span class="w"> </span><span class="n">fnhe</span><span class="o">-&gt;</span><span class="n">fnhe_daddr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">daddr</span><span class="p">;</span><span class="w"></span>
+<span class="o">|</span><span class="w">           </span><span class="o">|-</span><span class="w"> </span><span class="n">fnhe</span><span class="o">-&gt;</span><span class="n">fnhe_pmtu</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mtu</span><span class="w"></span>
+<span class="o">|</span><span class="w">           </span><span class="o">|-</span><span class="w"> </span><span class="n">fnhe</span><span class="o">-&gt;</span><span class="n">fnhe_next</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">hash</span><span class="o">-&gt;</span><span class="n">chain</span><span class="w"></span>
+<span class="o">|</span><span class="w">           </span><span class="o">|-</span><span class="w"> </span><span class="n">rcu_assign_pointer</span><span class="p">(</span><span class="n">hash</span><span class="o">-&gt;</span><span class="n">chain</span><span class="p">,</span><span class="w"> </span><span class="n">fnhe</span><span class="p">)</span><span class="w"></span>
+<span class="o">|-</span><span class="w"> </span><span class="n">tcp_sync_mss</span><span class="p">(</span><span class="n">sk</span><span class="p">,</span><span class="w"> </span><span class="n">mtu</span><span class="p">)</span><span class="w"></span>
+</pre></div>
+</div>
+<p>可以看到主要做了 2 件事：</p>
+<p><strong>第一</strong> 将 PMTU 保存到这个目的主机对应的路由里。</p>
+<p><code class="docutils literal notranslate"><span class="pre">fib_lookup</span></code> 返回一个 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">fib_result</span></code> 指针， 其中和 MTU 相关的主要是 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">fib_info</span></code> 和 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">fib_nh_common</span></code>。</p>
+<p>路由的 MTU 存在 <code class="docutils literal notranslate"><span class="pre">fib_info.fib_metrics-&gt;metrics[RTAX_MTU-1]</span></code> 中。</p>
+<p>PMTU 存在 <code class="docutils literal notranslate"><span class="pre">fib_info.fib_nh[i].nh_common.nh_exceptions</span></code> 哈希表中。</p>
+<p>关于 <code class="docutils literal notranslate"><span class="pre">fib_info</span></code> 可以参见： <a class="reference internal" href="220923-routing.html"><span class="doc">#220923 路由</span></a></p>
+<img alt="../_images/pmtu.svg" src="../_images/pmtu.svg" /><p><strong>第二</strong> 用 <code class="docutils literal notranslate"><span class="pre">tcp_sync_mss</span></code> 修改当前 tcp 连接的 mss，直接在 TCP 层改小发送的 tcp 包，使其加上 IP 头之后不会超过这个 PMTU。</p>
+<p>PMTU 会在路由里面缓存一段时间，缓存过期前和这个目标主机新建立的 TCP 连接会一直沿用这个 PMTU 来计算 mss，而不是等 ICMP 包回来再改小 mss。</p>
+<p>UDP 没有 mss，所以它的处理函数没有第二步，太大的 UDP 包在 IP 层会直接分片之后再发出去。</p>
+</section>
+<section id="li-yong-pmtu-shi-xian-dong-tai-mtu">
+<h2>利用 PMTU 实现动态 MTU<a class="headerlink" href="#li-yong-pmtu-shi-xian-dong-tai-mtu" title="Permalink to this headline">¶</a></h2>
+<p>在某些业务场景下，比如动态隧道，不同路径的封包头的大小可能不一样，一种解决方法是按照最大的封包头来设置隧道网卡的 MTU，另外一个方法就是按照大部分封包头的大小来设置，对于特殊的大的封包头回一个 ICMP Unreach/Packet Too Big 包，改下对应 PMTU。</p>
+<p>实验程序：<a class="reference external" href="https://github.com/chanfung032/labs/blob/master/lwt_icmp_too_big.c">https://github.com/chanfung032/labs/blob/master/lwt_icmp_too_big.c</a></p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">#240725 PMTU</a><ul>
+<li><a class="reference internal" href="#df-he-icmp-packet-too-big">DF 和 ICMP Packet Too Big</a></li>
+<li><a class="reference internal" href="#pmtu-cun-zai-nei-he-zhong-shen-me-di-fang">PMTU 存在内核中什么地方</a></li>
+<li><a class="reference internal" href="#li-yong-pmtu-shi-xian-dong-tai-mtu">利用 PMTU 实现动态 MTU</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/network/240725-pmtu.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="https://cn.bing.com/search" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>
+$('#searchbox').show(0);
+document.getElementsByClassName('search')[0].addEventListener('submit', function(event) {
+  event.preventDefault();
+  var form = event.target;
+  var input = form.querySelector('input[name="q"]');
+  var value = input.value;
+  var q = 'ensearch=1&q=site%3Achanfung032.github.io++' + value;
+  var url = form.action + '?' + q;
+  window.location.href = url;
+});
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, chanfung032.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/network/240725-pmtu.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

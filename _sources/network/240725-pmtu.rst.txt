@@ -1,0 +1,76 @@
+#240725 PMTU
+============================================
+
+DF 和 ICMP Packet Too Big
+--------------------------------
+
+除了网卡和路由可以设置 MTU 之外，还有一个更细的主机粒度的 MTU，这个 MTU 不可以直接设置，而是根据返回机器的特定类型的 ICMP 包记录下来的。
+
+对于发往另一个主机的 IPv4 包，如果中间某跳发现包太大，无法直接转发，这个包还设置了 DF（Don't Fragment）标志，该跳会丢弃包并给发包的机器发送一个 ICMP Unreach 包，包里面会带上正确的 MTU。IPv6 同理，但回复的是 ICMP Packt Too Large 。
+
+这个 MTU 又叫 PTMU，P 是 Path 的意思。
+
+PMTU 存在内核中什么地方
+--------------------------------
+
+存在路由里面，下面是内核中 ICMP 收包之后的处理路径：
+
+.. code-block:: c
+
+    icmp_rcv
+    |- icmp_pointers[icmph->type].handler(skb)/icmp_unreach/...
+    |- info = ntohs(icmph->un.frag.mtu)
+    |- icmp_socket_deliver(skb, info)
+        |- ipprot = inet_protos[protocol]
+        |- ipprot->err_handler(skb, info)/tcp_v4_err/__udp4_lib_err
+
+ICMP Unreach/Packet Too Big 包里面会附带上被丢弃包的包头数据，ICMP 包的处理函数中会根据这个包头中 IP 头的协议类型，然后调用对应的 ``err_handler``，对于 IPv4 TCP 就是 ``tcp_v4_err`` 函数。
+
+下面是 ``tcp_v4_err`` 的处理路径：
+
+.. code-block:: c
+
+    tcp_v4_err
+    |- tcp_v4_mtu_reduced(sk)
+    |- inet_csk_update_pmtu(sk, mtu)
+    |  |- struct dst_entry *dst = __sk_dst_check(sk, 0)
+    |  |- dst->ops->update_pmtu(dst, sk, NULL, mtu, true)/ip_rt_update_pmtu
+    |     |- __ip_rt_update_pmtu(rt, &fl4, mtu)
+    |        |- fib_lookup(net, fl4, &res, 0)
+    |        |- nhc = FIB_RES_NHC(res)
+    |        |- update_or_create_fnhe(nhc, fl4->daddr, 0, mtu, lock,
+    |           |   jiffies + net->ipv4.ip_rt_mtu_expires)
+    |           |- hash = rcu_dereference(nhc->nhc_exceptions) 
+    |           |- fnhe = kzalloc(sizeof(*fnhe), GFP_ATOMIC)
+    |           |- fnhe->fnhe_daddr = daddr;
+    |           |- fnhe->fnhe_pmtu = mtu
+    |           |- fnhe->fnhe_next = hash->chain
+    |           |- rcu_assign_pointer(hash->chain, fnhe)
+    |- tcp_sync_mss(sk, mtu)
+
+可以看到主要做了 2 件事：
+
+**第一** 将 PMTU 保存到这个目的主机对应的路由里。
+
+``fib_lookup`` 返回一个 ``struct fib_result`` 指针， 其中和 MTU 相关的主要是 ``struct fib_info`` 和 ``struct fib_nh_common``。
+
+路由的 MTU 存在 ``fib_info.fib_metrics->metrics[RTAX_MTU-1]`` 中。
+
+PMTU 存在 ``fib_info.fib_nh[i].nh_common.nh_exceptions`` 哈希表中。
+
+关于 ``fib_info`` 可以参见： :doc:`220923-routing`
+
+.. image:: images/pmtu.svg
+
+**第二** 用 ``tcp_sync_mss`` 修改当前 tcp 连接的 mss，直接在 TCP 层改小发送的 tcp 包，使其加上 IP 头之后不会超过这个 PMTU。
+
+PMTU 会在路由里面缓存一段时间，缓存过期前和这个目标主机新建立的 TCP 连接会一直沿用这个 PMTU 来计算 mss，而不是等 ICMP 包回来再改小 mss。
+
+UDP 没有 mss，所以它的处理函数没有第二步，太大的 UDP 包在 IP 层会直接分片之后再发出去。
+
+利用 PMTU 实现动态 MTU
+---------------------------
+
+在某些业务场景下，比如动态隧道，不同路径的封包头的大小可能不一样，一种解决方法是按照最大的封包头来设置隧道网卡的 MTU，另外一个方法就是按照大部分封包头的大小来设置，对于特殊的大的封包头回一个 ICMP Unreach/Packet Too Big 包，改下对应 PMTU。
+
+实验程序：https://github.com/chanfung032/labs/blob/master/lwt_icmp_too_big.c
