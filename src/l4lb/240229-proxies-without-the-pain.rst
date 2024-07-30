@@ -67,10 +67,14 @@ TCP 状态的导出和恢复
 
 https://github.com/YutaroHayakawa/libtcprepair/blob/master/tcprepair.c
 
+libtcprepair 库有些参数没有迁移，比如 tcp 的 wscale 参数（会导致刚开始响应的包都是小包）等，这些缺少的可以参考：https://github.com/checkpoint-restore/criu/blob/criu-dev/soccr/soccr.c
+
+导出/恢复需要调用的接口很多，实际生产环节中可以用内核模块合并这些操作，提供一个原子的接口。
+
 TLS 状态的导出和恢复
 ````````````````````````
 
-这一块的原理可以参见： :doc:`../tls-protocol` 。
+迁移的时候，非对称加密的 TLS 握手阶段已经结束，已经进入对称加密的数据传输阶段，只需要将对称加密的相关状态数据同步到 BE 即可，这一块的原理可以参见： :doc:`../tls-protocol` 。
 
 Prism 修改了 tlse 库，提供了 TLS 状态的导入导出功能， 详细见：https://github.com/YutaroHayakawa/Prism-HTTP/blob/master/src/extern/tlse.c
 
@@ -80,3 +84,16 @@ Prism 修改了 tlse 库，提供了 TLS 状态的导入导出功能， 详细�
 7 层在关闭连接后，内核中的 TCP 连接并不是立刻释放的，而是要等和客户端的 4 次挥手完了之后才会释放，所以需要修改内核暴露接口给 7 层，在底层连接完全释放之后再通知 Switch 删除所有的规则，提前删除可能会导致连接无法正常结束。
 
 https://github.com/YutaroHayakawa/Prism-HTTP/blob/master/patches/linux-4.18.diff
+
+4 层
+``````````````
+
+可编程交换机这个不是必须的，相关的功能可以在 4 层负载均衡上实现，并且可能更简单。
+
+首先，在 4 层负载均衡中添加一个 **7 层重定向跟踪表**，这个表通过接口暴露给 7 层，7 层将连接迁移之后，将迁移的连接信息及迁移的目标 BE 写入表中。4 层负载均衡在正常的转发逻辑之后，检查 TCP 连接是不是在 7 层重定向跟踪表中，如果在，将原包封包后转发给 BE。
+
+因为 4 层负载均衡中提供服务的是 VIP，BE 上是绑定了 VIP 了，所以 BE 上恢复连接后就相当于原始连接了，不用再做复杂的地址重写，FE 转发过来的封包直接解包就能续上接着处理。
+
+当然，绑定 VIP 这一步甚至也不是必须的，通过 :doc:`../network/240730-ip-transparent-and-rule` 还可以让 BE 直接恢复非本机 IP 的连接。
+
+上面 **内核 TCP 连接释放事件监控** 这个也不是必须的，7 层重定向跟踪表中连接可以跟 lvs 一样，采用老化的方法来删除连接。
