@@ -37,3 +37,7 @@ div.admonition p.admonition-title {
     min-width: auto !important;
   }
 }
+
+.logo {
+    border-radius: 5px;
+}
